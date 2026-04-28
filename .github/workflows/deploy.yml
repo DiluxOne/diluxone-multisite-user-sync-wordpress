@@ -1,0 +1,29 @@
+name: Deploy to WordPress.org
+
+on:
+  push:
+    tags:
+      - '*'
+
+jobs:
+  deploy:
+    name: Deploy to wp.org SVN
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: WordPress Plugin Deploy
+        id: deploy
+        uses: 10up/action-wordpress-plugin-deploy@stable
+        with:
+          generate-zip: true
+        env:
+          SVN_USERNAME: ${{ secrets.SVN_USERNAME }}
+          SVN_PASSWORD: ${{ secrets.SVN_PASSWORD }}
+
+      - name: Upload zip to GitHub Release
+        if: ${{ steps.deploy.outputs.zip-path != '' }}
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ steps.deploy.outputs.zip-path }}
