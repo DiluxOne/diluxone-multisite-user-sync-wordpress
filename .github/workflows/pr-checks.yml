@@ -1,0 +1,156 @@
+name: PR checks
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+jobs:
+  php-lint:
+    name: PHP ${{ matrix.php }} syntax check
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # The plugin requires PHP 7.4+ per its header. Older versions are not
+        # tested — the syntax matrix only covers what we actually support.
+        php: ['7.4', '8.0', '8.1', '8.2', '8.3']
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup PHP ${{ matrix.php }}
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          coverage: none
+          tools: none
+
+      - name: Lint all PHP files
+        run: |
+          set -e
+          find . -type f -name '*.php' \
+            -not -path './vendor/*' \
+            -not -path './node_modules/*' \
+            -not -path './.wordpress-org/*' \
+            -exec php -l {} \;
+
+  plugin-check:
+    name: WordPress Plugin Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Run WordPress Plugin Check
+        uses: wordpress/plugin-check-action@v1
+        with:
+          build-dir: ./
+          # Run all categories Plugin Check supports, including experimental
+          # checks. Strict mode — issues caught here are issues we'd be told
+          # about by wp.org reviewers later, so we'd rather know now.
+          categories: plugin_repo,security,performance,accessibility,general
+          include-experimental: true
+          # Mirror this list with .distignore to keep the two in sync.
+          exclude-directories: tests,vendor,node_modules,docs
+          exclude-files: phpunit.xml.dist,phpunit.xml,composer.json,composer.lock,package.json,package-lock.json,Makefile,phpcs.xml,phpcs.xml.dist,phpstan.neon,phpstan.neon.dist,phpstan-baseline.neon,psalm.xml,psalm.xml.dist,psalm-baseline.xml
+          ignore-codes: hidden_files,github_directory,unexpected_markdown_file,stable_tag_mismatch
+
+  readme-validation:
+    name: Validate readme.txt and version alignment
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Verify required readme.txt headers are present
+        run: |
+          set -e
+          required_headers=(
+            "Contributors"
+            "Tags"
+            "Requires at least"
+            "Tested up to"
+            "Stable tag"
+            "License"
+          )
+          missing=0
+          for header in "${required_headers[@]}"; do
+            if ! grep -qE "^${header}:" readme.txt; then
+              echo "::error file=readme.txt::Missing required header: ${header}"
+              missing=1
+            fi
+          done
+          if [ "$missing" -ne 0 ]; then
+            exit 1
+          fi
+          echo "All required readme.txt headers present."
+
+      - name: Verify Stable tag matches PHP Version header (modulo -dev/-alpha/-rc suffix)
+        run: |
+          set -e
+          stable_tag=$(grep -oP '^Stable tag:\s*\K\S+' readme.txt)
+          php_version=$(grep -oP '^\s*\*?\s*Version:\s*\K\S+' wpm-user-sync.php)
+
+          # The PHP `Version:` header may carry a pre-release suffix on `main`
+          # while we work toward the next release (e.g. `1.5.0-dev`). Strip the
+          # suffix to get the base release version, then require Stable tag to
+          # match the base. Tagged releases drop the suffix so this check is
+          # strict at tag time.
+          php_base=$(printf '%s' "${php_version}" | sed -E 's/-(dev|alpha|beta|rc)([.0-9]*)?$//')
+
+          echo "readme.txt Stable tag:       ${stable_tag}"
+          echo "PHP file Version header:     ${php_version}  (base: ${php_base})"
+
+          if [ "${stable_tag}" != "${php_base}" ]; then
+            echo "::error::Version mismatch — readme.txt Stable tag (${stable_tag}) does not match the base version of the PHP Version header (${php_version}, base ${php_base}). Either update Stable tag, or drop the -dev/-alpha/-rc suffix from Version when preparing a release."
+            exit 1
+          fi
+
+          echo "Versions aligned: Stable tag = ${stable_tag}, PHP Version = ${php_version}."
+
+      - name: Verify Changelog has entry for current version
+        run: |
+          set -e
+          stable_tag=$(grep -oP '^Stable tag:\s*\K\S+' readme.txt)
+          if ! grep -qE "^=\s*${stable_tag}" readme.txt; then
+            echo "::error file=readme.txt::No changelog entry found for version ${stable_tag}. Add a '= ${stable_tag} =' section under '== Changelog =='."
+            exit 1
+          fi
+          echo "Changelog entry for ${stable_tag} found."
+
+  phpunit:
+    name: PHPUnit (unit suite)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup PHP 8.2
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+          tools: composer:v2
+
+      - name: Determine Composer cache directory
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: composer-phpunit-${{ runner.os }}-${{ hashFiles('composer.json') }}
+          restore-keys: |
+            composer-phpunit-${{ runner.os }}-
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Run PHPUnit (unit suite)
+        run: composer test:unit

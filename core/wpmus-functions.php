@@ -1,5 +1,9 @@
 <?php
 
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
     // When the plugin is activated
     function wpmus_plugin_activate() {
 

@@ -1,0 +1,39 @@
+# PHPStan configuration for wpm-user-sync.
+#
+# Level 8 (max strictness). The WordPress extension
+# (szepeviktor/phpstan-wordpress) is auto-registered via the
+# phpstan/extension-installer composer plugin — no manual `includes:`
+# needed for it.
+#
+# Note: PR 1 introduces this configuration. Until the OOP refactor (PR 2)
+# lands and removes the global-state architecture, expect a substantial
+# violation count on this file's analysis. The PR-1 commit deliberately
+# does NOT chase 0 violations on `phpstan` — that is the goal of the
+# linter-cleanup PR after the refactor.
+
+parameters:
+  level: 8
+
+  paths:
+    - wpm-user-sync.php
+    - uninstall.php
+    - core
+    - network-admin
+    - site-admin
+
+  excludePaths:
+    analyse:
+      - tests/*
+      - vendor/*
+      - node_modules/*
+      - .wordpress-org/*
+
+  # The plugin's runtime minimum is PHP 7.4 (see Requires PHP in
+  # wpm-user-sync.php). PHPStan accepts 7.1+; we set 70400 to match the
+  # plugin's declared minimum exactly so any 7.4-specific call surfaces.
+  phpVersion: 70400
+
+  # WP_DEBUG flips per-deployment from wp-config.php. Mark it dynamic
+  # so PHPStan does not collapse `if ( WP_DEBUG )` into a constant.
+  dynamicConstantNames:
+    - WP_DEBUG

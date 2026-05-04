@@ -1,5 +1,9 @@
 <?php
 
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 function wpmus_network_syncactions_options() {
     global $wpdb;
     $sites = get_sites();
