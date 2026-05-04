@@ -56,7 +56,7 @@ jobs:
           include-experimental: true
           # Mirror this list with .distignore to keep the two in sync.
           exclude-directories: tests,vendor,node_modules,docs
-          exclude-files: phpunit.xml.dist,phpunit.xml,composer.json,composer.lock,package.json,package-lock.json,Makefile,phpcs.xml,phpcs.xml.dist,phpstan.neon,phpstan.neon.dist,phpstan-baseline.neon,psalm.xml,psalm.xml.dist,psalm-baseline.xml
+          exclude-files: phpunit.xml.dist,phpunit.xml,phpunit-integration.xml.dist,phpunit-integration.xml,composer.json,composer.lock,package.json,package-lock.json,Makefile,phpcs.xml,phpcs.xml.dist,phpstan.neon,phpstan.neon.dist,phpstan-baseline.neon,psalm.xml,psalm.xml.dist,psalm-baseline.xml
           # Codes prefixed `WordPress.*` below are TEMPORARY — they flag
           # pre-existing legacy violations in the procedural code that PR 1
           # deliberately does not touch. They will be removed in PR 5 of the

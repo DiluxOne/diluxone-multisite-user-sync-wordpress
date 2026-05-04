@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/9.6/phpunit.xsd"
+    bootstrap="tests/Integration/bootstrap.php"
+    colors="true"
+    convertErrorsToExceptions="true"
+    convertNoticesToExceptions="true"
+    convertWarningsToExceptions="true"
+    failOnRisky="true"
+    cacheResultFile=".phpunit-integration.result.cache"
+    beStrictAboutOutputDuringTests="false"
+    beStrictAboutTestsThatDoNotTestAnything="true"
+    executionOrder="default"
+>
+    <!--
+        The integration suite boots a real WordPress (loaded via
+        wp-load.php inside the wp-env tests-cli container) and
+        exercises the plugin against it. It does NOT replace the
+        unit suite — the two run independently and gate independently.
+
+        Run locally via:
+          npx wp-env start
+          npx wp-env run tests-cli ./vendor/bin/phpunit -c phpunit-integration.xml.dist
+
+        Or via the Makefile's `make test-integration` target.
+    -->
+    <testsuites>
+        <testsuite name="integration">
+            <directory>tests/Integration</directory>
+        </testsuite>
+    </testsuites>
+</phpunit>

@@ -30,6 +30,7 @@ build/
 # Test caches
 .phpunit.result.cache
 .phpunit.cache/
+.phpunit-integration.result.cache
 .phpcs-cache/
 
 # Local env
