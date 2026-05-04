@@ -17,6 +17,11 @@ vendor/
 # diffs without runtime benefit (the plugin ships with no vendor/).
 composer.lock
 
+# npm lock file — same reasoning. Only @wordpress/env lives in
+# devDependencies; CI never installs it. Local devs regenerate via
+# `npm install` after a clone.
+package-lock.json
+
 # Build artifacts
 dist/
 build/
