@@ -15,7 +15,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-final class SiteRepository {
+/**
+ * Note: not declared `final` so Mockery can subclass it for unit
+ * tests. The class is still treated as a leaf in production.
+ */
+class SiteRepository {
 
 	/**
 	 * Every blog ID in the current network. Returns int[] regardless of

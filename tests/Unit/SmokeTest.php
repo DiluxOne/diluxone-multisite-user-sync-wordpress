@@ -1,13 +1,9 @@
 <?php
 /**
- * Smoke test for the unit suite — confirms the plugin's bootstrap
- * surface is intact: PHP version, plugin file readable, plugin
- * header present, and the OOP autoloader can resolve the main
- * `WPMUS\Plugin` class.
- *
- * Real coverage of the Sync engine, Config, repositories and admin
- * pages lands in PR 3 (unit tests with mocks) and PR 4 (integration
- * tests on a wp-env multisite).
+ * Smoke test: confirms the plugin's bootstrap surface is intact —
+ * PHP version, plugin file readable, plugin header present, the
+ * autoloader resolves `WPMUS\` classes, and the legacy site-option
+ * names have not drifted (critical for in-place 1.4 → 1.5 upgrade).
  *
  * @package WPMUS\Tests\Unit
  */
@@ -18,18 +14,12 @@ namespace Tests\Unit;
 
 use PHPUnit\Framework\TestCase;
 
-if ( ! defined( 'ABSPATH' ) ) {
-	define( 'ABSPATH', sys_get_temp_dir() . '/abspath-stub/' );
-}
-
-require_once dirname( __DIR__, 2 ) . '/src/Autoloader.php';
-
 final class SmokeTest extends TestCase {
 
 	public function test_php_version_satisfies_plugin_runtime_minimum(): void {
 		$this->assertTrue(
 			PHP_VERSION_ID >= 70400,
-			'wpm-user-sync requires PHP 7.4 or newer per its plugin header. The test runner is on an unsupported version.'
+			'wpm-user-sync requires PHP 7.4 or newer per its plugin header.'
 		);
 	}
 
@@ -47,9 +37,6 @@ final class SmokeTest extends TestCase {
 	}
 
 	public function test_autoloader_resolves_namespaced_classes(): void {
-		// Touch each class in the project so the autoloader's spl
-		// callback runs against it. If the file path is wrong or the
-		// PSR-4 mapping is broken, class_exists returns false here.
 		$this->assertTrue( class_exists( \WPMUS\Plugin::class ), 'WPMUS\\Plugin should be autoloadable' );
 		$this->assertTrue( class_exists( \WPMUS\Config::class ), 'WPMUS\\Config should be autoloadable' );
 		$this->assertTrue( class_exists( \WPMUS\Sync\SyncEngine::class ), 'WPMUS\\Sync\\SyncEngine should be autoloadable' );
