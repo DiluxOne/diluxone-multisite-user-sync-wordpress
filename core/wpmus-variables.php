@@ -1,5 +1,9 @@
 <?php
 
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 $pluginRoute = plugin_basename( 'wpm-user-sync/wpm-user-sync.php' );
 $pluginBaseName = plugin_basename( $pluginRoute );
 if (!function_exists('get_plugin_data')) {

@@ -1,5 +1,9 @@
 <?php
 
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 function wpmus_site_syncactions_options() {
 
     echo '<div class="wrap">

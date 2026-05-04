@@ -12,11 +12,24 @@ Thumbs.db
 node_modules/
 vendor/
 
+# Composer lock file — dev-only deps for testing/linting; CI regenerates
+# from composer.json on every run, and tracking it inflates Dependabot
+# diffs without runtime benefit (the plugin ships with no vendor/).
+composer.lock
+
 # Build artifacts
 dist/
 build/
 *.log
 
+# Test caches
+.phpunit.result.cache
+.phpunit.cache/
+.phpcs-cache/
+
 # Local env
 .env
 .env.local
+
+# wp-env local override (machine-specific dev config)
+.wp-env.override.json

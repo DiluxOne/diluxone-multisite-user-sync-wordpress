@@ -1,0 +1,79 @@
+# Dependabot configuration for wpm-user-sync.
+#
+# The published plugin has zero production dependencies, but the
+# GitHub Actions used in CI/CD (deploy to wp.org SVN, PR checks)
+# are themselves a supply-chain surface. Dependabot watches them.
+#
+# Also covers npm devDependencies (currently @wordpress/env) and
+# Composer dev dependencies (phpunit, phpstan, psalm, wpcs, etc.).
+# None of these dependencies ever ship to wp.org — they are excluded
+# from the deploy via .distignore.
+#
+# Schedule is weekly with grouping enabled — at most 1–2 PRs per week,
+# not one per package.
+
+version: 2
+updates:
+  # GitHub Actions used in workflows under .github/workflows/.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "America/Argentina/Buenos_Aires"
+    open-pull-requests-limit: 3
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+    labels:
+      - "dependencies"
+      - "github-actions"
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"
+
+  # npm dev dependencies — currently only @wordpress/env.
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "America/Argentina/Buenos_Aires"
+    open-pull-requests-limit: 3
+    groups:
+      dev-dependencies:
+        dependency-type: "development"
+        patterns:
+          - "*"
+    labels:
+      - "dependencies"
+      - "npm"
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"
+
+  # Composer dev dependencies — phpunit, brain/monkey, mockery, phpstan,
+  # psalm, wpcs, etc. All are dev-only — composer install --no-dev would
+  # skip them. None reach wp.org.
+  - package-ecosystem: "composer"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "America/Argentina/Buenos_Aires"
+    open-pull-requests-limit: 3
+    groups:
+      composer-dev:
+        dependency-type: "development"
+        patterns:
+          - "*"
+    labels:
+      - "dependencies"
+      - "composer"
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"

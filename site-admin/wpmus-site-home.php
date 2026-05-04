@@ -1,5 +1,9 @@
 <?php
 
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 function wpmus_site_home_content() {
     
     global $sd_active_tab;

@@ -7,13 +7,17 @@ Author: Pablo Ariel Di Loreto
 Version: 1.4
 Requires at least: 6.6
 Requires PHP: 7.4
-Tested up to: 6.9.4
+Tested up to: 6.9
 Author URI: https://pablodiloreto.com/wpm-user-sync/
 Text Domain: wpm-user-sync
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 Network: true
 */
+
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
 
 // Load required core plugin files
 require_once (dirname(__FILE__).'/core/wpmus-variables.php');

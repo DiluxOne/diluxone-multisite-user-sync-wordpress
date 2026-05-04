@@ -1,5 +1,9 @@
 <?php
 
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 function wpmus_network_syncoptions_settings() {
     global $wpmus_newSiteSync;
     global $wpmus_newUserSync;

@@ -1,0 +1,115 @@
+<?xml version="1.0"?>
+<!--
+  Psalm configuration for wpm-user-sync.
+
+  Psalm is used here EXCLUSIVELY for taint analysis: tracking user
+  controlled values ($_GET, $_POST, $_REQUEST, $_COOKIE, $_FILES,
+  $_SERVER) through the codebase to dangerous sinks (echo, eval,
+  $wpdb->query, exec, file_put_contents, etc.) so XSS / SQLi / RCE
+  paths surface as concrete findings instead of being missed in code
+  review.
+
+  General static type checking is already covered by PHPStan level 8
+  (see phpstan.neon). To avoid double reporting and keep the signal
+  focused, we run Psalm in taint analysis mode only and silence its
+  type error output for the regular run via a high error level.
+
+  The humanmade/psalm-plugin-wordpress plugin teaches Psalm about
+  WordPress's escaping helpers (esc_html, esc_attr, esc_url, ...) and
+  $wpdb->prepare(), so calls through them are correctly tagged as
+  sanitisation barriers.
+-->
+<psalm
+    errorLevel="8"
+    findUnusedBaselineEntry="false"
+    findUnusedCode="false"
+    resolveFromConfigFile="true"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns="https://getpsalm.org/schema/config"
+    xsi:schemaLocation="https://getpsalm.org/schema/config vendor/vimeo/psalm/config.xsd"
+>
+    <projectFiles>
+        <file name="wpm-user-sync.php" />
+        <file name="uninstall.php" />
+        <directory name="core" />
+        <directory name="network-admin" />
+        <directory name="site-admin" />
+        <ignoreFiles>
+            <directory name="vendor" />
+            <directory name="node_modules" />
+            <directory name="tests" />
+            <directory name=".wordpress-org" />
+        </ignoreFiles>
+    </projectFiles>
+
+    <plugins>
+        <pluginClass class="PsalmWordPress\Plugin" />
+    </plugins>
+
+    <!--
+      Suppress non-taint diagnostics. PHPStan level 8 already enforces
+      the equivalent type rules on every push, so reporting them here
+      again would just duplicate failures and obscure real taint
+      findings.
+    -->
+    <issueHandlers>
+        <MixedAssignment errorLevel="suppress" />
+        <MixedArgument errorLevel="suppress" />
+        <MixedArrayAccess errorLevel="suppress" />
+        <MixedArrayAssignment errorLevel="suppress" />
+        <MixedArrayOffset errorLevel="suppress" />
+        <MixedFunctionCall errorLevel="suppress" />
+        <MixedMethodCall errorLevel="suppress" />
+        <MixedOperand errorLevel="suppress" />
+        <MixedPropertyAssignment errorLevel="suppress" />
+        <MixedPropertyFetch errorLevel="suppress" />
+        <MixedPropertyTypeCoercion errorLevel="suppress" />
+        <MixedReturnStatement errorLevel="suppress" />
+        <MixedReturnTypeCoercion errorLevel="suppress" />
+        <MixedInferredReturnType errorLevel="suppress" />
+        <MixedStringOffsetAssignment errorLevel="suppress" />
+        <PossiblyNullArgument errorLevel="suppress" />
+        <PossiblyNullArrayAccess errorLevel="suppress" />
+        <PossiblyNullArrayOffset errorLevel="suppress" />
+        <PossiblyNullPropertyFetch errorLevel="suppress" />
+        <PossiblyNullReference errorLevel="suppress" />
+        <PossiblyFalseArgument errorLevel="suppress" />
+        <PossiblyInvalidArgument errorLevel="suppress" />
+        <PossiblyUndefinedVariable errorLevel="suppress" />
+        <UndefinedConstant errorLevel="suppress" />
+        <UndefinedDocblockClass errorLevel="suppress" />
+        <UndefinedFunction errorLevel="suppress" />
+        <UndefinedClass errorLevel="suppress" />
+        <UndefinedGlobalVariable errorLevel="suppress" />
+        <UndefinedVariable errorLevel="suppress" />
+        <PropertyNotSetInConstructor errorLevel="suppress" />
+        <RedundantCondition errorLevel="suppress" />
+        <RedundantConditionGivenDocblockType errorLevel="suppress" />
+        <DocblockTypeContradiction errorLevel="suppress" />
+        <TypeDoesNotContainType errorLevel="suppress" />
+        <ArgumentTypeCoercion errorLevel="suppress" />
+        <InvalidArgument errorLevel="suppress" />
+        <InvalidArrayOffset errorLevel="suppress" />
+        <InvalidNullableReturnType errorLevel="suppress" />
+        <InvalidPropertyAssignmentValue errorLevel="suppress" />
+        <InvalidReturnStatement errorLevel="suppress" />
+        <InvalidReturnType errorLevel="suppress" />
+        <UnusedMethod errorLevel="suppress" />
+        <UnusedVariable errorLevel="suppress" />
+        <UnusedParam errorLevel="suppress" />
+        <UnusedProperty errorLevel="suppress" />
+        <UnusedFunctionCall errorLevel="suppress" />
+        <DeprecatedMethod errorLevel="suppress" />
+        <DeprecatedFunction errorLevel="suppress" />
+        <ImplementedReturnTypeMismatch errorLevel="suppress" />
+        <MethodSignatureMismatch errorLevel="suppress" />
+        <ImplementedParamTypeMismatch errorLevel="suppress" />
+        <NoValue errorLevel="suppress" />
+        <NullableReturnStatement errorLevel="suppress" />
+        <ParamNameMismatch errorLevel="suppress" />
+        <UnresolvableInclude errorLevel="suppress" />
+        <RiskyTruthyFalsyComparison errorLevel="suppress" />
+        <LoopInvalidation errorLevel="suppress" />
+        <ReferenceConstraintViolation errorLevel="suppress" />
+    </issueHandlers>
+</psalm>
