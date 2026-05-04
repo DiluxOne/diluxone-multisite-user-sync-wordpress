@@ -23,9 +23,7 @@
     <coverage processUncoveredFiles="false">
         <include>
             <file>wpm-user-sync.php</file>
-            <directory>core</directory>
-            <directory>network-admin</directory>
-            <directory>site-admin</directory>
+            <directory>src</directory>
         </include>
     </coverage>
 </phpunit>

@@ -31,9 +31,8 @@
     <projectFiles>
         <file name="wpm-user-sync.php" />
         <file name="uninstall.php" />
-        <directory name="core" />
-        <directory name="network-admin" />
-        <directory name="site-admin" />
+        <file name="legacy-deprecated.php" />
+        <directory name="src" />
         <ignoreFiles>
             <directory name="vendor" />
             <directory name="node_modules" />

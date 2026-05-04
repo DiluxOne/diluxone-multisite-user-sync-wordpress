@@ -24,6 +24,11 @@
         "vimeo/psalm": "^5.26",
         "wp-coding-standards/wpcs": "^3.1"
     },
+    "autoload": {
+        "psr-4": {
+            "WPMUS\\": "src/"
+        }
+    },
     "autoload-dev": {
         "psr-4": {
             "Tests\\": "tests/"
