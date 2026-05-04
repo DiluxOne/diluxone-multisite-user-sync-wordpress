@@ -143,9 +143,12 @@ final class Plugin {
 	}
 
 	/**
-	 * Returns the live Plugin singleton, or null if `register()` has
-	 * not run yet. Used by the deprecated procedural wrappers in
-	 * `legacy-deprecated.php`.
+	 * Returns the live Plugin singleton, or null if no instance has
+	 * been constructed yet. The singleton is set in `__construct()`
+	 * (not `register()`), so once `wpm-user-sync.php` has run its
+	 * `new Plugin( __FILE__ )` line this is non-null for the rest of
+	 * the request. Used by the deprecated procedural wrappers in
+	 * `legacy-deprecated.php` to dispatch into the live engine.
 	 */
 	public static function instance(): ?self {
 		return self::$instance;
