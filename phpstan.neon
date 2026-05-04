@@ -17,9 +17,8 @@ parameters:
   paths:
     - wpm-user-sync.php
     - uninstall.php
-    - core
-    - network-admin
-    - site-admin
+    - legacy-deprecated.php
+    - src
 
   excludePaths:
     analyse:

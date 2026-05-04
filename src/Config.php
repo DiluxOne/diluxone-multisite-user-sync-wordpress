@@ -1,0 +1,85 @@
+<?php
+/**
+ * Plugin configuration: reads the three site options that drive the
+ * sync triggers and exposes plugin metadata gathered from WordPress.
+ *
+ * The three options are stored at network level via `*_site_option()`
+ * (NOT `*_option()`), so the same toggle applies to every site in the
+ * multisite network. They are each a string — `'yes'` enables the
+ * matching trigger, anything else (including missing) disables it.
+ *
+ * @package WPMUS
+ */
+
+declare(strict_types=1);
+
+namespace WPMUS;
+
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
+final class Config {
+
+	public const OPTION_NEW_SITE_SYNC      = 'wpmus_newSiteSync';
+	public const OPTION_NEW_USER_SYNC      = 'wpmus_newUserSync';
+	public const OPTION_SET_USER_ROLE_SYNC = 'wpmus_setUserRoleSync';
+
+	public const NONCE_ACTION = 'wpmus-validate';
+
+	private string $plugin_file;
+
+	public function __construct( string $plugin_file ) {
+		$this->plugin_file = $plugin_file;
+	}
+
+	public function is_new_site_sync_enabled(): bool {
+		return 'yes' === (string) get_site_option( self::OPTION_NEW_SITE_SYNC );
+	}
+
+	public function is_new_user_sync_enabled(): bool {
+		return 'yes' === (string) get_site_option( self::OPTION_NEW_USER_SYNC );
+	}
+
+	public function is_set_user_role_sync_enabled(): bool {
+		return 'yes' === (string) get_site_option( self::OPTION_SET_USER_ROLE_SYNC );
+	}
+
+	/**
+	 * Persist the three toggles. Values that are not exactly `'yes'`
+	 * are stored as the empty string, so re-reads return `false` from
+	 * the matching `is_*_enabled()` accessor.
+	 */
+	public function save_toggles( string $new_site_sync, string $new_user_sync, string $set_user_role_sync ): void {
+		update_site_option( self::OPTION_NEW_SITE_SYNC, 'yes' === $new_site_sync ? 'yes' : '' );
+		update_site_option( self::OPTION_NEW_USER_SYNC, 'yes' === $new_user_sync ? 'yes' : '' );
+		update_site_option( self::OPTION_SET_USER_ROLE_SYNC, 'yes' === $set_user_role_sync ? 'yes' : '' );
+	}
+
+	public function plugin_file(): string {
+		return $this->plugin_file;
+	}
+
+	public function plugin_basename(): string {
+		return plugin_basename( $this->plugin_file );
+	}
+
+	/**
+	 * Plugin metadata as returned by WordPress's `get_plugin_data()`.
+	 *
+	 * @return array<string,string>
+	 */
+	public function plugin_data(): array {
+		if ( ! function_exists( 'get_plugin_data' ) ) {
+			require_once ABSPATH . 'wp-admin/includes/plugin.php';
+		}
+		/** @var array<string,string> $data */
+		$data = get_plugin_data( $this->plugin_file );
+		return $data;
+	}
+
+	public function required_wp_version(): string {
+		$data = $this->plugin_data();
+		return isset( $data['RequiresWP'] ) ? (string) $data['RequiresWP'] : '';
+	}
+}

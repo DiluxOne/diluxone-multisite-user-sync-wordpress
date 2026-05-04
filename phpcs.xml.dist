@@ -9,9 +9,8 @@
     <!-- Files / paths to scan -->
     <file>wpm-user-sync.php</file>
     <file>uninstall.php</file>
-    <file>core</file>
-    <file>network-admin</file>
-    <file>site-admin</file>
+    <file>legacy-deprecated.php</file>
+    <file>src</file>
 
     <!-- Files / paths to exclude (mirrors .distignore where applicable) -->
     <exclude-pattern>*/vendor/*</exclude-pattern>
