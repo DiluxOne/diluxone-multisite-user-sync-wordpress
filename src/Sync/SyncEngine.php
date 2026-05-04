@@ -43,6 +43,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+/**
+ * Multisite user-synchronisation engine. Centralises every membership
+ * write triggered by the plugin — both the WP hook callbacks and the
+ * manual admin actions go through this class.
+ */
 final class SyncEngine {
 
 	private Config $config;
@@ -57,6 +62,12 @@ final class SyncEngine {
 	 */
 	private bool $in_sync = false;
 
+	/**
+	 * @param Config         $config Toggle accessors + plugin metadata.
+	 * @param SiteRepository $sites  Wraps `get_sites()` / `get_blog_option()`.
+	 * @param UserRepository $users  Wraps `get_users()` / `add_user_to_blog()`
+	 *                               / `is_user_member_of_blog()`.
+	 */
 	public function __construct( Config $config, SiteRepository $sites, UserRepository $users ) {
 		$this->config = $config;
 		$this->sites  = $sites;
@@ -195,6 +206,12 @@ final class SyncEngine {
 		}
 	}
 
+	/**
+	 * Helper used by the new-user / login triggers: ensures the user
+	 * is a member of every existing site, with each site's default
+	 * role for the new memberships it creates. Existing memberships
+	 * are not touched.
+	 */
 	private function add_user_to_every_site( int $user_id ): void {
 		foreach ( $this->sites->all_blog_ids() as $blog_id ) {
 			if ( $this->users->is_member_of( $user_id, $blog_id ) ) {

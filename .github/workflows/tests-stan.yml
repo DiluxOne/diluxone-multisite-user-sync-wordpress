@@ -1,0 +1,45 @@
+name: Static analysis (PHPStan)
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  phpstan:
+    name: PHPStan level 8
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup PHP 8.2
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+          tools: composer:v2
+
+      - name: Determine Composer cache directory
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: composer-stan-${{ runner.os }}-${{ hashFiles('composer.json') }}
+          restore-keys: |
+            composer-stan-${{ runner.os }}-
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Run PHPStan
+        # phpstan.neon pins level 8 against the OOP src/ tree plus
+        # uninstall.php and legacy-deprecated.php. The WordPress
+        # extension is auto-registered via phpstan/extension-installer.
+        run: composer stan

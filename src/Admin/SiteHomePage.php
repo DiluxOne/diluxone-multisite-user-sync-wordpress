@@ -16,8 +16,18 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+/**
+ * Per-site home page renderer with three built-in tabs (Welcome,
+ * Concepts, About) and the legacy `wpmus_site_home_tabs` /
+ * `_contents` extension hooks for third-party tab plugins.
+ */
 final class SiteHomePage {
 
+	/**
+	 * Render the entire page: tabs row + active tab body. Sets the
+	 * legacy `$GLOBALS['sd_active_tab']` and fires the extension
+	 * actions.
+	 */
 	public function render(): void {
 		$active_tab = $this->active_tab();
 
@@ -74,11 +84,18 @@ final class SiteHomePage {
 		do_action( 'wpmus_site_home_contents', $active_tab );
 	}
 
+	/**
+	 * Resolves the currently active tab from `$_GET['tab']`, defaulting
+	 * to `welcome` and rejecting any value not in the allow-list.
+	 */
 	private function active_tab(): string {
 		$tab = isset( $_GET['tab'] ) ? sanitize_key( wp_unslash( (string) $_GET['tab'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		return in_array( $tab, array( 'welcome', 'concepts', 'about' ), true ) ? $tab : 'welcome';
 	}
 
+	/**
+	 * Renders a single tab link in the nav-tab-wrapper row.
+	 */
 	private function render_tab( string $slug, string $label, string $active_tab ): void {
 		$url     = admin_url( 'admin.php?page=wpmus-sitehome&tab=' . $slug );
 		$classes = 'nav-tab' . ( $slug === $active_tab ? ' nav-tab-active' : '' );
@@ -90,6 +107,9 @@ final class SiteHomePage {
 		);
 	}
 
+	/**
+	 * Body of the "Welcome" tab — quick-start links.
+	 */
 	private function render_welcome(): void {
 		$concepts_url = admin_url( 'admin.php?page=wpmus-sitehome&tab=concepts' );
 		$actions_url  = admin_url( 'admin.php?page=wpmus-sitesyncactions' );
@@ -105,6 +125,10 @@ final class SiteHomePage {
 		<?php
 	}
 
+	/**
+	 * Body of the "Concepts" tab — site-admin perspective on the
+	 * sync features.
+	 */
 	private function render_concepts(): void {
 		?>
 		<h3><?php esc_html_e( 'Site User Sync Concepts', 'wpm-user-sync' ); ?></h3>
@@ -118,6 +142,9 @@ final class SiteHomePage {
 		<?php
 	}
 
+	/**
+	 * Body of the "About" tab — author + project links.
+	 */
 	private function render_about(): void {
 		?>
 		<h3><?php esc_html_e( 'About', 'wpm-user-sync' ); ?></h3>

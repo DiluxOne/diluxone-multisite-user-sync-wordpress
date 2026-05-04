@@ -21,8 +21,19 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+/**
+ * Network-home page renderer with three built-in tabs (Welcome,
+ * Concepts, About) and the legacy `wpmus_network_home_tabs` /
+ * `_contents` extension hooks for third-party tab plugins.
+ */
 final class NetworkHomePage {
 
+	/**
+	 * Render the entire page: tabs row + active tab body. Sets the
+	 * legacy `$GLOBALS['sd_active_tab']` for back-compat with the
+	 * 1.4 extension API and fires `wpmus_network_home_tabs` /
+	 * `wpmus_network_home_contents` so extensions can append.
+	 */
 	public function render(): void {
 		$active_tab = $this->active_tab();
 
@@ -83,6 +94,10 @@ final class NetworkHomePage {
 		do_action( 'wpmus_network_home_contents', $active_tab );
 	}
 
+	/**
+	 * Resolves the currently active tab from `$_GET['tab']`, defaulting
+	 * to `welcome` and rejecting any value not in the allow-list.
+	 */
 	private function active_tab(): string {
 		// The page is gated by `manage_options` (capability check via
 		// add_menu_page), so we trust the URL parameter at the gate
@@ -92,6 +107,9 @@ final class NetworkHomePage {
 		return in_array( $tab, array( 'welcome', 'concepts', 'about' ), true ) ? $tab : 'welcome';
 	}
 
+	/**
+	 * Renders a single tab link in the nav-tab-wrapper row.
+	 */
 	private function render_tab( string $slug, string $label, string $active_tab ): void {
 		$url     = network_admin_url( 'admin.php?page=wpmus-networkhome&tab=' . $slug );
 		$classes = 'nav-tab' . ( $slug === $active_tab ? ' nav-tab-active' : '' );
@@ -103,6 +121,10 @@ final class NetworkHomePage {
 		);
 	}
 
+	/**
+	 * Body of the "Welcome" tab — quick-start links to the other
+	 * pages.
+	 */
 	private function render_welcome(): void {
 		$concepts_url = network_admin_url( 'admin.php?page=wpmus-networkhome&tab=concepts' );
 		$actions_url  = network_admin_url( 'admin.php?page=wpmus-networksyncactions' );
@@ -130,6 +152,10 @@ final class NetworkHomePage {
 		<?php
 	}
 
+	/**
+	 * Body of the "Concepts" tab — long-form explanation of triggers
+	 * and manual actions.
+	 */
 	private function render_concepts(): void {
 		?>
 		<h3><?php esc_html_e( 'User Sync Concepts', 'wpm-user-sync' ); ?></h3>
@@ -175,6 +201,9 @@ final class NetworkHomePage {
 		<?php
 	}
 
+	/**
+	 * Body of the "About" tab — author + project links.
+	 */
 	private function render_about(): void {
 		?>
 		<h3><?php esc_html_e( 'About WPM User Sync Plugin', 'wpm-user-sync' ); ?></h3>

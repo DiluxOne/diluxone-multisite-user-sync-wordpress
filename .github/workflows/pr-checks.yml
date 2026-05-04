@@ -57,23 +57,17 @@ jobs:
           # Mirror this list with .distignore to keep the two in sync.
           exclude-directories: tests,vendor,node_modules,docs
           exclude-files: phpunit.xml.dist,phpunit.xml,phpunit-integration.xml.dist,phpunit-integration.xml,composer.json,composer.lock,package.json,package-lock.json,Makefile,phpcs.xml,phpcs.xml.dist,phpstan.neon,phpstan.neon.dist,phpstan-baseline.neon,psalm.xml,psalm.xml.dist,psalm-baseline.xml
-          # Codes prefixed `WordPress.*` below are TEMPORARY — they flag
-          # pre-existing legacy violations in the procedural code that PR 1
-          # deliberately does not touch. They will be removed in PR 5 of the
-          # modernisation plan (linter cleanup pass), at which point Plugin
-          # Check runs strict on every category. If a future PR adds NEW
-          # output without escaping or text-domain mismatches, that PR
-          # introduces them — they're not blocked by this list because
-          # PHPCS, PHPStan, and Psalm cover the same surface from the
-          # cleanup PR onward.
-          #
-          # Standing ignores (NOT temporary):
+          # Standing ignores:
           #   - hidden_files / github_directory / unexpected_markdown_file:
           #     repo-layout false positives (Plugin Check scans the repo
           #     tree, not the deployed zip).
           #   - stable_tag_mismatch: tolerated during the -dev suffix window
           #     between releases; deploy.yml re-runs the strict check.
-          ignore-codes: hidden_files,github_directory,unexpected_markdown_file,stable_tag_mismatch,WordPress.Security.EscapeOutput.OutputNotEscaped,WordPress.Security.EscapeOutput.UnsafePrintingFunction,WordPress.WP.I18n.TextDomainMismatch,WordPress.WP.DeprecatedFunctions.get_userdatabyloginFound
+          # The four `WordPress.*` codes that were temporarily ignored in
+          # PRs 1-4 (covering pre-existing legacy violations) are now
+          # removed — PR 5's linter cleanup pass dropped the OOP refactor
+          # to zero violations across PHPCS, PHPStan and Psalm.
+          ignore-codes: hidden_files,github_directory,unexpected_markdown_file,stable_tag_mismatch
 
   readme-validation:
     name: Validate readme.txt and version alignment
@@ -137,6 +131,39 @@ jobs:
             exit 1
           fi
           echo "Changelog entry for ${stable_tag} found."
+
+  phpcs:
+    name: PHPCS (WordPress Coding Standards)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup PHP 8.2
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+          tools: composer:v2
+
+      - name: Determine Composer cache directory
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: composer-phpcs-${{ runner.os }}-${{ hashFiles('composer.json') }}
+          restore-keys: |
+            composer-phpcs-${{ runner.os }}-
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Run PHPCS
+        run: composer lint
 
   phpunit:
     name: PHPUnit (unit suite)

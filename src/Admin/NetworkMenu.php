@@ -16,6 +16,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+/**
+ * Network-admin menu registration + page-render dispatcher.
+ */
 final class NetworkMenu {
 
 	private Header $header;
@@ -23,6 +26,12 @@ final class NetworkMenu {
 	private NetworkSyncOptionsPage $options;
 	private NetworkSyncActionsPage $actions;
 
+	/**
+	 * @param Header                 $header  Shared page header.
+	 * @param NetworkHomePage        $home    Home (Welcome / Concepts / About).
+	 * @param NetworkSyncOptionsPage $options Trigger toggles form.
+	 * @param NetworkSyncActionsPage $actions Manual sync actions.
+	 */
 	public function __construct( Header $header, NetworkHomePage $home, NetworkSyncOptionsPage $options, NetworkSyncActionsPage $actions ) {
 		$this->header  = $header;
 		$this->home    = $home;
@@ -30,6 +39,10 @@ final class NetworkMenu {
 		$this->actions = $actions;
 	}
 
+	/**
+	 * Hooked on `network_admin_menu` from {@see \WPMUS\Plugin}.
+	 * Registers the WPM User Sync menu plus its two submenus.
+	 */
 	public function register(): void {
 		add_menu_page(
 			__( 'WPM User Sync', 'wpm-user-sync' ),
@@ -60,16 +73,25 @@ final class NetworkMenu {
 		);
 	}
 
+	/**
+	 * Page-render callback for `wpmus-networkhome`.
+	 */
 	public function render_home(): void {
 		$this->header->render();
 		$this->home->render();
 	}
 
+	/**
+	 * Page-render callback for `wpmus-networksyncoptions`.
+	 */
 	public function render_options(): void {
 		$this->header->render();
 		$this->options->render();
 	}
 
+	/**
+	 * Page-render callback for `wpmus-networksyncactions`.
+	 */
 	public function render_actions(): void {
 		$this->header->render();
 		$this->actions->render();

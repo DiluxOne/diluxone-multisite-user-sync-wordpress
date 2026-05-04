@@ -18,20 +18,30 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+/**
+ * Network Sync Actions page — two manual sync forms (sync everything,
+ * or sync only selected sites) plus the matching save handlers.
+ */
 final class NetworkSyncActionsPage {
 
 	private SiteRepository $sites;
 	private SyncEngine $engine;
 
+	/**
+	 * @param SiteRepository $sites  For listing the sites in the
+	 *                               "Sync specific sites" form.
+	 * @param SyncEngine     $engine Runs the actual sync work.
+	 */
 	public function __construct( SiteRepository $sites, SyncEngine $engine ) {
 		$this->sites  = $sites;
 		$this->engine = $engine;
 	}
 
+	/**
+	 * Render both manual-sync forms. Output is HTML.
+	 */
 	public function render(): void {
-		$all_sites             = $this->sites->all_sites();
-		$action_all_sites_url  = esc_url( network_admin_url( 'edit.php?action=wpmusSyncNetworkFromScratch' ) );
-		$action_select_url     = esc_url( network_admin_url( 'edit.php?action=wpmusSyncNetworkSiteFromScratch' ) );
+		$all_sites = $this->sites->all_sites();
 		?>
 		<div class="wrap">
 			<h3><?php esc_html_e( 'Network Sync Actions', 'wpm-user-sync' ); ?></h3>
@@ -40,7 +50,7 @@ final class NetworkSyncActionsPage {
 				<tr>
 					<th scope="row"><?php esc_html_e( 'Sync from scratch', 'wpm-user-sync' ); ?></th>
 					<td>
-						<form method="post" action="<?php echo $action_all_sites_url; ?>">
+						<form method="post" action="<?php echo esc_url( network_admin_url( 'edit.php?action=wpmusSyncNetworkFromScratch' ) ); ?>">
 							<?php wp_nonce_field( Config::NONCE_ACTION ); ?>
 							<input type="submit" value="<?php esc_attr_e( 'Sync from scratch', 'wpm-user-sync' ); ?>" class="button" />
 						</form>
@@ -51,7 +61,7 @@ final class NetworkSyncActionsPage {
 					<th scope="row"><?php esc_html_e( 'Sync specific sites', 'wpm-user-sync' ); ?></th>
 					<td>
 						<p><?php esc_html_e( 'Select the sites you want to sync users into:', 'wpm-user-sync' ); ?></p>
-						<form method="post" action="<?php echo $action_select_url; ?>">
+						<form method="post" action="<?php echo esc_url( network_admin_url( 'edit.php?action=wpmusSyncNetworkSiteFromScratch' ) ); ?>">
 							<?php wp_nonce_field( Config::NONCE_ACTION ); ?>
 							<?php foreach ( $all_sites as $site ) : ?>
 								<label>

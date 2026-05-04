@@ -54,6 +54,11 @@ class SiteRepository {
 		return $sites;
 	}
 
+	/**
+	 * Resolves the default user role configured for `$blog_id`,
+	 * falling back to `subscriber` when the site has no `default_role`
+	 * option (or it is empty / non-string).
+	 */
 	public function default_role_for_blog( int $blog_id ): string {
 		$role = get_blog_option( $blog_id, 'default_role', 'subscriber' );
 		return is_string( $role ) && '' !== $role ? $role : 'subscriber';

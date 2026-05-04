@@ -16,12 +16,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 spl_autoload_register(
-	static function ( string $class ): void {
+	static function ( string $class_name ): void {
 		$prefix = 'WPMUS\\';
-		if ( strncmp( $class, $prefix, strlen( $prefix ) ) !== 0 ) {
+		if ( strncmp( $class_name, $prefix, strlen( $prefix ) ) !== 0 ) {
 			return;
 		}
-		$relative = substr( $class, strlen( $prefix ) );
+		$relative = substr( $class_name, strlen( $prefix ) );
 		$file     = __DIR__ . DIRECTORY_SEPARATOR . str_replace( '\\', DIRECTORY_SEPARATOR, $relative ) . '.php';
 		if ( is_readable( $file ) ) {
 			require $file;
