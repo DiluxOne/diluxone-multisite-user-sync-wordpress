@@ -25,11 +25,33 @@ final class NetworkHomePage {
 
 	public function render(): void {
 		$active_tab = $this->active_tab();
+
+		// Legacy 1.4 set this global as the API for tab callbacks. Kept
+		// in place so any external extension that hooked into the
+		// `wpmus_network_home_tabs` / `_contents` actions and read
+		// `$sd_active_tab` still works after the OOP refactor.
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound,WordPress.WP.GlobalVariablesOverride.Prohibited
+		$GLOBALS['sd_active_tab'] = $active_tab;
 		?>
 		<h2 class="nav-tab-wrapper">
 			<?php $this->render_tab( 'welcome', __( 'Welcome', 'wpm-user-sync' ), $active_tab ); ?>
 			<?php $this->render_tab( 'concepts', __( 'Concepts', 'wpm-user-sync' ), $active_tab ); ?>
 			<?php $this->render_tab( 'about', __( 'About', 'wpm-user-sync' ), $active_tab ); ?>
+			<?php
+			/**
+			 * Fires after the built-in network-home tabs are rendered.
+			 *
+			 * Extensions may hook into this action to append their own
+			 * `<a class="nav-tab">` links. The currently selected tab
+			 * slug is also exposed as `$GLOBALS['sd_active_tab']` for
+			 * backwards compatibility with WPM User Sync 1.4 extensions.
+			 *
+			 * @since 1.0.0
+			 *
+			 * @param string $active_tab Slug of the currently selected tab.
+			 */
+			do_action( 'wpmus_network_home_tabs', $active_tab );
+			?>
 		</h2>
 		<?php
 
@@ -45,6 +67,20 @@ final class NetworkHomePage {
 				$this->render_welcome();
 				break;
 		}
+
+		/**
+		 * Fires after the built-in network-home tab body is rendered.
+		 *
+		 * Extensions may hook into this action to append additional
+		 * content. They should check the `$active_tab` argument (or
+		 * the `$GLOBALS['sd_active_tab']` legacy global) and only
+		 * render their content when their own tab is selected.
+		 *
+		 * @since 1.0.0
+		 *
+		 * @param string $active_tab Slug of the currently selected tab.
+		 */
+		do_action( 'wpmus_network_home_contents', $active_tab );
 	}
 
 	private function active_tab(): string {

@@ -13,6 +13,21 @@
  * functions directly — every interaction goes through the repositories,
  * so unit tests can mock them.
  *
+ * ## Re-entrancy
+ *
+ * `add_user_to_blog()` fires WordPress's `set_user_role` action as a
+ * side effect of every membership write. With the role-sync trigger
+ * enabled, that re-enters {@see SyncEngine::on_role_changed()} and can
+ * cascade across the network — propagating a destination site's role
+ * back onto every other membership the user already has, recursively.
+ *
+ * To prevent that without temporarily detaching/re-attaching WP hooks
+ * (which interacts badly with priority and unrelated subscribers), the
+ * class carries a private `$in_sync` flag. Every method that calls
+ * `add_to_blog()` does so via {@see SyncEngine::add_to_blog_guarded()},
+ * which sets the flag for the duration of the call. `on_role_changed()`
+ * early-returns when the flag is set, breaking the recursion.
+ *
  * @package WPMUS\Sync
  */
 
@@ -34,6 +49,14 @@ final class SyncEngine {
 	private SiteRepository $sites;
 	private UserRepository $users;
 
+	/**
+	 * Re-entrancy guard. Set to `true` while any sync method is in the
+	 * middle of writing a membership, so the `set_user_role` hook fired
+	 * as a side effect of `add_user_to_blog()` does not recurse back
+	 * into {@see on_role_changed()}.
+	 */
+	private bool $in_sync = false;
+
 	public function __construct( Config $config, SiteRepository $sites, UserRepository $users ) {
 		$this->config = $config;
 		$this->sites  = $sites;
@@ -42,8 +65,16 @@ final class SyncEngine {
 
 	/**
 	 * Trigger callback for `wpmu_new_blog` (legacy hook) — populates a
-	 * freshly-created site with every existing network user, using each
-	 * site's default role. No-op when the `New Site Sync` toggle is off.
+	 * freshly-created site with every existing network user. No-op when
+	 * the `New Site Sync` toggle is off.
+	 *
+	 * Per the legacy 1.4 behaviour preserved by this refactor, users
+	 * with at least one existing role contribute their first role to
+	 * the new site; users with no roles fall back to the destination
+	 * site's default role. A separate PR may revisit that to match the
+	 * documented "default role" behaviour, but doing so here would
+	 * change observable behaviour for existing installs and is out of
+	 * scope for the OOP refactor.
 	 *
 	 * @param int $blog_id The blog ID of the newly created site.
 	 */
@@ -59,7 +90,7 @@ final class SyncEngine {
 			$role = is_array( $user->roles ) && isset( $user->roles[0] ) && '' !== $user->roles[0]
 				? (string) $user->roles[0]
 				: $this->sites->default_role_for_blog( $blog_id );
-			$this->users->add_to_blog( $blog_id, (int) $user->ID, $role );
+			$this->add_to_blog_guarded( $blog_id, (int) $user->ID, $role );
 		}
 	}
 
@@ -103,8 +134,15 @@ final class SyncEngine {
 	 * changed on one site, propagate the same role to every other site
 	 * where the user is already a member. New memberships are NOT
 	 * created here — that's what the new-user trigger is for.
+	 *
+	 * Returns immediately when {@see $in_sync} is set: the current
+	 * `add_user_to_blog` call is part of another sync method's loop,
+	 * not a real role change driven by an admin.
 	 */
 	public function on_role_changed( int $user_id, string $role ): void {
+		if ( $this->in_sync ) {
+			return;
+		}
 		if ( ! $this->config->is_set_user_role_sync_enabled() ) {
 			return;
 		}
@@ -112,7 +150,7 @@ final class SyncEngine {
 			if ( ! $this->users->is_member_of( $user_id, $blog_id ) ) {
 				continue;
 			}
-			$this->users->add_to_blog( $blog_id, $user_id, $role );
+			$this->add_to_blog_guarded( $blog_id, $user_id, $role );
 		}
 	}
 
@@ -123,12 +161,13 @@ final class SyncEngine {
 	 */
 	public function sync_all_users_to_all_sites(): void {
 		$blog_ids = $this->sites->all_blog_ids();
-		foreach ( $this->users->all_network_users() as $user ) {
+		$users    = $this->users->all_network_users();
+		foreach ( $users as $user ) {
 			foreach ( $blog_ids as $blog_id ) {
 				if ( $this->users->is_member_of( (int) $user->ID, $blog_id ) ) {
 					continue;
 				}
-				$this->users->add_to_blog( $blog_id, (int) $user->ID, $this->sites->default_role_for_blog( $blog_id ) );
+				$this->add_to_blog_guarded( $blog_id, (int) $user->ID, $this->sites->default_role_for_blog( $blog_id ) );
 			}
 		}
 	}
@@ -141,13 +180,17 @@ final class SyncEngine {
 	 *                       list is left untouched.
 	 */
 	public function sync_all_users_to_sites( array $blog_ids ): void {
+		// Fetch the user list ONCE for the whole operation. The previous
+		// shape of this loop refetched on every iteration, which on a
+		// large network turns a single expensive query into N queries.
+		$users = $this->users->all_network_users();
 		foreach ( $blog_ids as $blog_id ) {
 			$blog_id = (int) $blog_id;
-			foreach ( $this->users->all_network_users() as $user ) {
+			foreach ( $users as $user ) {
 				if ( $this->users->is_member_of( (int) $user->ID, $blog_id ) ) {
 					continue;
 				}
-				$this->users->add_to_blog( $blog_id, (int) $user->ID, $this->sites->default_role_for_blog( $blog_id ) );
+				$this->add_to_blog_guarded( $blog_id, (int) $user->ID, $this->sites->default_role_for_blog( $blog_id ) );
 			}
 		}
 	}
@@ -157,7 +200,28 @@ final class SyncEngine {
 			if ( $this->users->is_member_of( $user_id, $blog_id ) ) {
 				continue;
 			}
-			$this->users->add_to_blog( $blog_id, $user_id, $this->sites->default_role_for_blog( $blog_id ) );
+			$this->add_to_blog_guarded( $blog_id, $user_id, $this->sites->default_role_for_blog( $blog_id ) );
+		}
+	}
+
+	/**
+	 * Wraps `UserRepository::add_to_blog()` with the {@see $in_sync}
+	 * re-entrancy guard. Every membership write inside this class
+	 * MUST go through this helper rather than calling the repository
+	 * directly, otherwise the `set_user_role` cascade described in
+	 * the class-level docblock kicks in.
+	 *
+	 * The previous flag value is preserved + restored so the helper
+	 * is safe under nested calls (extension code is unlikely to nest,
+	 * but the bookkeeping costs nothing).
+	 */
+	private function add_to_blog_guarded( int $blog_id, int $user_id, string $role ): void {
+		$previously_in_sync = $this->in_sync;
+		$this->in_sync      = true;
+		try {
+			$this->users->add_to_blog( $blog_id, $user_id, $role );
+		} finally {
+			$this->in_sync = $previously_in_sync;
 		}
 	}
 }
