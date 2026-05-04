@@ -19,7 +19,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-final class Config {
+/**
+ * Note: not declared `final` so Mockery can subclass it for unit
+ * tests. The class is still treated as a leaf-of-the-hierarchy in
+ * production — there are no extension points exposed here, and
+ * subclassing it is a code smell rather than an extension API.
+ */
+class Config {
 
 	public const OPTION_NEW_SITE_SYNC      = 'wpmus_newSiteSync';
 	public const OPTION_NEW_USER_SYNC      = 'wpmus_newUserSync';

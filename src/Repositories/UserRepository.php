@@ -15,7 +15,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-final class UserRepository {
+/**
+ * Note: not declared `final` so Mockery can subclass it for unit
+ * tests. The class is still treated as a leaf in production.
+ */
+class UserRepository {
 
 	/**
 	 * Every WP_User in the network (regardless of which sites they

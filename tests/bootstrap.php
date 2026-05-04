@@ -2,27 +2,26 @@
 /**
  * PHPUnit bootstrap for the unit-test suite.
  *
- * Unit tests for wpm-user-sync run in pure PHP without WordPress.
- * The plugin is heavily WP-coupled (multisite hooks, $wpdb access,
- * site options), so most testable logic is exercised via the
- * integration suite that boots wp-env. The unit suite covers the
- * pieces of pure logic that can be lifted out — currently a smoke
- * placeholder pending the OOP refactor (see docs/release.md and
- * the project plan).
+ * Loads Composer's autoloader (which resolves `WPMUS\` via PSR-4 from
+ * src/ and `Tests\` from tests/) and defines a minimal stand-in for
+ * `ABSPATH` so the plugin's `if ( ! defined( 'ABSPATH' ) )` guards
+ * don't `exit`. Brain Monkey is loaded per-test through the base
+ * {@see \Tests\TestCase} class.
  *
- * Brain Monkey is wired up to allow stubbing of WordPress core
- * functions in unit tests when needed. Mockery is available for
- * object mocking. Both are dev dependencies in composer.json.
+ * For types referenced by the plugin's repositories (`WP_User`,
+ * `WP_Site`) we register minimal stub classes so the production code's
+ * return-type declarations do not require a full WordPress runtime in
+ * the unit suite.
  *
  * @package WPMUS\Tests
  */
 
+declare(strict_types=1);
+
 require_once __DIR__ . '/../vendor/autoload.php';
 
-// Brain Monkey makes WP core functions stubbable so we can write
-// unit tests without booting a full WordPress runtime. Activated
-// per-test via Brain\Monkey\setUp() / tearDown() in the test classes.
-\Brain\Monkey\setUp();
-register_shutdown_function( static function (): void {
-	\Brain\Monkey\tearDown();
-} );
+if ( ! defined( 'ABSPATH' ) ) {
+	define( 'ABSPATH', sys_get_temp_dir() . '/abspath-stub/' );
+}
+
+require_once __DIR__ . '/Stubs/wp-classes.php';
