@@ -48,9 +48,12 @@ psalm-baseline.xml
 # Tests and test artifacts
 phpunit.xml
 phpunit.xml.dist
+phpunit-integration.xml
+phpunit-integration.xml.dist
 tests
 .phpunit.result.cache
 .phpunit.cache
+.phpunit-integration.result.cache
 coverage
 coverage.xml
 clover.xml

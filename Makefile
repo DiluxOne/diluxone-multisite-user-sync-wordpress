@@ -94,6 +94,12 @@ test: test-unit ## Run the unit-test suite (default — fast, no WP needed).
 test-unit: ## Run only the unit-test suite (no WordPress runtime).
 	$(VENDOR) ./vendor/bin/phpunit --testsuite unit
 
+.PHONY: test-integration
+test-integration: ## Run the integration suite against wp-env multisite.
+	@echo "Requires wp-env running (make env). Running integration tests…"
+	npx wp-env run tests-cli --env-cwd=wp-content/plugins/wpm-user-sync \
+	    ./vendor/bin/phpunit -c phpunit-integration.xml.dist
+
 # -- Aggregate ---------------------------------------------------------
 .PHONY: check
 check: lint stan psalm test ## Run every quality gate CI runs (lint, stan, psalm, unit tests).
