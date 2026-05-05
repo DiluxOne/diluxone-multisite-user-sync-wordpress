@@ -2,7 +2,7 @@
 /**
  * Plugin Name: WPM User Sync
  * Plugin URI: https://pablodiloreto.com/wpm-user-sync/
- * Description: WPM User Sync is THE plugin that allows you to configure & automate users sync between WordPress sites when you are using a multi-site setup.
+ * Description: Optimized for Microsoft Azure and Azure App Service (compatible with any host). Configures & automates user synchronization between WordPress sites in a multi-site setup.
  * Author: Pablo Ariel Di Loreto
  * Version: 1.4
  * Requires at least: 6.6
