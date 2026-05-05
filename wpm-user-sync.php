@@ -4,7 +4,7 @@
  * Plugin URI: https://pablodiloreto.com/wpm-user-sync/
  * Description: Optimized for Microsoft Azure and Azure App Service (compatible with any host). Configures & automates user synchronization between WordPress sites in a multi-site setup.
  * Author: Pablo Ariel Di Loreto
- * Version: 1.4
+ * Version: 1.5.0
  * Requires at least: 6.6
  * Requires PHP: 7.4
  * Tested up to: 6.9

@@ -4,7 +4,7 @@ Donate link: https://pablodiloreto.com/
 Tags: multisite, wpm user sync, user sync, sync, multisite user
 Requires at least: 6.6
 Tested up to: 6.9
-Stable tag: 1.4
+Stable tag: 1.5.0
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -96,6 +96,9 @@ If you have been impressed with this plugin and would like to somehow show some 
 
 == Upgrade Notice ==
 
+= 1.5.0 =
+* Major modernization release — full OOP refactor with security hardening (capability checks on every admin handler, output escaping throughout, re-entrancy guard preventing role-sync cascades). Description now leads with the Microsoft Azure App Service positioning. Same toggles, same behavior, dramatically safer internals.
+
 = 1.4 =
 Compatibility with the latest WordPress versions. Added clean uninstall support, proper multisite network flag, and translations-ready loading.
 
@@ -112,6 +115,16 @@ Bug fixes.
 First release. Check help for all features.
 
 == Changelog ==
+
+= 1.5.0 (2026-05-05) =
+* **Description repositioned**: leads with "Optimized for Microsoft Azure and Azure App Service" while explicitly noting compatibility with any WordPress Multisite host (DigitalOcean, AWS, dedicated servers, shared hosting, etc.).
+* **Security hardening**: every admin save handler now requires `manage_network_options` (network forms) or `manage_options` (site form) on top of the existing nonce check. Previously only nonces were enforced.
+* **Output escaping**: every admin page now escapes all dynamic output via `esc_html`, `esc_attr`, `esc_url`, or `wp_kses` with explicit allow-lists.
+* **Input sanitisation**: every `$_GET` / `$_POST` access now goes through `wp_unslash` + the appropriate `sanitize_*` (with `absint()` on blog IDs).
+* **Re-entrancy guard in the sync engine**: when role-sync is on, `add_user_to_blog` no longer cascades through `set_user_role` → `on_role_changed` → `add_user_to_blog`, which previously could mass-reset roles across the network.
+* **Better error messages on requirements failure**: the `wp_die` shown when activated on single-site or below the minimum WP version is now translatable and clearer.
+* **Internal: full developer-experience stack**: PHPCS+WPCS strict at zero violations, PHPStan level 8 (no baseline), Psalm taint analysis, 46 unit tests, 16 multisite integration tests on wp-env, Plugin Check enforced strict, CI matrix on PHP 7.4–8.3. None of this changes runtime behavior.
+* **Internal: procedural code refactored to OOP** under the `WPMUS\` namespace with PSR-4 autoloading. Legacy `wpmus_*` functions retained as `@deprecated 1.5.0` thin wrappers for back-compat.
 
 = 1.4 (2026-04-22) =
 * Added "Network: true" header flag (proper multisite-only declaration).
