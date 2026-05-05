@@ -14,8 +14,17 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+/**
+ * Reusable page header rendered at the top of every admin page the
+ * plugin owns.
+ */
 final class Header {
 
+	/**
+	 * Render the shared page header. Intended to be called from the
+	 * page-render callbacks in {@see \WPMUS\Admin\NetworkMenu} and
+	 * {@see \WPMUS\Admin\SiteMenu}.
+	 */
 	public function render(): void {
 		?>
 		<div class="wrap">

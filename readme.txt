@@ -12,7 +12,9 @@ Welcome to the best free user synchronization solution for WordPress Multisite.
 
 == Description ==
 
-'WPM User Sync' (which actually means "WordPress Multi-Site User Synchronization") is a plugin that allow you to configure & automate users sync between wordpress sites when you are using a multi-site setup. You will find options at network & sites level, to take absolute control with what happen when: a new user is created, a new site is created, and when we change a role for an existing user. Enjoy! 
+**Optimized for Microsoft Azure and Azure App Service** — built and battle-tested in production on Azure-hosted WordPress Multisite environments, while remaining fully compatible with any other WordPress Multisite host (DigitalOcean, AWS, dedicated servers, shared hosting, etc.).
+
+'WPM User Sync' (which actually means "WordPress Multi-Site User Synchronization") is a plugin that allows you to configure & automate users sync between WordPress sites when you are using a multi-site setup. You will find options at network & sites level, to take absolute control with what happens when: a new user is created, a new site is created, and when we change a role for an existing user. Enjoy!
 
 == Installation ==
 

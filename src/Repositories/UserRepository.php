@@ -34,6 +34,11 @@ class UserRepository {
 		return $users;
 	}
 
+	/**
+	 * Returns true when the user is a member of the given blog.
+	 * Coerces the int/bool union historic versions of WordPress
+	 * sometimes returned to a strict `bool`.
+	 */
 	public function is_member_of( int $user_id, int $blog_id ): bool {
 		return (bool) is_user_member_of_blog( $user_id, $blog_id );
 	}
@@ -48,11 +53,22 @@ class UserRepository {
 		return add_user_to_blog( $blog_id, $user_id, $role );
 	}
 
+	/**
+	 * Find a user by login name. Returns null (not false) when the
+	 * login does not match any user, so callers can pattern-match
+	 * with `=== null`.
+	 */
 	public function find_by_login( string $login ): ?\WP_User {
 		$user = get_user_by( 'login', $login );
 		return $user instanceof \WP_User ? $user : null;
 	}
 
+	/**
+	 * Returns true when the user has the legacy `msum_has_caps` meta
+	 * flag set to the literal string `"true"`. Used by the login
+	 * trigger to skip users that the old MSUM plugin already
+	 * processed.
+	 */
 	public function has_legacy_msum_caps( int $user_id ): bool {
 		return 'true' === (string) get_user_meta( $user_id, 'msum_has_caps', true );
 	}

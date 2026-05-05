@@ -35,18 +35,35 @@ class Config {
 
 	private string $plugin_file;
 
+	/**
+	 * @param string $plugin_file Absolute path to wpm-user-sync.php —
+	 *                            used by `plugin_basename()` and
+	 *                            `get_plugin_data()` calls below.
+	 */
 	public function __construct( string $plugin_file ) {
 		$this->plugin_file = $plugin_file;
 	}
 
+	/**
+	 * True when the network-level "New Site Automatic Sync" toggle is
+	 * enabled.
+	 */
 	public function is_new_site_sync_enabled(): bool {
 		return 'yes' === (string) get_site_option( self::OPTION_NEW_SITE_SYNC );
 	}
 
+	/**
+	 * True when the network-level "New User Automatic Sync" toggle is
+	 * enabled.
+	 */
 	public function is_new_user_sync_enabled(): bool {
 		return 'yes' === (string) get_site_option( self::OPTION_NEW_USER_SYNC );
 	}
 
+	/**
+	 * True when the network-level "Set User Role Automatic Sync" toggle
+	 * is enabled.
+	 */
 	public function is_set_user_role_sync_enabled(): bool {
 		return 'yes' === (string) get_site_option( self::OPTION_SET_USER_ROLE_SYNC );
 	}
@@ -62,10 +79,18 @@ class Config {
 		update_site_option( self::OPTION_SET_USER_ROLE_SYNC, 'yes' === $set_user_role_sync ? 'yes' : '' );
 	}
 
+	/**
+	 * Absolute path to the plugin's main file (the value passed to
+	 * the constructor). Returned as-is.
+	 */
 	public function plugin_file(): string {
 		return $this->plugin_file;
 	}
 
+	/**
+	 * Plugin basename (`wpm-user-sync/wpm-user-sync.php`-shape) — used
+	 * to address the plugin in `is_plugin_active()` / `deactivate_plugins()`.
+	 */
 	public function plugin_basename(): string {
 		return plugin_basename( $this->plugin_file );
 	}
@@ -84,6 +109,11 @@ class Config {
 		return $data;
 	}
 
+	/**
+	 * Reads the `Requires at least` header from the plugin metadata
+	 * and returns it as a string. Empty string when the header is
+	 * absent — callers should treat that as "no minimum".
+	 */
 	public function required_wp_version(): string {
 		$data = $this->plugin_data();
 		return isset( $data['RequiresWP'] ) ? (string) $data['RequiresWP'] : '';

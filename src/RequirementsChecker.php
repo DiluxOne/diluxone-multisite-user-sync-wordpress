@@ -19,14 +19,28 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+/**
+ * Verifies the host WordPress install satisfies the plugin's runtime
+ * requirements (minimum WP version + multisite enabled) and
+ * self-deactivates with a `wp_die()` notice when either is missing.
+ */
 final class RequirementsChecker {
 
 	private Config $config;
 
+	/**
+	 * @param Config $config Provides plugin metadata + the basename
+	 *                       used by `is_plugin_active()`.
+	 */
 	public function __construct( Config $config ) {
 		$this->config = $config;
 	}
 
+	/**
+	 * Hooked on `admin_init` from {@see \WPMUS\Plugin}. Walks the
+	 * two checks (WP version, multisite) and `wp_die`s with the
+	 * matching message when one fails.
+	 */
 	public function check(): void {
 		global $wp_version;
 
@@ -55,6 +69,10 @@ final class RequirementsChecker {
 		}
 	}
 
+	/**
+	 * Renders a translated `wp_die()` page explaining why the plugin
+	 * was deactivated. `$reason` is `wp-version` or `multisite`.
+	 */
 	private function die_with_message( string $plugin_name, string $required_wp, string $reason ): void {
 		$plugins_back_link = sprintf(
 			'<a href="%s">%s</a>',

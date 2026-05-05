@@ -16,18 +16,30 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+/**
+ * Per-site admin menu registration + page-render dispatcher.
+ */
 final class SiteMenu {
 
 	private Header $header;
 	private SiteHomePage $home;
 	private SiteSyncActionsPage $actions;
 
+	/**
+	 * @param Header              $header  Shared page header.
+	 * @param SiteHomePage        $home    Home (Welcome / Concepts / About).
+	 * @param SiteSyncActionsPage $actions Single-button sync action.
+	 */
 	public function __construct( Header $header, SiteHomePage $home, SiteSyncActionsPage $actions ) {
 		$this->header  = $header;
 		$this->home    = $home;
 		$this->actions = $actions;
 	}
 
+	/**
+	 * Hooked on `admin_menu` from {@see \WPMUS\Plugin}. Registers the
+	 * WPM User Sync menu plus the Site Sync Actions submenu.
+	 */
 	public function register(): void {
 		add_menu_page(
 			__( 'WPM User Sync', 'wpm-user-sync' ),
@@ -49,11 +61,17 @@ final class SiteMenu {
 		);
 	}
 
+	/**
+	 * Page-render callback for `wpmus-sitehome`.
+	 */
 	public function render_home(): void {
 		$this->header->render();
 		$this->home->render();
 	}
 
+	/**
+	 * Page-render callback for `wpmus-sitesyncactions`.
+	 */
 	public function render_actions(): void {
 		$this->header->render();
 		$this->actions->render();

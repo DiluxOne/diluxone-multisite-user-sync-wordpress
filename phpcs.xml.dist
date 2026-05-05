@@ -51,6 +51,21 @@
     </rule>
 
     <!-- =================================================================
+         PSR-4 OOP DIRECTORY OVERRIDES
+         The src/ tree follows PSR-4 (StudlyCase filenames, one class
+         per file, namespace-mapped paths). The default WordPress
+         file-naming sniffs expect kebab-case + `class-` prefixes —
+         valid for procedural plugin trees, not PSR-4. We turn them
+         off only for the src/ directory; the rest of the codebase
+         (uninstall.php, wpm-user-sync.php, legacy-deprecated.php)
+         still gets the legacy WordPress filename rules.
+         ================================================================= -->
+    <rule ref="WordPress.Files.FileName">
+        <exclude-pattern>src/*</exclude-pattern>
+        <exclude-pattern>tests/*</exclude-pattern>
+    </rule>
+
+    <!-- =================================================================
          RULE EXCLUSIONS — deliberate project choices, NOT a baseline.
          Each exclusion below is paired with a justification.
          ================================================================= -->
@@ -73,6 +88,34 @@
     </rule>
     <rule ref="Generic.Commenting.DocComment.MissingShort">
         <severity>0</severity>
+    </rule>
+
+    <!-- Property and parameter docblocks redundant with PHP 7.4+ typed
+         declarations. `private bool $in_sync` is more authoritative
+         than `@var bool $in_sync`. Same for parameters: `function f( int $x )`
+         conveys exactly what `@param int $x` would. We keep
+         FunctionComment.Missing and ClassComment.Missing on, so the
+         WHAT and WHY of every function/class is still documented;
+         these rules just stop demanding redundant @var / @param
+         restatements of information already in the signature. -->
+    <rule ref="Squiz.Commenting.VariableComment.Missing">
+        <severity>0</severity>
+    </rule>
+    <rule ref="Squiz.Commenting.VariableComment.MissingVar">
+        <severity>0</severity>
+    </rule>
+    <rule ref="Squiz.Commenting.FunctionComment.MissingParamTag">
+        <severity>0</severity>
+    </rule>
+
+    <!-- The plugin's $sd_active_tab legacy global is set in two
+         places (NetworkHomePage::render and SiteHomePage::render) for
+         backward compatibility with tab-extension hooks. PHPCS flags
+         the $GLOBALS write as VariableOverride.Prohibited; the
+         override is intentional and there is no other way to expose
+         the value to legacy callbacks that read it as a global. -->
+    <rule ref="WordPress.WP.GlobalVariablesOverride.Prohibited">
+        <exclude-pattern>src/Admin/*HomePage.php</exclude-pattern>
     </rule>
 
     <!-- Plugin minimum WordPress version (matches readme.txt) -->

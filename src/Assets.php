@@ -15,14 +15,24 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+/**
+ * Enqueues the plugin's admin stylesheet on every admin page.
+ */
 final class Assets {
 
 	private string $plugin_file;
 
+	/**
+	 * @param string $plugin_file Absolute path to wpm-user-sync.php — used
+	 *                            by `plugins_url()` to resolve the CSS URL.
+	 */
 	public function __construct( string $plugin_file ) {
 		$this->plugin_file = $plugin_file;
 	}
 
+	/**
+	 * Hooked on `admin_enqueue_scripts` from {@see \WPMUS\Plugin}.
+	 */
 	public function enqueue_admin_styles(): void {
 		wp_enqueue_style(
 			'wpmus_styles',

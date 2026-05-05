@@ -16,24 +16,34 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+/**
+ * Network Sync Options page — three checkboxes that toggle the
+ * automatic sync triggers, plus the matching save handler.
+ */
 final class NetworkSyncOptionsPage {
 
 	private Config $config;
 
+	/**
+	 * @param Config $config Toggle accessors used by the form view
+	 *                       and the save handler.
+	 */
 	public function __construct( Config $config ) {
 		$this->config = $config;
 	}
 
+	/**
+	 * Render the options form. Output is HTML; no return value.
+	 */
 	public function render(): void {
-		$new_site_sync     = $this->config->is_new_site_sync_enabled();
-		$new_user_sync     = $this->config->is_new_user_sync_enabled();
-		$set_role_sync     = $this->config->is_set_user_role_sync_enabled();
-		$form_action       = esc_url( network_admin_url( 'edit.php?action=wpmusSaveGlobalConfig' ) );
+		$new_site_sync = $this->config->is_new_site_sync_enabled();
+		$new_user_sync = $this->config->is_new_user_sync_enabled();
+		$set_role_sync = $this->config->is_set_user_role_sync_enabled();
 		?>
 		<div class="wrap">
 			<h3><?php esc_html_e( 'Network Configuration', 'wpm-user-sync' ); ?></h3>
 			<p><?php esc_html_e( 'These settings let you customize the sync behavior.', 'wpm-user-sync' ); ?></p>
-			<form method="post" action="<?php echo $form_action; // already escaped via esc_url() above. ?>">
+			<form method="post" action="<?php echo esc_url( network_admin_url( 'edit.php?action=wpmusSaveGlobalConfig' ) ); ?>">
 				<?php wp_nonce_field( Config::NONCE_ACTION ); ?>
 				<table class="form-table">
 					<tr>

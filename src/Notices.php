@@ -20,8 +20,16 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+/**
+ * Renders the post-action admin notices that follow plugin redirects.
+ */
 final class Notices {
 
+	/**
+	 * Render the appropriate notice for the current admin request.
+	 * Reads `$_GET['page']`, `$_GET['updated']`, `$_GET['synced']`,
+	 * `$_GET['nosynced']`. No-op outside the plugin's own screens.
+	 */
 	public function render(): void {
 		$page = isset( $_GET['page'] ) ? sanitize_key( wp_unslash( (string) $_GET['page'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		if ( '' === $page || strncmp( $page, 'wpmus-', 6 ) !== 0 ) {
