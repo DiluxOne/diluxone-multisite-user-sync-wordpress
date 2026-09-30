@@ -274,8 +274,13 @@ pcp-env: dist
 	  || npx @wordpress/env run cli wp plugin install plugin-check --activate >/dev/null)
 
 .PHONY: plugin-check
-plugin-check: pcp-env ## Run wordpress.org's Plugin Check on the built dist (errors fail).
-	@cd "$(PCP_DIR)" && npx @wordpress/env run cli wp plugin check $(SLUG) --format=table --severity=5
+plugin-check: pcp-env ## Run wordpress.org's Plugin Check on the built dist (an ERROR fails; warnings are listed).
+	@# `wp plugin check` exits 0 whatever it finds, so the verdict is read from
+	@# its table: any ERROR row fails the target.
+	@cd "$(PCP_DIR)" && out="$$(npx @wordpress/env run cli wp plugin check $(SLUG) --format=table --severity=5 2>&1)"; status=$$?; \
+	  echo "$$out"; [ $$status -eq 0 ] || exit $$status; \
+	  if printf '%s\n' "$$out" | grep -qP '\tERROR\t'; then echo "✖ Plugin Check reported errors"; exit 1; fi; \
+	  echo "✔ No Plugin Check errors."
 
 .PHONY: plugin-check-all
 plugin-check-all: pcp-env ## Plugin Check on the built dist, including warnings and notices.
@@ -311,11 +316,26 @@ pre-pr: ## Everything a pull request is checked on, one after the other, then th
 	$(MAKE) check
 	$(MAKE) test-unit-min
 	$(MAKE) i18n-check
+	$(MAKE) docs-check
 	$(MAKE) test-integration
 	$(MAKE) test-e2e
 	$(MAKE) plugin-check
 	$(MAKE) review-local
 	@echo "✔ Checks passed; the review above says whether the branch is ready for a pull request."
+
+# The docs job of the conventions workflow, the same checks locally: relative
+# links in every Markdown file resolve (lychee, the version CI runs), and no
+# retired product name is back (the regex pull-request.yml passes, when it
+# names any).
+LYCHEE_IMAGE ?= lycheeverse/lychee:0.24.2
+
+.PHONY: docs-check
+docs-check: ## Relative links in every Markdown file resolve, and no retired product name is back (what CI's docs job checks).
+	docker run --rm -v "$(CURDIR)":/input -w /input $(LYCHEE_IMAGE) --offline --no-progress --exclude-path node_modules --exclude-path vendor --exclude-path build './**/*.md' './.github/**/*.md'
+	@retired=$$(sed -n "s/.*retired-names: '\(.*\)'.*/\1/p" .github/workflows/pull-request.yml | head -1); \
+	if [ -z "$$retired" ]; then echo "No retired product names configured."; exit 0; fi; \
+	if git grep -nIiE "$$retired" -- . | grep -vE '^[^:]+:[0-9]+:\s*retired-names:'; then echo "A retired product name is back (see above)."; exit 1; fi; \
+	echo "No retired product names."
 
 # -- Local dev environment (wp-env, a subdirectory network) ------------
 # .wp-env.json declares "multisite": true, so both sites are subdirectory
