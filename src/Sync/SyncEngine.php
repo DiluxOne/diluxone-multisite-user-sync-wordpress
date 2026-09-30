@@ -148,23 +148,52 @@ final class SyncEngine {
 
 	/**
 	 * Trigger callback for `set_user_role`. When a user's role is
-	 * changed on one site, propagate the same role to every other site
-	 * where the user is already a member. New memberships are NOT
-	 * created here — that's what the new-user trigger is for.
+	 * changed on one site, copy it to the other sites where the user is
+	 * already a member. New memberships are NOT created here.
+	 *
+	 * The role is copied only to a site that defines it, never when it
+	 * is `administrator` unless the `wpmus_replicate_role` filter says
+	 * so, never for a super admin, and not when nothing changed (the
+	 * role is empty, or equals the only role the user had).
 	 *
 	 * Returns immediately when {@see $in_sync} is set: the current
 	 * `add_user_to_blog` call is part of another sync method's loop,
 	 * not a real role change driven by an admin.
+	 *
+	 * @param int      $user_id   The user whose role changed.
+	 * @param string   $role      The new role on the current site.
+	 * @param string[] $old_roles The roles the user had there before.
 	 */
-	public function on_role_changed( int $user_id, string $role ): void {
+	public function on_role_changed( int $user_id, string $role, array $old_roles = array() ): void {
 		if ( $this->in_sync ) {
 			return;
 		}
 		if ( ! $this->config->is_set_user_role_sync_enabled() ) {
 			return;
 		}
-		foreach ( $this->sites->all_blog_ids() as $blog_id ) {
-			if ( ! $this->users->is_member_of( $user_id, $blog_id ) ) {
+		if ( '' === $role || array( $role ) === array_values( $old_roles ) ) {
+			return;
+		}
+		if ( in_array( $user_id, $this->users->super_admin_ids(), true ) ) {
+			return;
+		}
+
+		/**
+		 * Filters whether a role change on one site is copied to the
+		 * user's other sites. `administrator` is not copied by default.
+		 *
+		 * @param bool   $replicate True to copy the role.
+		 * @param string $role      The new role.
+		 * @param int    $user_id   The user.
+		 */
+		if ( ! apply_filters( 'wpmus_replicate_role', 'administrator' !== $role, $role, $user_id ) ) {
+			return;
+		}
+
+		$this->begin_run();
+		$source = $this->sites->current_blog_id();
+		foreach ( $this->target_blog_ids( $this->users->blog_ids_of_user( $user_id ), 'role_change' ) as $blog_id ) {
+			if ( $blog_id === $source || ! $this->sites->role_exists_on_blog( $blog_id, $role ) ) {
 				continue;
 			}
 			$this->add_to_blog_guarded( $blog_id, $user_id, $role );
@@ -245,7 +274,7 @@ final class SyncEngine {
 	 * minus the ones the `wpmus_excluded_site_ids` filter lists.
 	 *
 	 * @param int[]|null $requested Requested sites, null for all.
-	 * @param string     $context   new_site, new_user or manual.
+	 * @param string     $context   new_site, new_user, manual or role_change.
 	 * @return int[]
 	 */
 	private function target_blog_ids( ?array $requested, string $context ): array {
@@ -256,7 +285,7 @@ final class SyncEngine {
 		 * Filters the sites the sync never writes to.
 		 *
 		 * @param int[]  $excluded Blog ids to leave alone. Default empty.
-		 * @param string $context  `new_site`, `new_user` or `manual`.
+		 * @param string $context  `new_site`, `new_user`, `manual` or `role_change`.
 		 */
 		$excluded = apply_filters( 'wpmus_excluded_site_ids', array(), $context );
 		if ( is_array( $excluded ) && array() !== $excluded ) {

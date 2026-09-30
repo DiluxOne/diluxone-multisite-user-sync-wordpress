@@ -117,7 +117,7 @@ final class Plugin {
 			add_action( 'wpmu_new_user', array( $this->engine, 'on_new_user' ) );
 		}
 		if ( $this->config->is_set_user_role_sync_enabled() ) {
-			add_action( 'set_user_role', array( $this->engine, 'on_role_changed' ), 10, 2 );
+			add_action( 'set_user_role', array( $this->engine, 'on_role_changed' ), 10, 3 );
 		}
 
 		// Removals are recorded whatever the toggles say, so a trigger

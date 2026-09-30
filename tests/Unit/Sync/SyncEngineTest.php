@@ -182,19 +182,65 @@ final class SyncEngineTest extends TestCase {
 		$this->engine()->on_role_changed( 5, 'editor' );
 	}
 
-	public function test_on_role_changed_propagates_role_to_existing_memberships_only(): void {
+	/**
+	 * Role sync on, the change made on site 1, the user a member of
+	 * sites 1, 2 and 3, every site active and defining every role.
+	 */
+	private function role_change_on_site_one(): void {
 		$this->config->shouldReceive( 'is_set_user_role_sync_enabled' )->andReturn( true );
-		$this->sites->shouldReceive( 'all_blog_ids' )->andReturn( array( 1, 2, 3 ) );
+		$this->sites->shouldReceive( 'current_blog_id' )->andReturn( 1 );
+		$this->sites->shouldReceive( 'all_blog_ids' )->andReturn( array( 1, 2, 3, 4 ) );
+		$this->users->shouldReceive( 'blog_ids_of_user' )->with( 5 )->andReturn( array( 1, 2, 3 ) );
+		$this->sites->shouldReceive( 'role_exists_on_blog' )->andReturn( true )->byDefault();
+	}
 
-		$this->users->shouldReceive( 'is_member_of' )->with( 5, 1 )->andReturn( true );
-		$this->users->shouldReceive( 'is_member_of' )->with( 5, 2 )->andReturn( false ); // not a member → no add
-		$this->users->shouldReceive( 'is_member_of' )->with( 5, 3 )->andReturn( true );
-
-		$this->users->shouldReceive( 'add_to_blog' )->once()->with( 1, 5, 'editor' )->andReturn( true );
+	public function test_on_role_changed_copies_the_role_to_the_users_other_sites(): void {
+		$this->role_change_on_site_one();
+		$this->users->shouldReceive( 'add_to_blog' )->once()->with( 2, 5, 'editor' )->andReturn( true );
 		$this->users->shouldReceive( 'add_to_blog' )->once()->with( 3, 5, 'editor' )->andReturn( true );
-		// blog 2 explicitly not added — only existing memberships are touched.
 
-		$this->engine()->on_role_changed( 5, 'editor' );
+		$this->engine()->on_role_changed( 5, 'editor', array( 'subscriber' ) );
+	}
+
+	public function test_on_role_changed_skips_a_site_without_that_role(): void {
+		$this->role_change_on_site_one();
+		$this->sites->shouldReceive( 'role_exists_on_blog' )->with( 2, 'shop_manager' )->andReturn( false );
+		$this->sites->shouldReceive( 'role_exists_on_blog' )->with( 3, 'shop_manager' )->andReturn( true );
+		$this->users->shouldReceive( 'add_to_blog' )->once()->with( 3, 5, 'shop_manager' )->andReturn( true );
+
+		$this->engine()->on_role_changed( 5, 'shop_manager', array( 'subscriber' ) );
+	}
+
+	public function test_on_role_changed_does_not_copy_administrator(): void {
+		$this->role_change_on_site_one();
+		$this->users->shouldNotReceive( 'add_to_blog' );
+
+		$this->engine()->on_role_changed( 5, 'administrator', array( 'subscriber' ) );
+	}
+
+	public function test_on_role_changed_copies_administrator_when_the_filter_allows_it(): void {
+		$this->role_change_on_site_one();
+		\Brain\Monkey\Filters\expectApplied( 'wpmus_replicate_role' )->once()->with( false, 'administrator', 5 )->andReturn( true );
+		$this->users->shouldReceive( 'add_to_blog' )->twice()->andReturn( true );
+
+		$this->engine()->on_role_changed( 5, 'administrator', array( 'subscriber' ) );
+	}
+
+	public function test_on_role_changed_ignores_an_unchanged_or_empty_role(): void {
+		$this->config->shouldReceive( 'is_set_user_role_sync_enabled' )->andReturn( true );
+		$this->users->shouldNotReceive( 'blog_ids_of_user' );
+		$this->users->shouldNotReceive( 'add_to_blog' );
+
+		$this->engine()->on_role_changed( 5, 'editor', array( 'editor' ) );
+		$this->engine()->on_role_changed( 5, '', array( 'editor' ) );
+	}
+
+	public function test_on_role_changed_leaves_super_admins_alone(): void {
+		$this->config->shouldReceive( 'is_set_user_role_sync_enabled' )->andReturn( true );
+		$this->users->shouldReceive( 'super_admin_ids' )->andReturn( array( 5 ) );
+		$this->users->shouldNotReceive( 'add_to_blog' );
+
+		$this->engine()->on_role_changed( 5, 'editor', array( 'subscriber' ) );
 	}
 
 	// ---------------------------------------------------------------------
@@ -325,7 +371,7 @@ final class SyncEngineTest extends TestCase {
 		// Simulate WP firing set_user_role during add_user_to_blog.
 		$this->users->shouldReceive( 'add_to_blog' )->andReturnUsing(
 			static function ( int $blog_id, int $user_id, string $role ) use ( $engine ) {
-				$engine->on_role_changed( $user_id, $role );
+				$engine->on_role_changed( $user_id, $role, array() );
 				return true;
 			}
 		);
@@ -342,13 +388,9 @@ final class SyncEngineTest extends TestCase {
 		// Sanity check: the in_sync flag is reset between calls, so a
 		// real role-change event after a manual sync still propagates
 		// across existing memberships.
-		$engine = $this->engine();
-
-		$this->config->shouldReceive( 'is_set_user_role_sync_enabled' )->andReturn( true );
-		$this->sites->shouldReceive( 'all_blog_ids' )->andReturn( array( 1, 2 ) );
-		$this->users->shouldReceive( 'is_member_of' )->andReturn( true );
+		$this->role_change_on_site_one();
 		$this->users->shouldReceive( 'add_to_blog' )->twice()->andReturn( true );
 
-		$engine->on_role_changed( 5, 'editor' );
+		$this->engine()->on_role_changed( 5, 'editor', array( 'subscriber' ) );
 	}
 }

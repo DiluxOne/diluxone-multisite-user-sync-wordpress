@@ -49,6 +49,13 @@ class SiteRepository {
 	}
 
 	/**
+	 * The site the current request runs on.
+	 */
+	public function current_blog_id(): int {
+		return get_current_blog_id();
+	}
+
+	/**
 	 * `get_sites()` arguments shared by every lookup: this network's
 	 * sites that are not archived, spam or deleted.
 	 *

@@ -52,7 +52,7 @@ At network level you can configure the 3 triggers that we descripted in the past
 
 - New Site Automatic Sync: When a new site is created in the network, all users in the database will be added to this new site with default site role. If no default role is configured, "subscriber" role will be added.
 - New User Automatic Sync: When a new user is created in the network, will be added to all sites in the database with each default site role. If no default role is configured, "subscriber" role will be added.
-- Set User Role Automatic Sync: When an user role change is detected in any site (for example change an user to administrator of an specific site) this change will be replicated to all other sites (in the other sites will be administrator, too).
+- Set User Role Automatic Sync: When an user role change is detected in any site (for example change an user to editor of an specific site) this change will be replicated to the other sites where the user is already a member and that have that role. The administrator role is never replicated (a developer can allow it with the `wpmus_replicate_role` filter), and super admins are left alone.
 
 Also, you can execute the following actions:
 
@@ -122,6 +122,7 @@ First release. Check help for all features.
 * **Removed**: the catch-up sync that ran on every sign-in (`wp_login`, `social_connect_login`). Accounts created outside the normal flows (imports, SQL) are added with the manual network sync.
 * **Fix**: super admins are no longer added as members of every site (they already reach every site), and archived, spam and deleted sites, and the sites of other networks on the same install, are no longer synced.
 * **New**: two filters for developers, `wpmus_excluded_site_ids` (sites the sync never writes to) and `wpmus_should_sync_user` (skip one user on one site).
+* **Fix (security)**: the Set User Role trigger copied any role, administrator included, to every site the user belonged to, including roles those sites do not define. It now copies a role only to sites that define it, never copies administrator unless the new `wpmus_replicate_role` filter allows it, leaves super admins alone, and ignores calls where the role did not change.
 
 = 1.5.0 (2026-05-05) =
 * **Description repositioned**: leads with "Optimized for Microsoft Azure and Azure App Service" while explicitly noting compatibility with any WordPress Multisite host (DigitalOcean, AWS, dedicated servers, shared hosting, etc.).

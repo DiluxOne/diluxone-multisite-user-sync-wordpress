@@ -58,6 +58,15 @@ class UserRepository {
 	}
 
 	/**
+	 * Ids of the active sites the user is a member of.
+	 *
+	 * @return int[]
+	 */
+	public function blog_ids_of_user( int $user_id ): array {
+		return array_map( 'intval', array_keys( get_blogs_of_user( $user_id ) ) );
+	}
+
+	/**
 	 * Returns true when the user is a member of the given blog.
 	 * Coerces the int/bool union historic versions of WordPress
 	 * sometimes returned to a strict `bool`.
