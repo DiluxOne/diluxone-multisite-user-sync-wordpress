@@ -132,6 +132,53 @@ final class SyncEngineTest extends TestCase {
 		$this->engine()->on_new_user( 5 );
 	}
 
+	public function test_on_new_site_accepts_the_wp_site_from_wp_initialize_site(): void {
+		$this->config->shouldReceive( 'is_new_site_sync_enabled' )->andReturn( true );
+		$this->sites->shouldReceive( 'all_blog_ids' )->andReturn( array( 1, 7 ) );
+		$this->users->shouldReceive( 'all_network_users' )->andReturn( array( new \WP_User( 5 ) ) );
+		$this->users->shouldReceive( 'is_member_of' )->andReturn( false );
+		$this->sites->shouldReceive( 'default_role_for_blog' )->with( 7 )->andReturn( 'subscriber' );
+		$this->users->shouldReceive( 'add_to_blog' )->once()->with( 7, 5, 'subscriber' )->andReturn( true );
+
+		$this->engine()->on_new_site( new \WP_Site( 7, 'localhost', '/seven/' ) );
+	}
+
+	public function test_a_new_user_is_synced_once_whichever_hooks_fire(): void {
+		$this->config->shouldReceive( 'is_new_user_sync_enabled' )->andReturn( true );
+		$this->sites->shouldReceive( 'all_blog_ids' )->once()->andReturn( array( 2 ) );
+		$this->users->shouldReceive( 'is_member_of' )->andReturn( false );
+		$this->sites->shouldReceive( 'default_role_for_blog' )->andReturn( 'subscriber' );
+		$this->users->shouldReceive( 'add_to_blog' )->once()->with( 2, 5, 'subscriber' )->andReturn( true );
+
+		// wpmu_create_user(): user_register, then wpmu_new_user, then shutdown.
+		$engine = $this->engine();
+		$engine->on_user_registered( 5 );
+		$engine->on_new_user( 5 );
+		$engine->flush_registered_users();
+	}
+
+	public function test_a_user_made_with_wp_insert_user_alone_is_synced_at_shutdown(): void {
+		$this->config->shouldReceive( 'is_new_user_sync_enabled' )->andReturn( true );
+		$this->sites->shouldReceive( 'all_blog_ids' )->andReturn( array( 2 ) );
+		$this->users->shouldReceive( 'is_member_of' )->andReturn( false );
+		$this->sites->shouldReceive( 'default_role_for_blog' )->andReturn( 'subscriber' );
+
+		$added = array();
+		$this->users->shouldReceive( 'add_to_blog' )->andReturnUsing(
+			static function ( int $blog_id, int $user_id, string $role ) use ( &$added ): bool {
+				$added[] = array( $blog_id, $user_id, $role );
+				return true;
+			}
+		);
+
+		$engine = $this->engine();
+		$engine->on_user_registered( 6 );
+		$this->assertSame( array(), $added, 'Nothing happens at user_register.' );
+
+		$engine->flush_registered_users();
+		$this->assertSame( array( array( 2, 6, 'subscriber' ) ), $added );
+	}
+
 	// ---------------------------------------------------------------------
 	// Removals
 	// ---------------------------------------------------------------------

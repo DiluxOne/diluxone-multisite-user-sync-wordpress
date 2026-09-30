@@ -45,16 +45,15 @@ final class ReentrancyGuardIntegrationTest extends IntegrationTestCase {
 		// would flow through `on_role_changed` and propagate.
 		( new Config( WP_PLUGIN_DIR . '/wpm-user-sync/wpm-user-sync.php' ) )->save_toggles( '', '', 'yes' );
 
-		// Wire the engine's on_role_changed onto WP's hook for the
-		// duration of this test (Plugin::register only attaches it at
-		// boot when the toggle was already on; here we toggled it
-		// after boot and the integration suite is single-process).
+		// Wire this test's own engine onto WP's hook for the duration
+		// of the test, so the guard under test is the one on the engine
+		// that runs the sync.
 		$engine = new SyncEngine(
 			new Config( WP_PLUGIN_DIR . '/wpm-user-sync/wpm-user-sync.php' ),
 			new SiteRepository(),
 			new UserRepository()
 		);
-		add_action( 'set_user_role', array( $engine, 'on_role_changed' ), 10, 2 );
+		add_action( 'set_user_role', array( $engine, 'on_role_changed' ), 10, 3 );
 
 		try {
 			// Run the full sync. Without the in_sync guard, the chain is:

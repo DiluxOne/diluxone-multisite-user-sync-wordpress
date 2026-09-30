@@ -79,6 +79,21 @@ final class SyncEngine {
 	private ?array $super_admins = null;
 
 	/**
+	 * Users registered in this request whose new-user sync is waiting
+	 * for `wpmu_new_user` or shutdown, as keys.
+	 *
+	 * @var array<int,bool>
+	 */
+	private array $registered = array();
+
+	/**
+	 * Users the new-user sync already ran for in this request, as keys.
+	 *
+	 * @var array<int,bool>
+	 */
+	private array $synced_new_users = array();
+
+	/**
 	 * @param Config         $config Toggle accessors + plugin metadata.
 	 * @param SiteRepository $sites  Wraps `get_sites()` / `get_blog_option()`.
 	 * @param UserRepository $users  Wraps `get_users()` / `add_user_to_blog()`
@@ -91,7 +106,7 @@ final class SyncEngine {
 	}
 
 	/**
-	 * Trigger callback for `wpmu_new_blog` (legacy hook) — populates a
+	 * Trigger callback for `wp_initialize_site` — populates a
 	 * freshly-created site with every existing network user. No-op when
 	 * the `New Site Sync` toggle is off.
 	 *
@@ -100,10 +115,15 @@ final class SyncEngine {
 	 * copied: doing so made every editor or administrator of the main
 	 * site an editor or administrator of each new site.
 	 *
-	 * @param int $blog_id The blog ID of the newly created site.
+	 * @param \WP_Site|int $site The new site (`wp_initialize_site`), or
+	 *                           its id (the deprecated wrapper).
 	 */
-	public function on_new_site( int $blog_id ): void {
+	public function on_new_site( $site ): void {
 		if ( ! $this->config->is_new_site_sync_enabled() ) {
+			return;
+		}
+		$blog_id = $site instanceof \WP_Site ? (int) $site->blog_id : (int) $site;
+		if ( $blog_id <= 0 ) {
 			return;
 		}
 
@@ -112,14 +132,43 @@ final class SyncEngine {
 
 	/**
 	 * Trigger callback for `wpmu_new_user` — adds a brand-new user to
-	 * every existing site with each site's default role. No-op when the
-	 * `New User Sync` toggle is off.
+	 * every active site with each site's default role. No-op when the
+	 * `New User Sync` toggle is off, and runs once per user.
 	 */
 	public function on_new_user( int $user_id ): void {
+		unset( $this->registered[ $user_id ] );
 		if ( ! $this->config->is_new_user_sync_enabled() ) {
 			return;
 		}
+		if ( $user_id <= 0 || isset( $this->synced_new_users[ $user_id ] ) ) {
+			return;
+		}
+		$this->synced_new_users[ $user_id ] = true;
 		$this->add_user_to_every_site( $user_id );
+	}
+
+	/**
+	 * Callback for `user_register`. Inside wpmu_create_user() it fires
+	 * before core strips the account's default membership, so the work
+	 * waits: `wpmu_new_user` runs it right after, and accounts made
+	 * with wp_insert_user() alone, where `wpmu_new_user` never fires,
+	 * are handled by {@see flush_registered_users()} at shutdown.
+	 */
+	public function on_user_registered( int $user_id ): void {
+		if ( $user_id <= 0 || ! $this->config->is_new_user_sync_enabled() ) {
+			return;
+		}
+		$this->registered[ $user_id ] = true;
+	}
+
+	/**
+	 * Callback for `shutdown`: runs the new-user sync for accounts
+	 * registered in this request that `wpmu_new_user` did not cover.
+	 */
+	public function flush_registered_users(): void {
+		foreach ( array_keys( $this->registered ) as $user_id ) {
+			$this->on_new_user( $user_id );
+		}
 	}
 
 	/**

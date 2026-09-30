@@ -81,11 +81,7 @@ final class Plugin {
 	}
 
 	/**
-	 * Wire every WordPress hook the plugin listens on. Conditional
-	 * trigger registration depends on the three site options — the
-	 * legacy implementation read those once at bootstrap, so behaviour
-	 * is preserved (changing a toggle requires the next page load to
-	 * re-register).
+	 * Wire every WordPress hook the plugin listens on.
 	 */
 	public function register(): void {
 		// Lifecycle.
@@ -108,17 +104,22 @@ final class Plugin {
 		add_action( 'network_admin_notices', array( $this->notices, 'render' ) );
 		add_action( 'admin_notices', array( $this->notices, 'render' ) );
 
-		// Sync triggers (conditional on site options at boot time —
-		// matches legacy behaviour where toggling required a page load).
-		if ( $this->config->is_new_site_sync_enabled() ) {
-			add_action( 'wpmu_new_blog', array( $this->engine, 'on_new_site' ) );
-		}
-		if ( $this->config->is_new_user_sync_enabled() ) {
-			add_action( 'wpmu_new_user', array( $this->engine, 'on_new_user' ) );
-		}
-		if ( $this->config->is_set_user_role_sync_enabled() ) {
-			add_action( 'set_user_role', array( $this->engine, 'on_role_changed' ), 10, 3 );
-		}
+		// Sync triggers. They are always hooked and each callback reads
+		// its toggle when it runs, so turning a trigger on or off takes
+		// effect at once, and the toggle is checked in one place.
+		//
+		// A new site: `wp_initialize_site` (WordPress 5.1+) replaces the
+		// deprecated `wpmu_new_blog`; priority 11 runs after core has
+		// populated the site at 10 and switched back.
+		add_action( 'wp_initialize_site', array( $this->engine, 'on_new_site' ), 11, 1 );
+		// A new user: `wpmu_new_user` fires from wpmu_create_user() once
+		// core has stripped the default membership; `user_register`
+		// catches accounts made with wp_insert_user() alone (a plugin's
+		// own registration). The engine runs each user once.
+		add_action( 'wpmu_new_user', array( $this->engine, 'on_new_user' ) );
+		add_action( 'user_register', array( $this->engine, 'on_user_registered' ) );
+		add_action( 'shutdown', array( $this->engine, 'flush_registered_users' ) );
+		add_action( 'set_user_role', array( $this->engine, 'on_role_changed' ), 10, 3 );
 
 		// Removals are recorded whatever the toggles say, so a trigger
 		// turned on later still leaves those people off those sites.
