@@ -17,7 +17,7 @@ call reusable workflows, secrets and GitHub Apps that exist only inside the
 organisation, and they do not run here. What the move takes is in
 [Moving into DiluxOne](#moving-into-diluxone) below.
 
-The next version is being written under `= 1.6.0 =` in `readme.txt`, with its
+The next version is being written under `= 2.0.0 =` in `readme.txt`, with its
 `Unreleased.` line in place.
 
 ## Who does what
@@ -84,16 +84,12 @@ constant in `wpm-user-sync.php`, and `Stable tag:` in `readme.txt`. They
 always name a real version: the last one released (1.5.0 today), or, in the
 release pull request and on `main` after it, the one being released.
 
-**1.6.0.** The entry is headed `= 1.6.0 =` because what is written there adds
-filters (a `feat`) besides the fixes. It also raises Requires PHP from 7.4 to
-8.0, which the Upgrade Notice announces; if the labels give another number,
-the maintainer settles it in the release pull request (a `version:*` label,
-or the heading).
+**2.0.0.** The entry is headed `= 2.0.0 =`, a major version: besides the fixes and the new filters it raises Requires PHP from 7.4 to 8.0, so a site still on 7.4 stops receiving updates, and the automatic triggers behave differently (no sync on every sign-in, removals respected, roles never copied from the main site). The Upgrade Notice says so.
 
 ## The changelog is the release switch
 
 ```
-= 1.6.0 =
+= 2.0.0 =
 Unreleased.
 
 * The plugin is now called DiluxOne Multisite User Sync…

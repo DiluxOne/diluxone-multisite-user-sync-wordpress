@@ -93,7 +93,7 @@ It ships complete translations for Spanish (Argentina, Spain, Mexico), Portugues
 
 == Upgrade Notice ==
 
-= 1.6.0 =
+= 2.0.0 =
 Requires PHP 8.0. Security fixes: new sites no longer copy main-site roles, removed people stay removed, administrator is never copied, and site administrators can no longer pull the whole network into their site.
 
 = 1.5.0 =
@@ -116,7 +116,7 @@ First release. Check help for all features.
 
 == Changelog ==
 
-= 1.6.0 =
+= 2.0.0 =
 Unreleased.
 
 * The plugin is now called DiluxOne Multisite User Sync, in the DiluxOne family. Nothing else changes for your network: same settings, same screens, same slug.
