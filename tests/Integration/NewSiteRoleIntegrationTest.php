@@ -24,7 +24,7 @@ final class NewSiteRoleIntegrationTest extends IntegrationTestCase {
 
 	private function engine(): SyncEngine {
 		return new SyncEngine(
-			new Config( WP_PLUGIN_DIR . '/wpm-user-sync/wpm-user-sync.php' ),
+			new Config( dirname( __DIR__, 2 ) . '/wpm-user-sync.php' ),
 			new SiteRepository(),
 			new UserRepository()
 		);
@@ -50,7 +50,7 @@ final class NewSiteRoleIntegrationTest extends IntegrationTestCase {
 		$blog_id = $this->make_site( $this->slug( 'fresh' ) );
 		update_blog_option( $blog_id, 'default_role', 'author' );
 
-		( new Config( WP_PLUGIN_DIR . '/wpm-user-sync/wpm-user-sync.php' ) )->save_toggles( 'yes', '', '' );
+		( new Config( dirname( __DIR__, 2 ) . '/wpm-user-sync.php' ) )->save_toggles( 'yes', '', '' );
 		$this->engine()->on_new_site( $blog_id );
 
 		$this->assertSame( array( 'author' ), $this->roles_on( $user_id, $blog_id ) );
@@ -60,7 +60,7 @@ final class NewSiteRoleIntegrationTest extends IntegrationTestCase {
 		$user_id = $this->make_user( $this->slug( 'mainsite-admin' ), '', 'administrator' );
 		$blog_id = $this->make_site( $this->slug( 'fresh-admin' ) );
 
-		( new Config( WP_PLUGIN_DIR . '/wpm-user-sync/wpm-user-sync.php' ) )->save_toggles( 'yes', '', '' );
+		( new Config( dirname( __DIR__, 2 ) . '/wpm-user-sync.php' ) )->save_toggles( 'yes', '', '' );
 		$this->engine()->on_new_site( $blog_id );
 
 		$this->assertSame( array( get_blog_option( $blog_id, 'default_role', 'subscriber' ) ), $this->roles_on( $user_id, $blog_id ) );
@@ -72,7 +72,7 @@ final class NewSiteRoleIntegrationTest extends IntegrationTestCase {
 		$blog_id = $this->make_site( $this->slug( 'ghost-role-site' ) );
 		update_blog_option( $blog_id, 'default_role', 'no_such_role' );
 
-		( new Config( WP_PLUGIN_DIR . '/wpm-user-sync/wpm-user-sync.php' ) )->save_toggles( 'yes', '', '' );
+		( new Config( dirname( __DIR__, 2 ) . '/wpm-user-sync.php' ) )->save_toggles( 'yes', '', '' );
 		$this->engine()->on_new_site( $blog_id );
 
 		$this->assertSame( array( 'subscriber' ), $this->roles_on( $user_id, $blog_id ) );

@@ -1,80 +1,63 @@
-# WPM User Sync
+# DiluxOne Multisite User Sync
 
-> WordPress Multisite plugin that synchronises users across the sites of a network — when a user is created, when a site is created, or when a user's role changes on one site, the plugin propagates the change to the other sites. People an administrator removed from a site stay removed.
+> A WordPress Multisite plugin that adds the network's users to its sites: automatically when a user or a site is created or a role changes, or on demand from Network Admin. Formerly *WPM User Sync*; wordpress.org slug `wpm-user-sync`.
 
-[![License: GPL v2+](https://img.shields.io/badge/license-GPL--2.0--or--later-blue.svg)](https://www.gnu.org/licenses/old-licenses/gpl-2.0.html)
+[![License: GPL v2+](https://img.shields.io/badge/license-GPL--2.0--or--later-blue.svg)](LICENSE)
 
-## What is this?
+## For people who run a network
 
-`WPM User Sync` (short for "WordPress Multi-Site User Synchronization") is a small admin-only plugin for WordPress Multisite networks. It exposes three independent toggles at network level — sync-on-new-site, sync-on-new-user, sync-on-role-change — and propagates the corresponding events to the sites you select. There are no defaults: nothing happens until a network admin opts each behaviour in.
+Install it from the official directory, [wordpress.org/plugins/wpm-user-sync](https://wordpress.org/plugins/wpm-user-sync/), and network-activate it. What it does, how to set it up and the FAQ are in [`readme.txt`](readme.txt), the page wordpress.org shows. Usage questions go to the [support forum](https://wordpress.org/support/plugin/wpm-user-sync/).
 
-The plugin is **multisite only**: on a single-site install it self-deactivates and prints a notice asking you to configure WordPress for multisite first.
+In short:
 
-## For end users
-
-If you just want to **install and use** the plugin on your WordPress Multisite, get it from the official directory:
-
-[wordpress.org/plugins/wpm-user-sync](https://wordpress.org/plugins/wpm-user-sync/)
-
-User-facing documentation (features, installation, FAQ) lives in [`readme.txt`](readme.txt) — that's the version rendered on the wp.org plugin page.
+- **Three triggers**, each on or off: a new user joins every site; a new site gets every user; a role changed on one site is copied to the user's other sites.
+- **Manual syncs** from Network Admin (every site, or the sites you tick) and from a site's dashboard (that site only, super admins only).
+- **Safe by default**: each site's default role, never a copied one; super admins and archived, spam or deleted sites left alone; people removed from a site stay removed; administrator never copied; only super admins see the plugin.
+- **Big networks**: a sync too large for one request runs in the background through WP-Cron, with its progress on screen.
 
 ## For developers
 
-This README and the rest of this repository are aimed at developers who want to **contribute, fork, or run the plugin from source**.
-
-## Quick start (developers)
-
 ```bash
-git clone https://github.com/soydiloreto/wpm-user-sync.git
-cd wpm-user-sync
-make install     # composer install — populate vendor/
-make env         # boots wp-env at http://localhost:8888 (multisite!)
+git clone https://github.com/DiluxOne/diluxone-multisite-user-sync-wordpress.git
+cd <its folder>
+make install     # composer, npm, Playwright's Chromium
+make env         # a subdirectory network at http://localhost:8898 (admin / password)
+make check       # lint, PHPStan, Psalm, unit tests
 ```
 
-When it finishes, open <http://localhost:8888/wp-admin/network/>. Log in with `admin` / `password`. The plugin is already mounted at `wp-content/plugins/wpm-user-sync/` — network-activate it from the **Plugins** screen and you'll find the **WPM User Sync** menu item under network admin.
+`make help` lists every target. The filters and actions the plugin offers are in [`docs/extending.md`](docs/extending.md).
 
-`make help` lists every available target. For the full setup walkthrough, see [`docs/development.md`](docs/development.md). For multisite-specific dev notes, see [`docs/multisite-development.md`](docs/multisite-development.md).
+| Read | For |
+| --- | --- |
+| [`AGENTS.md`](AGENTS.md) | The rules a coding agent (and anyone) follows here, short. |
+| [`CONTRIBUTING.md`](CONTRIBUTING.md) | Issues, branches, pull requests, what CI enforces. |
+| [`docs/architecture.md`](docs/architecture.md) | How it works, the hard rules, what the review looks for. |
+| [`docs/extending.md`](docs/extending.md) | Filters, actions, what is stored, backwards compatibility. |
+| [`docs/development.md`](docs/development.md) | Local setup, the networks and their ports, every Make target. |
+| [`docs/testing-and-quality.md`](docs/testing-and-quality.md) | Every quality gate and how to run it. |
+| [`tests/e2e/COVERAGE.md`](tests/e2e/COVERAGE.md) | Which test covers which feature, at each layer. |
+| [`docs/release.md`](docs/release.md) | Versions, the changelog switch, the move into the DiluxOne organisation. |
+| [`docs/roadmap.md`](docs/roadmap.md) | What is planned and what is not. |
+| [`docs/ai.md`](docs/ai.md) | How AI is used here and the rules for AI-assisted work. |
 
 ## Repository layout
 
-| Path | What it contains |
-|------|------------------|
-| `wpm-user-sync.php` | Plugin header + bootstrap: builds `WPMUS\Plugin`, which registers every hook. |
-| `src/` | The plugin, PSR-4 under `WPMUS\`: `Plugin` (wiring), `Config` (toggles), `Sync/` (`SyncEngine`, the background `JobQueue` and `SyncJob`), `Repositories/` (sites and users), `Admin/` (network and site pages). |
-| `legacy-deprecated.php` | Deprecated `wpmus_*` functions kept for back-compat. |
-| `css/` | Admin styles enqueued via `wpmus_add_css()`. |
-| `uninstall.php` | Removes the plugin's data on uninstall: its network options, the background sync queue and its cron event, and the record of removals. **Users, roles and memberships are NOT touched.** |
-| `readme.txt` | wp.org plugin page content. |
-| `.wordpress-org/` | wp.org listing visuals — banner, icon, screenshots. Uploaded by CI to the SVN `assets/` directory. |
-| `tests/` | PHPUnit unit tests (`tests/Unit`) and multisite integration tests on wp-env (`tests/Integration`). |
-| `docs/` | Developer documentation. |
-| `.github/workflows/` | CI/CD: deploy to wp.org SVN on tag push, plus PR checks. |
-| `.distignore` | Paths excluded from the wp.org deploy. |
+| Path | What |
+| --- | --- |
+| `wpm-user-sync.php` | Headers, `WPMUS_VERSION`, bootstrap. |
+| `src/` | The plugin, PSR-4 under `WPMUS\`: `Plugin`, `Config`, `RequirementsChecker`, `Sync/` (engine, queue, job), `Repositories/`, `Admin/`. |
+| `legacy-deprecated.php` | The 1.4 function names, deprecated. |
+| `css/` | The admin stylesheet, loaded on the plugin's screens only. |
+| `languages/` | The `.pot` and eight complete locales (`.po`/`.mo`). |
+| `uninstall.php` | Removes the plugin's data; never users or memberships. |
+| `readme.txt`, `.wordpress-org/` | The wordpress.org page and its banner, icon and screenshots. |
+| `tests/` | Unit (`Unit/`), integration on a network (`Integration/`), end-to-end with Playwright (`e2e/`). |
+| `.github/` | The DiluxOne organisation's workflow callers, review policy, templates. |
 
-## Documentation
+## Security
 
-For developers working on the plugin itself:
+Do not open a public issue for a vulnerability: see [SECURITY.md](SECURITY.md).
 
-- [`CONTRIBUTING.md`](CONTRIBUTING.md) — branch naming, PR workflow, commit conventions, coding rules.
-- [`docs/development.md`](docs/development.md) — local dev setup (`wp-env`, Docker, Make targets).
-- [`docs/multisite-development.md`](docs/multisite-development.md) — multisite-specific notes: how to test sync flows, how to clear network options between runs, gotchas.
-- [`docs/testing-and-quality.md`](docs/testing-and-quality.md) — PHPUnit, PHPCS, PHPStan, Psalm, i18n.
-- [`docs/ai-tooling.md`](docs/ai-tooling.md) — what AI tooling the project uses.
-- [`docs/ai-policy.md`](docs/ai-policy.md) — rules for contributors using AI agents.
-- [`docs/release.md`](docs/release.md) — version bump flow, the `-dev` suffix convention, the wp.org SVN deploy.
+## Licence
 
-## Contributing
-
-Contributions are welcome — bug reports and pull requests. See [`CONTRIBUTING.md`](CONTRIBUTING.md) to get started.
-
-## Reporting security issues
-
-Please do not open public issues for security vulnerabilities. See [SECURITY.md](SECURITY.md) for the private reporting process via GitHub Security Advisories.
-
-## About
-
-This plugin is **free and open-source software** under the GPL-2.0-or-later licence. It was created and is currently maintained by **Pablo Diloreto** ([@soydiloreto](https://github.com/soydiloreto)).
-
-## License
-
-GPL-2.0-or-later. See the [WordPress GPL page](https://wordpress.org/about/license/).
+GPL-2.0-or-later ([LICENSE](LICENSE)). Created and maintained by Pablo Ariel Di Loreto, part of the [DiluxOne plugins for WordPress](https://diluxone.com/plugins-wordpress).

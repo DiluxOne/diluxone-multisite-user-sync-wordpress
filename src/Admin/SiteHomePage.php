@@ -115,8 +115,8 @@ final class SiteHomePage {
 		$actions_url  = admin_url( 'admin.php?page=wpmus-sitesyncactions' );
 		$about_url    = admin_url( 'admin.php?page=wpmus-sitehome&tab=about' );
 		?>
-		<h3><?php esc_html_e( 'Welcome to Site "WPM User Sync" Plugin', 'wpm-user-sync' ); ?></h3>
-		<p><?php esc_html_e( 'Thank you for choosing WPM User Sync (which actually means "WordPress Multi-Site User Synchronization").', 'wpm-user-sync' ); ?></p>
+		<h3><?php esc_html_e( 'Welcome to DiluxOne Multisite User Sync', 'wpm-user-sync' ); ?></h3>
+		<p><?php esc_html_e( 'Thank you for choosing DiluxOne Multisite User Sync.', 'wpm-user-sync' ); ?></p>
 		<p><?php esc_html_e( 'If you are new to this plugin we recommend you check the basic synchronization concepts. If this is your first time using the plugin, you can also do your first full sync.', 'wpm-user-sync' ); ?></p>
 
 		<a href="<?php echo esc_url( $concepts_url ); ?>" class="cuadrado"><?php esc_html_e( '1. Review basic concepts', 'wpm-user-sync' ); ?></a>
@@ -132,10 +132,10 @@ final class SiteHomePage {
 	private function render_concepts(): void {
 		?>
 		<h3><?php esc_html_e( 'Site User Sync Concepts', 'wpm-user-sync' ); ?></h3>
-		<p><?php esc_html_e( 'WPM User Sync has some simple but important concepts. Knowing all of them will help you get a better experience with the tool.', 'wpm-user-sync' ); ?></p>
+		<p><?php esc_html_e( 'DiluxOne Multisite User Sync has some simple but important concepts. Knowing all of them will help you get a better experience with the tool.', 'wpm-user-sync' ); ?></p>
 
 		<h4><?php esc_html_e( 'What exactly does this plugin do?', 'wpm-user-sync' ); ?></h4>
-		<p><?php esc_html_e( 'WPM User Sync enables user synchronization in your WordPress Multisite — see the Network admin Concepts tab for the full explanation. Here, a super admin can sync every network user into this one site.', 'wpm-user-sync' ); ?></p>
+		<p><?php esc_html_e( 'DiluxOne Multisite User Sync enables user synchronization in your WordPress Multisite — see the Network admin Concepts tab for the full explanation. Here, a super admin can sync every network user into this one site.', 'wpm-user-sync' ); ?></p>
 
 		<h4><?php esc_html_e( 'What can a site administrator configure?', 'wpm-user-sync' ); ?></h4>
 		<p><?php esc_html_e( 'Nothing. All triggers and toggles are configured at the network level, and these pages are only shown to super admins: the "sync from scratch" action adds every network user to this site with its default role, which is a network decision. Existing memberships are not modified, and people removed from this site stay removed.', 'wpm-user-sync' ); ?></p>
@@ -151,8 +151,8 @@ final class SiteHomePage {
 		<p><?php esc_html_e( 'This plugin was developed by Pablo Ariel Di Loreto:', 'wpm-user-sync' ); ?></p>
 		<ul>
 			<li>- <a href="https://www.linkedin.com/in/pablodiloreto/" target="_blank" rel="noopener"><?php esc_html_e( 'LinkedIn Contact', 'wpm-user-sync' ); ?></a>.</li>
-			<li>- <a href="https://pablodiloreto.com/" target="_blank" rel="noopener"><?php esc_html_e( 'Personal Blog', 'wpm-user-sync' ); ?></a>.</li>
-			<li>- <a href="https://pablodiloreto.com/wpm-user-sync/" target="_blank" rel="noopener"><?php esc_html_e( 'Plugin Homepage', 'wpm-user-sync' ); ?></a>.</li>
+			<li>- <a href="https://diluxone.com/plugins-wordpress" target="_blank" rel="noopener"><?php esc_html_e( 'DiluxOne plugins for WordPress', 'wpm-user-sync' ); ?></a>.</li>
+			<li>- <a href="https://wordpress.org/plugins/wpm-user-sync/" target="_blank" rel="noopener"><?php esc_html_e( 'Plugin Homepage', 'wpm-user-sync' ); ?></a>.</li>
 		</ul>
 		<?php
 	}

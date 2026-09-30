@@ -28,7 +28,7 @@ final class Header {
 	public function render(): void {
 		?>
 		<div class="wrap">
-			<h2><?php esc_html_e( 'WPM User Sync', 'wpm-user-sync' ); ?></h2>
+			<h2><?php esc_html_e( 'DiluxOne Multisite User Sync', 'wpm-user-sync' ); ?></h2>
 			<p>
 				<?php
 				echo wp_kses(

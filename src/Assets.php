@@ -45,7 +45,7 @@ final class Assets {
 			'wpmus_styles',
 			plugins_url( 'css/wpmus_styles.css', $this->plugin_file ),
 			array(),
-			'1.5.0'
+			WPMUS_VERSION
 		);
 	}
 }

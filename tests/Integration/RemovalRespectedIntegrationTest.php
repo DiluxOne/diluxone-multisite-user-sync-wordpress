@@ -25,7 +25,7 @@ final class RemovalRespectedIntegrationTest extends IntegrationTestCase {
 
 	private function engine(): SyncEngine {
 		return new SyncEngine(
-			new Config( WP_PLUGIN_DIR . '/wpm-user-sync/wpm-user-sync.php' ),
+			new Config( dirname( __DIR__, 2 ) . '/wpm-user-sync.php' ),
 			new SiteRepository(),
 			new UserRepository()
 		);
@@ -51,7 +51,7 @@ final class RemovalRespectedIntegrationTest extends IntegrationTestCase {
 
 	public function test_new_user_trigger_does_not_put_a_removed_user_back(): void {
 		list( $user_id, $blog_id ) = $this->removed_member();
-		( new Config( WP_PLUGIN_DIR . '/wpm-user-sync/wpm-user-sync.php' ) )->save_toggles( '', 'yes', '' );
+		( new Config( dirname( __DIR__, 2 ) . '/wpm-user-sync.php' ) )->save_toggles( '', 'yes', '' );
 
 		$this->engine()->on_new_user( $user_id );
 
@@ -70,7 +70,7 @@ final class RemovalRespectedIntegrationTest extends IntegrationTestCase {
 
 	public function test_signing_in_does_not_put_a_removed_user_back(): void {
 		list( $user_id, $blog_id ) = $this->removed_member();
-		( new Config( WP_PLUGIN_DIR . '/wpm-user-sync/wpm-user-sync.php' ) )->save_toggles( 'yes', 'yes', 'yes' );
+		( new Config( dirname( __DIR__, 2 ) . '/wpm-user-sync.php' ) )->save_toggles( 'yes', 'yes', 'yes' );
 
 		$user = get_user_by( 'id', $user_id );
 		$this->assertInstanceOf( \WP_User::class, $user );

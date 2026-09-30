@@ -55,7 +55,7 @@ final class NetworkHomePage {
 			 * Extensions may hook into this action to append their own
 			 * `<a class="nav-tab">` links. The currently selected tab
 			 * slug is also exposed as `$GLOBALS['sd_active_tab']` for
-			 * backwards compatibility with WPM User Sync 1.4 extensions.
+			 * backwards compatibility with 1.4 extensions.
 			 *
 			 * @since 1.0.0
 			 *
@@ -130,19 +130,19 @@ final class NetworkHomePage {
 		$options_url  = network_admin_url( 'admin.php?page=wpmus-networksyncoptions' );
 		$about_url    = network_admin_url( 'admin.php?page=wpmus-networkhome&tab=about' );
 		?>
-		<h3><?php esc_html_e( 'Welcome to Network "WPM User Sync" Plugin', 'wpm-user-sync' ); ?></h3>
-		<p><?php esc_html_e( 'Thank you for choosing WPM User Sync (which actually means "WordPress Multi-Site User Synchronization"). Follow the next steps to get started synchronizing:', 'wpm-user-sync' ); ?></p>
+		<h3><?php esc_html_e( 'Welcome to DiluxOne Multisite User Sync', 'wpm-user-sync' ); ?></h3>
+		<p><?php esc_html_e( 'Thank you for choosing DiluxOne Multisite User Sync. Follow the next steps to get started synchronizing:', 'wpm-user-sync' ); ?></p>
 
 		<a href="<?php echo esc_url( $concepts_url ); ?>" class="cuadrado"><?php esc_html_e( '1. Review basic concepts', 'wpm-user-sync' ); ?></a>
 		<a href="<?php echo esc_url( $actions_url ); ?>" class="cuadrado"><?php esc_html_e( '2. Complete the initial Users Sync', 'wpm-user-sync' ); ?></a>
-		<a href="<?php echo esc_url( $options_url ); ?>" class="cuadrado"><?php esc_html_e( '3. Check all WPM User Sync options', 'wpm-user-sync' ); ?></a>
+		<a href="<?php echo esc_url( $options_url ); ?>" class="cuadrado"><?php esc_html_e( '3. Check the network sync options', 'wpm-user-sync' ); ?></a>
 		<a href="<?php echo esc_url( $about_url ); ?>" class="cuadrado"><?php esc_html_e( '4. Meet the Authors & Support Us', 'wpm-user-sync' ); ?></a>
 
 		<p>
 			<?php
-			$site_link = '<a href="https://pablodiloreto.com/wpm-user-sync/">' . esc_html__( 'site', 'wpm-user-sync' ) . '</a>';
+			$site_link = '<a href="https://wordpress.org/support/plugin/wpm-user-sync/">' . esc_html__( 'support forum', 'wpm-user-sync' ) . '</a>';
 			printf(
-				/* translators: %s: link to the plugin's website */
+				/* translators: %s: link to the plugin's support forum on wordpress.org */
 				esc_html__( 'Do you want online help? Check our %s.', 'wpm-user-sync' ),
 				$site_link // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- pre-built from esc_html__ above.
 			);
@@ -158,20 +158,20 @@ final class NetworkHomePage {
 	private function render_concepts(): void {
 		?>
 		<h3><?php esc_html_e( 'User Sync Concepts', 'wpm-user-sync' ); ?></h3>
-		<p><?php esc_html_e( 'WPM User Sync has some simple but important concepts. Knowing all of them will help you get a better experience with the tool.', 'wpm-user-sync' ); ?></p>
+		<p><?php esc_html_e( 'DiluxOne Multisite User Sync has some simple but important concepts. Knowing all of them will help you get a better experience with the tool.', 'wpm-user-sync' ); ?></p>
 
 		<h4><?php esc_html_e( 'What exactly does this plugin do?', 'wpm-user-sync' ); ?></h4>
-		<p><?php esc_html_e( 'WPM User Sync is a plugin that enables user synchronization in your WordPress Multisite — a type of WordPress installation that allows you to create and manage a network of multiple websites from a single WordPress dashboard.', 'wpm-user-sync' ); ?></p>
+		<p><?php esc_html_e( 'DiluxOne Multisite User Sync is a plugin that enables user synchronization in your WordPress Multisite — a type of WordPress installation that allows you to create and manage a network of multiple websites from a single WordPress dashboard.', 'wpm-user-sync' ); ?></p>
 		<p><?php esc_html_e( 'Key concepts:', 'wpm-user-sync' ); ?></p>
 		<ul>
-			<li>- <?php esc_html_e( 'WPM User Sync is a plugin, not a core feature of WordPress. It was built by external developers. However, it goes through a detailed testing process to ensure smooth operation as it interacts with core aspects of the CMS.', 'wpm-user-sync' ); ?></li>
+			<li>- <?php esc_html_e( 'DiluxOne Multisite User Sync is a plugin, not a core feature of WordPress. It was built by external developers. However, it goes through a detailed testing process to ensure smooth operation as it interacts with core aspects of the CMS.', 'wpm-user-sync' ); ?></li>
 			<li>- <?php esc_html_e( 'In an out-of-the-box WordPress multisite setup, when you create a new user, it is never synced to other sites in your network. Also, when you create a new site in your network, no users are synced to it. This means that you must manually register or associate users — a tedious manual process.', 'wpm-user-sync' ); ?></li>
 			<li>- <?php esc_html_e( 'This plugin lets you automate all those scenarios, or do them manually. You decide.', 'wpm-user-sync' ); ?></li>
-			<li>- <?php esc_html_e( 'When we talk about "user synchronization" we never duplicate user data. The user is one identity that is added (referenced) on multiple sites. If you use SUBDOMAIN_INSTALL and want a single-sign-on experience, configure the cookie domain in wp-config.php — see the plugin website for help.', 'wpm-user-sync' ); ?></li>
+			<li>- <?php esc_html_e( 'When we talk about "user synchronization" we never duplicate user data. The user is one identity that is added (referenced) on multiple sites. If you use SUBDOMAIN_INSTALL and want a single-sign-on experience, configure the cookie domain in wp-config.php.', 'wpm-user-sync' ); ?></li>
 		</ul>
 
 		<h4><?php esc_html_e( 'What is a trigger? Which ones exist here?', 'wpm-user-sync' ); ?></h4>
-		<p><?php esc_html_e( 'A trigger is procedural code that runs automatically in response to certain events. WPM User Sync exposes three:', 'wpm-user-sync' ); ?></p>
+		<p><?php esc_html_e( 'A trigger is procedural code that runs automatically in response to certain events. DiluxOne Multisite User Sync exposes three:', 'wpm-user-sync' ); ?></p>
 		<ul>
 			<li>- <strong><?php esc_html_e( 'New user creation', 'wpm-user-sync' ); ?></strong> — <?php esc_html_e( 'when a user registers on your site, or an admin creates a new one.', 'wpm-user-sync' ); ?></li>
 			<li>- <strong><?php esc_html_e( 'New site creation', 'wpm-user-sync' ); ?></strong> — <?php esc_html_e( 'when an admin or authorized user creates a new site in your network.', 'wpm-user-sync' ); ?></li>
@@ -205,12 +205,12 @@ final class NetworkHomePage {
 	 */
 	private function render_about(): void {
 		?>
-		<h3><?php esc_html_e( 'About WPM User Sync Plugin', 'wpm-user-sync' ); ?></h3>
+		<h3><?php esc_html_e( 'About DiluxOne Multisite User Sync', 'wpm-user-sync' ); ?></h3>
 		<p><?php esc_html_e( 'This plugin was developed by Pablo Ariel Di Loreto:', 'wpm-user-sync' ); ?></p>
 		<ul>
 			<li>- <a href="https://www.linkedin.com/in/pablodiloreto/" target="_blank" rel="noopener"><?php esc_html_e( 'LinkedIn Contact', 'wpm-user-sync' ); ?></a>.</li>
-			<li>- <a href="https://pablodiloreto.com/" target="_blank" rel="noopener"><?php esc_html_e( 'Personal Blog', 'wpm-user-sync' ); ?></a>.</li>
-			<li>- <a href="https://pablodiloreto.com/wpm-user-sync/" target="_blank" rel="noopener"><?php esc_html_e( 'Plugin Homepage', 'wpm-user-sync' ); ?></a>.</li>
+			<li>- <a href="https://diluxone.com/plugins-wordpress" target="_blank" rel="noopener"><?php esc_html_e( 'DiluxOne plugins for WordPress', 'wpm-user-sync' ); ?></a>.</li>
+			<li>- <a href="https://wordpress.org/plugins/wpm-user-sync/" target="_blank" rel="noopener"><?php esc_html_e( 'Plugin Homepage', 'wpm-user-sync' ); ?></a>.</li>
 		</ul>
 		<?php
 	}

@@ -19,11 +19,7 @@
         exercises the plugin against it. It does NOT replace the
         unit suite — the two run independently and gate independently.
 
-        Run locally via:
-          npx wp-env start
-          npx wp-env run tests-cli ./vendor/bin/phpunit -c phpunit-integration.xml.dist
-
-        Or via the Makefile's `make test-integration` target.
+        Run locally with `make env` and then `make test-integration`.
     -->
     <testsuites>
         <testsuite name="integration">

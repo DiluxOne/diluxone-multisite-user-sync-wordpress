@@ -1,15 +1,14 @@
 {
-    "name": "soydiloreto/wpm-user-sync",
-    "description": "WPM User Sync WordPress Multisite plugin — Composer manifest for development tooling. Not used at runtime.",
+    "name": "diluxone/wpm-user-sync",
+    "description": "DiluxOne Multisite User Sync (wordpress.org slug wpm-user-sync) — Composer manifest for development tooling. Not used at runtime.",
     "type": "wordpress-plugin",
     "license": "GPL-2.0-or-later",
-    "homepage": "https://github.com/soydiloreto/wpm-user-sync",
+    "homepage": "https://wordpress.org/plugins/wpm-user-sync/",
     "support": {
-        "issues": "https://github.com/soydiloreto/wpm-user-sync/issues",
-        "source": "https://github.com/soydiloreto/wpm-user-sync"
+        "forum": "https://wordpress.org/support/plugin/wpm-user-sync/"
     },
     "require": {
-        "php": ">=7.4"
+        "php": ">=8.0"
     },
     "require-dev": {
         "brain/monkey": "^2.6",
@@ -37,7 +36,7 @@
     "config": {
         "sort-packages": true,
         "platform": {
-            "php": "7.4.30"
+            "php": "8.0.30"
         },
         "allow-plugins": {
             "dealerdirect/phpcodesniffer-composer-installer": true,

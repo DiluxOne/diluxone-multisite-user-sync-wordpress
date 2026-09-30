@@ -1,105 +1,103 @@
-=== WPM User Sync ===
+=== DiluxOne Multisite User Sync ===
 Contributors: pablodiloreto
-Donate link: https://pablodiloreto.com/
-Tags: multisite, wpm user sync, user sync, sync, multisite user
+Tags: multisite, users, user sync, network, roles
 Requires at least: 6.6
 Tested up to: 7.1
+Requires PHP: 8.0
 Stable tag: 1.5.0
 License: GPLv2 or later
-License URI: http://www.gnu.org/licenses/gpl-2.0.html
+License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Welcome to the best free user synchronization solution for WordPress Multisite.
+Adds your WordPress Multisite users to your sites, automatically or on demand: new users, new sites, role changes.
 
 == Description ==
 
-**Optimized for Microsoft Azure and Azure App Service** — built and battle-tested in production on Azure-hosted WordPress Multisite environments, while remaining fully compatible with any other WordPress Multisite host (DigitalOcean, AWS, dedicated servers, shared hosting, etc.).
+Out of the box, a WordPress Multisite network keeps its users and its sites apart: a new user joins no site, a new site starts with nobody but its administrator, and a role changed on one site stays there. DiluxOne Multisite User Sync closes that gap from Network Admin.
 
-'WPM User Sync' (which actually means "WordPress Multi-Site User Synchronization") is a plugin that allows you to configure & automate users sync between WordPress sites when you are using a multi-site setup. You will find options at network & sites level, to take absolute control with what happens when: a new user is created, a new site is created, and when we change a role for an existing user. Enjoy!
+Formerly *WPM User Sync*: same plugin, same settings, a new name in the DiluxOne family.
+
+= Three automatic triggers, each one on or off =
+
+* **New user**: a user added to the network (by a super admin, by registration, or by another plugin) joins every site, with each site's default role.
+* **New site**: a new site gets every user of the network, with the new site's own default role.
+* **Role change**: a role changed on one site is copied to the other sites the user already belongs to, where that role exists. Administrator is never copied.
+
+= Two manual actions =
+
+* **Sync from scratch**: every user to every site, or only to the sites you tick. Existing memberships are never changed.
+* **Add back people who were removed**, only if you tick the box: someone an administrator removed from a site stays off it otherwise, whatever the triggers say.
+
+= Safe by default =
+
+* Super admins are never added as members (they reach every site already), and archived, spam and deleted sites are left alone.
+* Only super admins see the plugin. A site's own administrator cannot pull the network's users into their site.
+* Big networks: a sync too large for one request runs in the background through WP-Cron, in batches, with its progress on the Network Sync Actions screen.
+* Users are never duplicated: one account, added to more sites. Uninstalling removes the plugin's settings and keeps every membership.
+
+Works on any WordPress Multisite host.
+
+= For developers =
+
+Filters: `wpmus_excluded_site_ids` (sites the sync never writes to), `wpmus_should_sync_user` (skip one user on one site), `wpmus_replicate_role` (which roles the role trigger copies), `wpmus_sync_inline_limit`, `wpmus_sync_batch_size` and `wpmus_sync_time_limit` (how big syncs are split). The source, its tests and the whole list are on GitHub: https://github.com/DiluxOne/diluxone-multisite-user-sync-wordpress
 
 == Installation ==
 
-The normal plugin install process applies, that is search for 'WPM User Sync' from your plugin screen or via the manual method:
+1. In Network Admin › Plugins › Add New, search for "DiluxOne Multisite User Sync", install it and click **Network Activate**.
+2. Go to Network Admin › User Sync › Network Sync Options and turn on the triggers you want.
+3. To bring an existing network up to date, run **Sync from scratch** on Network Admin › User Sync › Network Sync Actions.
 
-1. Upload the 'WPM User Sync' folder into your '/wp-content/plugins/' directory.
-1. Activate the plugin through the 'Plugins' menu in WordPress.
-
-That's it! 'WPM User Sync' will appear in your dashboard at Network & Site level
+The plugin needs WordPress Multisite. On a single site it says so and deactivates itself.
 
 == Frequently Asked Questions ==
 
-= What exactly does this plugin do? =
+= Does it copy or duplicate users? =
 
-WPM User Sync is a plugin that enable the user synchronization in your Wordpress Multisite, that is a type of WordPress installation that allows you to create and manage a network of multiple websites from a single WordPress dashboard. Key concepts:
+No. A WordPress network has one list of accounts; the plugin adds the same account to more sites, with a role on each.
 
-- WPM User sync is a plugin, not a core feature of WordPress. It was built by external developers to WordPress. However, it goes through a detailed testing process to ensure smooth operation as it interacts with core aspects of the CMS.
-- In out-of-the-box WordPress multisite setup, when you create a new user, it never sync to other sites in your network. Also, when you create a new site in your network, no users are synced to this new site. This means that you must manually register or associate users to your site, or your new site with your users. This is a tedious and manual process.
-- This plugin bring you the possibility to automate all this scenarios: a) when you create a new user, this user can be synced to all existing sites in your network; b) when you create a new site, all users can be automatic synced to it; c) when we change an user role in one site, you can configure to replicate this change to all sites in your network; d) if you do not want automation, with this plugin you can do all previous things in manual mode :-).
-- Last but not least, when we talk about 'user synchronization', we never duplicate user data. The user is only one, and the same identity is the one that is added to the sites in a reference model. If you are using "SUBDOMAIN_INSTALL" option (that is, each site on your network will be a subdomain) and you want "single-sign on experience", you should configure some cookies aspects in your WP-CONFIG. Check plugin's website help for more information.
+= Which role does a user get on each site? =
 
-= What is a trigger? Which ones exist here? =
+The site's own default role (Settings › General › New User Default Role on that site), or subscriber when the site's default role does not exist. The role a user holds on another site is never carried over by the new-user and new-site triggers or the manual actions.
 
-In WPM User Sync you will can configure some triggers to automate user sync. A trigger is procedural code that is automatically executed in response to certain events, and in the particular case of WPM User Sync & WordPress, to one of the following events:
+= Someone was removed from a site. Will a sync put them back? =
 
-- New user creation: when an user register in your site, or an admin create a new one.
-- New site creation: when an admin or authorized user create a new site in your network.
-- User role edited in one site: when you edit a user role in one of your network sites.
+No. The plugin remembers who was removed from which site and no trigger adds them back. The manual actions only do so when you tick "Also add back people who were removed from a site". Adding someone back yourself clears the record.
 
-Its very important to remember that you can configure all these 3 triggers from network level options.
+= Can I use only the manual actions? =
 
-= What kind of options do I have at the network level? =
+Yes. Leave the three triggers off and run the actions when you want.
 
-At network level you can configure the 3 triggers that we descripted in the past:
+= What can a site administrator do? =
 
-- New Site Automatic Sync: When a new site is created in the network, all users in the database will be added to this new site with default site role. If no default role is configured, "subscriber" role will be added.
-- New User Automatic Sync: When a new user is created in the network, will be added to all sites in the database with each default site role. If no default role is configured, "subscriber" role will be added.
-- Set User Role Automatic Sync: When an user role change is detected in any site (for example change an user to editor of an specific site) this change will be replicated to the other sites where the user is already a member and that have that role. The administrator role is never replicated (a developer can allow it with the `wpmus_replicate_role` filter), and super admins are left alone.
+Nothing: site administrators do not see the plugin. From a site's dashboard, a super admin can add every network user to that one site.
 
-Also, you can execute the following actions:
+= What does it store in the database? =
 
-- Sync from scratch: Sync all sites with all users. Each site will receive all users with default site role. If no default role is configured, "subscriber" role will be added. Existing users will have not changes. People removed from a site are only added back if you tick "Also add back people who were removed from a site".
-- Sync specific site: All selected sites will receive all users with default site role. If no default role is configured, "subscriber" role will be added. Existing users will have not changes. The same box applies.
+The three trigger settings and the progress of syncs running in the background, as network options, and the list of sites each person was removed from, as user meta. Nothing else, and nothing leaves your server: the plugin connects to no external service.
 
-None of the triggers or actions adds super admins to sites, or touches archived, spam or deleted sites. Large syncs run in the background in batches, and their progress is shown on the Network Sync Actions page.
+= What happens when I uninstall it? =
 
-= What can configure an administrator at site level? =
+The plugin's own data is removed (the settings, any sync still queued with its scheduled event, and the record of removals). Users, roles and memberships stay exactly as they are.
 
-Nothing. Site administrators do not see the plugin: pulling every network account into a site is a network decision. From a site's dashboard, a super admin (anyone who can manage the network's users) can run one action:
+= Is it in my language? =
 
-- Sync from scratch: Add all network users to that site with its default role. If no default role is configured, "subscriber" role will be added. Existing users will have not changes, and people removed from the site stay removed.
-
-= Can I avoid automatic actions and only act with manual actions? =
-
-Yes! You can. Disable all triggers at network level & you will allow to execute only manual actions.
-
-= Does this plugin host information in the local WordPress database? =
-
-Yes. This plugin host information in the "sitemeta" table to remember network sync options and the progress of large syncs running in the background, and in the "usermeta" table to remember which sites each person was removed from.
-
-= Does this plugin connect to any external web service? =
-
-Nope.
-
-= What happens if I uninstall the plugin? Do I lose my users? =
-
-No. Your users and their roles will remain untouched. When you uninstall WPM User Sync, only the plugin's own data is removed from the database: the automatic sync triggers, any sync still queued in the background, and its record of who was removed from which site. All user/site relationships created while the plugin was active remain as they are.
-
-= I love it, how can I show my appreciation? =
-
-If you have been impressed with this plugin and would like to somehow show some appreciation, rather than send a donation my way, please donate to your charity of choice. I will never ask for any form of reward or compensation. Helping others achieve their goals is satisfying for me :)
+Translations for Spanish (Argentina, Spain, Mexico), Portuguese (Brazil, Portugal), French, German and Italian are written with the plugin and contributed to translate.wordpress.org. WordPress installs a language from there once it is approved; the plugin itself carries no translation files.
 
 == Screenshots ==
- 
-1. Plugin Home for Network Admins.
-2. Network level Options for WPM User Sync.
-3. Network level Actions for WPM User Sync.
-4. Plugin Home for Site Admins.
-5. Site level Actions for WPM User Sync.
 
+1. Network Admin › User Sync: the home and the first steps.
+2. Network Sync Options: the three automatic triggers, each one on or off.
+3. Network Sync Actions: sync every site, or only the sites you pick.
+4. A large sync running in the background, with its progress.
+5. A site's dashboard, for super admins: the site's own home.
+6. Site Sync Actions: add every network user to this one site.
 
 == Upgrade Notice ==
 
+= 2.0.0 =
+Requires PHP 8.0. Security fixes: new sites no longer copy main-site roles, removed people stay removed, administrator is never copied, and site administrators can no longer pull the whole network into their site.
+
 = 1.5.0 =
-* Major modernization release — full OOP refactor with security hardening (capability checks on every admin handler, output escaping throughout, re-entrancy guard preventing role-sync cascades). Description now leads with the Microsoft Azure App Service positioning. Same toggles, same behavior, dramatically safer internals.
+Security hardening (capability checks on every admin action, escaped output, no role-sync cascades) and a full refactor. Same settings, same behavior.
 
 = 1.4 =
 Compatibility with the latest WordPress versions. Added clean uninstall support, proper multisite network flag, and translations-ready loading.
@@ -118,19 +116,25 @@ First release. Check help for all features.
 
 == Changelog ==
 
-= Unreleased =
-* **Fix (security)**: the New Site trigger gave each new site's members the role they held on the main site, so main-site editors and administrators became editors and administrators of every new site. Every new membership now gets the new site's own default role, and a default role the site does not define falls back to subscriber.
-* **Fix**: people removed from a site were put back on it at their next sign-in (and by the new-user trigger and the manual sync). The plugin now remembers who was removed from which site and no automatic sync adds them back; the network "Sync from scratch" and "Sync specific sites" actions only do so when you tick "Also add back people who were removed from a site". Adding someone back yourself clears the record.
-* **Removed**: the catch-up sync that ran on every sign-in (`wp_login`, `social_connect_login`). Accounts created outside the normal flows (imports, SQL) are added with the manual network sync.
-* **Fix**: super admins are no longer added as members of every site (they already reach every site), and archived, spam and deleted sites, and the sites of other networks on the same install, are no longer synced.
-* **New**: two filters for developers, `wpmus_excluded_site_ids` (sites the sync never writes to) and `wpmus_should_sync_user` (skip one user on one site).
-* **Fix (security)**: the Set User Role trigger copied any role, administrator included, to every site the user belonged to, including roles those sites do not define. It now copies a role only to sites that define it, never copies administrator unless the new `wpmus_replicate_role` filter allows it, leaves super admins alone, and ignores calls where the role did not change.
-* **Fix (security)**: any site administrator could run the site-level "Sync from scratch" and pull every account on the network into their site. The site-level pages and action now require the `manage_network_users` capability (super admins), and so do the network sync actions.
-* **Fix**: the New Site trigger listened on the deprecated `wpmu_new_blog` hook; it now uses `wp_initialize_site`. The New User trigger also covers accounts created with `wp_insert_user()` alone (some registration plugins), and runs once per account.
-* **Fix**: turning a trigger on or off now takes effect immediately, instead of from the next page load.
-* **Performance**: syncs no longer load every user of the network into memory, and large ones (a new site or a manual sync on a big network, a new user on a network with many sites) run in the background through WP-Cron in batches instead of in the request that started them, with their progress listed on the Network Sync Actions page. Small syncs still finish immediately. Developers can tune this with the `wpmus_sync_inline_limit`, `wpmus_sync_batch_size` and `wpmus_sync_time_limit` filters.
-* **Fix**: uninstalling now also removes the background sync queue, its scheduled event and the record of removals.
-* **Performance**: the plugin's admin stylesheet now loads only on its own pages instead of on every admin screen.
+= 2.0.0 =
+Unreleased.
+
+* The plugin is now called DiluxOne Multisite User Sync, in the DiluxOne family. Nothing else changes for your network: same settings, same screens, same slug.
+* Requires PHP 8.0 or newer (it was 7.4). Tested with WordPress 7.1.
+* Security: the new-site trigger gave each new site's members the role they held on the main site, so main-site editors and administrators became editors and administrators of every new site. Every new membership now gets the new site's own default role, and subscriber when that role does not exist there.
+* Security: the role trigger copied any role, administrator included, to every site the user belonged to, even where the role does not exist. It now copies a role only to sites that define it, never copies administrator (a developer can allow it with the `wpmus_replicate_role` filter), leaves super admins alone and ignores changes that change nothing.
+* Security: any site administrator could run the site-level "Sync from scratch" and pull every account of the network into their site. The site screens and their action are now for super admins only, and so are the network actions.
+* People removed from a site were put back on it at their next sign-in, and by the new-user trigger and the manual sync. The plugin now remembers who was removed from which site and no sync adds them back, unless you tick "Also add back people who were removed from a site" on a manual sync. Adding someone back yourself clears the record.
+* Removed: the catch-up sync that ran on every sign-in. Accounts created outside the normal flows (imports, SQL) are added with the manual network sync.
+* Super admins are no longer added as members of every site, and archived, spam and deleted sites, and the sites of other networks on the same install, are left alone.
+* The new-site trigger now listens on `wp_initialize_site` instead of the deprecated `wpmu_new_blog`, and the new-user trigger also covers accounts created with `wp_insert_user()` alone (some registration plugins), once per account.
+* Turning a trigger on or off takes effect immediately instead of from the next page load.
+* Big networks: syncs no longer load every user into memory, and a large one (a new site or a manual sync on a big network, a new user on a network with many sites) runs in the background through WP-Cron in batches, with its progress on the Network Sync Actions screen. Small syncs still finish at once.
+* New filters for developers: `wpmus_excluded_site_ids`, `wpmus_should_sync_user`, `wpmus_replicate_role`, `wpmus_sync_inline_limit`, `wpmus_sync_batch_size` and `wpmus_sync_time_limit`.
+* On a site that is not a network, the plugin now only explains that it needs WordPress Multisite and deactivates itself; nothing else of it runs in the meantime.
+* Uninstalling now also removes the background sync queue, its scheduled event and the record of removals.
+* The plugin's stylesheet loads only on its own screens instead of on every admin screen.
+* Translations written for Spanish (Argentina, Spain, Mexico), Portuguese (Brazil, Portugal), French, German and Italian, to be contributed to translate.wordpress.org; WordPress installs them from there. The plugin no longer loads translations itself.
 
 = 1.5.0 (2026-05-05) =
 * **Description repositioned**: leads with "Optimized for Microsoft Azure and Azure App Service" while explicitly noting compatibility with any WordPress Multisite host (DigitalOcean, AWS, dedicated servers, shared hosting, etc.).

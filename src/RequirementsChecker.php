@@ -46,7 +46,7 @@ final class RequirementsChecker {
 
 		$plugin_basename = $this->config->plugin_basename();
 		$plugin_data     = $this->config->plugin_data();
-		$plugin_name     = isset( $plugin_data['Name'] ) ? (string) $plugin_data['Name'] : 'WPM User Sync';
+		$plugin_name     = isset( $plugin_data['Name'] ) ? (string) $plugin_data['Name'] : 'DiluxOne Multisite User Sync';
 		$required_wp     = $this->config->required_wp_version();
 
 		if ( ! function_exists( 'is_plugin_active' ) ) {

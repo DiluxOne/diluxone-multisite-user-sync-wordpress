@@ -26,7 +26,7 @@ final class SyncEngineIntegrationTest extends IntegrationTestCase {
 
 	private function make_engine(): SyncEngine {
 		return new SyncEngine(
-			new Config( WP_PLUGIN_DIR . '/wpm-user-sync/wpm-user-sync.php' ),
+			new Config( dirname( __DIR__, 2 ) . '/wpm-user-sync.php' ),
 			new SiteRepository(),
 			new UserRepository()
 		);
@@ -86,7 +86,7 @@ final class SyncEngineIntegrationTest extends IntegrationTestCase {
 		$blog_id = $this->make_site( $this->unique_slug( 'on-blog' ) );
 		$user_id = $this->make_user( $this->unique_slug( 'on-user' ) );
 
-		( new Config( WP_PLUGIN_DIR . '/wpm-user-sync/wpm-user-sync.php' ) )->save_toggles( '', 'yes', '' );
+		( new Config( dirname( __DIR__, 2 ) . '/wpm-user-sync.php' ) )->save_toggles( '', 'yes', '' );
 
 		$this->make_engine()->on_new_user( $user_id );
 
@@ -98,7 +98,7 @@ final class SyncEngineIntegrationTest extends IntegrationTestCase {
 
 	public function test_on_new_site_with_toggle_on_seeds_new_site_with_existing_users(): void {
 		$user_id = $this->make_user( $this->unique_slug( 'seeded' ) );
-		( new Config( WP_PLUGIN_DIR . '/wpm-user-sync/wpm-user-sync.php' ) )->save_toggles( 'yes', '', '' );
+		( new Config( dirname( __DIR__, 2 ) . '/wpm-user-sync.php' ) )->save_toggles( 'yes', '', '' );
 
 		$blog_id = $this->make_site( $this->unique_slug( 'seed-target' ) );
 		// `wpmu_create_blog` does NOT fire `wpmu_new_blog` on every WP
@@ -119,7 +119,7 @@ final class SyncEngineIntegrationTest extends IntegrationTestCase {
 
 		add_user_to_blog( $member_blog, $user_id, 'editor' );
 
-		( new Config( WP_PLUGIN_DIR . '/wpm-user-sync/wpm-user-sync.php' ) )->save_toggles( '', '', 'yes' );
+		( new Config( dirname( __DIR__, 2 ) . '/wpm-user-sync.php' ) )->save_toggles( '', '', 'yes' );
 
 		// Trigger entry point: simulate a role change to 'author'.
 		$this->make_engine()->on_role_changed( $user_id, 'author' );

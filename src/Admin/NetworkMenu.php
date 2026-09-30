@@ -41,12 +41,12 @@ final class NetworkMenu {
 
 	/**
 	 * Hooked on `network_admin_menu` from {@see \WPMUS\Plugin}.
-	 * Registers the WPM User Sync menu plus its two submenus.
+	 * Registers the plugin's menu plus its two submenus.
 	 */
 	public function register(): void {
 		add_menu_page(
-			__( 'WPM User Sync', 'wpm-user-sync' ),
-			__( 'WPM User Sync', 'wpm-user-sync' ),
+			__( 'DiluxOne Multisite User Sync', 'wpm-user-sync' ),
+			__( 'User Sync', 'wpm-user-sync' ),
 			'manage_network_options',
 			'wpmus-networkhome',
 			array( $this, 'render_home' ),

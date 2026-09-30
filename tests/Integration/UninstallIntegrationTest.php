@@ -24,7 +24,7 @@ final class UninstallIntegrationTest extends IntegrationTestCase {
 		$blog_id = $this->make_site( $slug . '-site' );
 		add_user_to_blog( $blog_id, $user_id, 'author' );
 
-		( new Config( WP_PLUGIN_DIR . '/wpm-user-sync/wpm-user-sync.php' ) )->save_toggles( 'yes', 'yes', 'yes' );
+		( new Config( dirname( __DIR__, 2 ) . '/wpm-user-sync.php' ) )->save_toggles( 'yes', 'yes', 'yes' );
 		$queue = new JobQueue();
 		$queue->add( new SyncJob( 'manual', null, null, false ) );
 		$queue->schedule();
@@ -33,7 +33,7 @@ final class UninstallIntegrationTest extends IntegrationTestCase {
 		if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 			define( 'WP_UNINSTALL_PLUGIN', 'wpm-user-sync/wpm-user-sync.php' );
 		}
-		include WP_PLUGIN_DIR . '/wpm-user-sync/uninstall.php';
+		include dirname( __DIR__, 2 ) . '/uninstall.php';
 
 		$this->assertFalse( get_site_option( Config::OPTION_NEW_SITE_SYNC ) );
 		$this->assertFalse( get_site_option( JobQueue::OPTION_JOBS ) );

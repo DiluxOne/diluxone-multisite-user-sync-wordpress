@@ -1,9 +1,9 @@
 <?xml version="1.0"?>
-<ruleset name="WPM User Sync">
+<ruleset name="DiluxOne Multisite User Sync">
     <description>
-        WordPress Coding Standards configuration for the WPM User Sync plugin.
+        WordPress Coding Standards configuration for DiluxOne Multisite User Sync (wpm-user-sync).
         Strict mode — runs the full WordPress ruleset (Core + Docs + Extra) plus
-        PHP 7.4+ compatibility checks. No baseline.
+        PHP 8.0+ compatibility checks. No baseline.
     </description>
 
     <!-- Files / paths to scan -->
@@ -90,7 +90,7 @@
         <severity>0</severity>
     </rule>
 
-    <!-- Property and parameter docblocks redundant with PHP 7.4+ typed
+    <!-- Property and parameter docblocks redundant with PHP 8.0+ typed
          declarations. `private bool $in_sync` is more authoritative
          than `@var bool $in_sync`. Same for parameters: `function f( int $x )`
          conveys exactly what `@param int $x` would. We keep
@@ -121,7 +121,7 @@
     <!-- Plugin minimum WordPress version (matches readme.txt) -->
     <config name="minimum_supported_wp_version" value="6.6"/>
 
-    <!-- PHP compatibility: must run cleanly on PHP 7.4 and up -->
-    <config name="testVersion" value="7.4-"/>
+    <!-- PHP compatibility: must run cleanly on PHP 8.0 and up -->
+    <config name="testVersion" value="8.0-"/>
     <rule ref="PHPCompatibilityWP"/>
 </ruleset>

@@ -1,11 +1,9 @@
-# CODEOWNERS for wpm-user-sync
+# CODEOWNERS for DiluxOne Multisite User Sync (wpm-user-sync).
 #
-# Lines below define who is auto-assigned as reviewer when a PR touches
-# matching paths. The first matching line wins per file. See:
-# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
-#
-# Branch protection on `main` does NOT require code-owner approval today —
-# this file currently only triggers automatic review-request on every PR.
+# Who is asked for a review when a pull request touches a path; the first
+# matching line wins per file. The ruleset on `main` does not require a code
+# owner's approval: this makes every pull request land in the maintainer's
+# review queue.
 
-# Default: maintainer reviews every PR.
+# Default: the maintainer reviews every pull request.
 * @soydiloreto

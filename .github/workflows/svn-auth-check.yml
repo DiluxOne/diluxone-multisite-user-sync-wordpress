@@ -1,0 +1,20 @@
+name: SVN credentials check
+
+# Run by hand after rotating the wordpress.org SVN password: proves the
+# secrets in the `wordpress-org` environment authenticate, without
+# publishing anything (the shared workflow in DiluxOne/.github, pinned to a
+# commit like the release: it runs with the same credentials).
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    uses: DiluxOne/.github/.github/workflows/svn-auth-check.yml@5d0f8511e1158c3ac23e3a647347f290f015eebb # v2.6.1
+    # An environment's secrets reach a called job only through `inherit`,
+    # which also passes every repository and organisation secret; hence the
+    # by-hand trigger and the pinned commit.
+    secrets: inherit

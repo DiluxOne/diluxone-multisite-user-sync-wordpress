@@ -1,0 +1,84 @@
+name: 🐛 Bug report
+description: Report a defect — something is broken or behaves unexpectedly.
+title: "[Bug]: "
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug. Before submitting, please confirm:
+
+        - This is a **defect in the plugin code**, not a usage question (those go to the [wordpress.org support forum](https://wordpress.org/support/plugin/wpm-user-sync/)).
+        - This is **not a security vulnerability**: those are reported privately, as this repository's Security policy (SECURITY.md) explains, never in a public issue.
+        - You searched this repository's existing issues and this is not a duplicate.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you expect to happen, and what happened instead? Which user, which site, which role?
+      placeholder: When I create a site with New Site Automatic Sync on, the user X is not added / gets role Y instead of Z.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: Minimal, ordered steps that reliably trigger the bug.
+      placeholder: |
+        1. Network Admin › User Sync › Network Sync Options: turn on '...'
+        2. Create '...'
+        3. See '...'
+    validations:
+      required: true
+
+  - type: input
+    id: plugin-version
+    attributes:
+      label: Plugin version
+      description: As shown on Network Admin › Plugins (for a development build, the version and the build). Please check first that it happens on the current released version or on the current development build (Releases › Development build).
+      placeholder: "1.5.0"
+    validations:
+      required: true
+
+  - type: input
+    id: wordpress-version
+    attributes:
+      label: WordPress version
+      placeholder: "7.1"
+    validations:
+      required: true
+
+  - type: input
+    id: php-version
+    attributes:
+      label: PHP version
+      placeholder: "8.2"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: network-type
+    attributes:
+      label: Network type
+      options:
+        - Subdirectory network
+        - Subdomain network
+        - Domain-mapped sites
+        - Not sure
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs / error messages
+      description: Entries from `wp-content/debug.log`, the browser console, or admin notices. **Redact personal data before pasting.**
+      render: shell
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional context
+      description: Other plugins that create users or sites (registration, membership, SSO), how many sites and users the network has, the host.

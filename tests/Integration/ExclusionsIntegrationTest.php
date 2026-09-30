@@ -19,7 +19,7 @@ final class ExclusionsIntegrationTest extends IntegrationTestCase {
 
 	private function engine(): SyncEngine {
 		return new SyncEngine(
-			new Config( WP_PLUGIN_DIR . '/wpm-user-sync/wpm-user-sync.php' ),
+			new Config( dirname( __DIR__, 2 ) . '/wpm-user-sync.php' ),
 			new SiteRepository(),
 			new UserRepository()
 		);
@@ -41,7 +41,7 @@ final class ExclusionsIntegrationTest extends IntegrationTestCase {
 		$blog_id = $this->make_site( $this->slug( 'no-supers' ) );
 
 		try {
-			( new Config( WP_PLUGIN_DIR . '/wpm-user-sync/wpm-user-sync.php' ) )->save_toggles( 'yes', '', '' );
+			( new Config( dirname( __DIR__, 2 ) . '/wpm-user-sync.php' ) )->save_toggles( 'yes', '', '' );
 			$this->engine()->on_new_site( $blog_id );
 			$this->engine()->sync_all_users_to_all_sites();
 			$this->assertFalse( $this->is_member( $user_id, $blog_id ) );
@@ -106,7 +106,7 @@ final class ExclusionsIntegrationTest extends IntegrationTestCase {
 			}
 		);
 
-		( new Config( WP_PLUGIN_DIR . '/wpm-user-sync/wpm-user-sync.php' ) )->save_toggles( '', 'yes', '' );
+		( new Config( dirname( __DIR__, 2 ) . '/wpm-user-sync.php' ) )->save_toggles( '', 'yes', '' );
 		$this->engine()->on_new_user( $user_id );
 		$this->engine()->sync_all_users_to_all_sites();
 

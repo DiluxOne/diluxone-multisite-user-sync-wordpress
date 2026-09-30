@@ -37,11 +37,11 @@ final class PluginBootstrapTest extends IntegrationTestCase {
 		);
 	}
 
-	public function test_textdomain_loader_is_registered_on_plugins_loaded(): void {
-		$this->assertNotFalse(
-			has_action( 'plugins_loaded' ),
-			'The plugin must register a plugins_loaded listener for load_plugin_textdomain.'
-		);
+	public function test_the_plugin_leaves_its_translations_to_wordpress(): void {
+		// No load_plugin_textdomain(): WordPress loads the language pack
+		// from wp-content/languages/plugins/ by itself (Plugin Check
+		// discourages the call for directory-hosted plugins).
+		$this->assertFalse( method_exists( Plugin::class, 'load_textdomain' ) );
 	}
 
 	public function test_form_save_handlers_are_registered_at_network_admin_edit_endpoints(): void {

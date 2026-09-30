@@ -22,8 +22,15 @@ require_once __DIR__ . '/../../vendor/autoload.php';
 // `convertWarningsToExceptions=true` would surface as undefined-key
 // errors. Stub them with safe placeholders so test fixtures can use
 // the real WordPress APIs to create sites.
+//
+// The host must be the tests network's own, or multisite cannot find the
+// site to load: WPMUS_TESTS_HOST when it is set, else the testsPort that
+// .wp-env.json gives the tests site.
+$wpmus_env_file  = dirname( __DIR__, 2 ) . '/.wp-env.json';
+$wpmus_env       = is_readable( $wpmus_env_file ) ? json_decode( (string) file_get_contents( $wpmus_env_file ), true ) : array();
+$wpmus_host      = getenv( 'WPMUS_TESTS_HOST' ) ?: 'localhost:' . (int) ( $wpmus_env['testsPort'] ?? 8889 );
 $_SERVER['REMOTE_ADDR']     = $_SERVER['REMOTE_ADDR']     ?? '127.0.0.1';
-$_SERVER['HTTP_HOST']       = $_SERVER['HTTP_HOST']       ?? 'localhost:8889';
+$_SERVER['HTTP_HOST']       = $_SERVER['HTTP_HOST']       ?? $wpmus_host;
 $_SERVER['SERVER_PROTOCOL'] = $_SERVER['SERVER_PROTOCOL'] ?? 'HTTP/1.1';
 $_SERVER['REQUEST_METHOD']  = $_SERVER['REQUEST_METHOD']  ?? 'GET';
 $_SERVER['REQUEST_URI']     = $_SERVER['REQUEST_URI']     ?? '/';
@@ -37,7 +44,7 @@ if ( ! file_exists( $wp_load ) ) {
 		"Could not find wp-load.php at: {$wp_load}\n\n" .
 		"Run via:\n" .
 		"  npx wp-env start\n" .
-		"  npx wp-env run tests-cli ./vendor/bin/phpunit -c phpunit-integration.xml.dist\n\n" .
+		"  npx wp-env run tests-cli ./vendor/bin/phpunit -c phpunit-integration.xml\n\n" .
 		"Or set WP_LOAD=/path/to/your/wp-load.php if WordPress is elsewhere.\n\n"
 	);
 	exit( 1 );

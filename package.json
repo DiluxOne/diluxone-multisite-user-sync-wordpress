@@ -1,12 +1,8 @@
 {
   "name": "wpm-user-sync-dev",
   "private": true,
-  "description": "Local development environment scripts for the WPM User Sync WordPress Multisite plugin. Not published to npm — only used to pin @wordpress/env for contributors.",
+  "description": "Local development scripts for DiluxOne Multisite User Sync (wordpress.org slug wpm-user-sync). Not published to npm — only used to pin @wordpress/env and the end-to-end runner for contributors.",
   "license": "GPL-2.0-or-later",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/soydiloreto/wpm-user-sync.git"
-  },
   "engines": {
     "node": ">=18"
   },
@@ -16,9 +12,12 @@
     "env:destroy": "wp-env destroy",
     "env:reset": "wp-env destroy && wp-env start",
     "env:cli": "wp-env run cli",
-    "env:logs": "wp-env logs"
+    "env:logs": "wp-env logs",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui"
   },
   "devDependencies": {
-    "@wordpress/env": "^10.0.0"
+    "@playwright/test": "^1.63.0",
+    "@wordpress/env": "^11.15.0"
   }
 }

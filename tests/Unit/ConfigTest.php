@@ -127,7 +127,7 @@ final class ConfigTest extends TestCase {
 	public function test_required_wp_version_reads_from_plugin_data(): void {
 		Functions\expect( 'get_plugin_data' )
 			->once()
-			->andReturn( array( 'Name' => 'WPM User Sync', 'RequiresWP' => '6.6' ) );
+			->andReturn( array( 'Name' => 'DiluxOne Multisite User Sync', 'RequiresWP' => '6.6' ) );
 
 		$this->assertSame( '6.6', $this->make_config()->required_wp_version() );
 	}
@@ -135,7 +135,7 @@ final class ConfigTest extends TestCase {
 	public function test_required_wp_version_returns_empty_string_when_missing(): void {
 		Functions\expect( 'get_plugin_data' )
 			->once()
-			->andReturn( array( 'Name' => 'WPM User Sync' ) );
+			->andReturn( array( 'Name' => 'DiluxOne Multisite User Sync' ) );
 
 		$this->assertSame( '', $this->make_config()->required_wp_version() );
 	}
