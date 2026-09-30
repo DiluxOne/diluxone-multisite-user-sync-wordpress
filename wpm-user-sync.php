@@ -2,7 +2,7 @@
 /**
  * Plugin Name: DiluxOne Multisite User Sync
  * Plugin URI: https://wordpress.org/plugins/wpm-user-sync/
- * Description: Optimized for Microsoft Azure and Azure App Service (compatible with any host). Configures & automates user synchronization between WordPress sites in a multi-site setup.
+ * Description: Configures & automates user synchronization between WordPress sites in a multi-site setup.
  * Version: 1.5.0
  * Author: Pablo Ariel Di Loreto
  * Author URI: https://diluxone.com/plugins-wordpress

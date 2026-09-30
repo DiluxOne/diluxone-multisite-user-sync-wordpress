@@ -1,6 +1,3 @@
-# Portuguese (Brazil) translation of DiluxOne Multisite User Sync.
-# Copyright (C) 2026 Pablo Ariel Di Loreto
-# This file is distributed under the GPLv2 or later.
 msgid ""
 msgstr ""
 "Project-Id-Version: DiluxOne Multisite User Sync 1.5.0\n"
@@ -31,8 +28,8 @@ msgstr "https://wordpress.org/plugins/wpm-user-sync/"
 
 #. Description of the plugin
 #: wpm-user-sync.php
-msgid "Optimized for Microsoft Azure and Azure App Service (compatible with any host). Configures & automates user synchronization between WordPress sites in a multi-site setup."
-msgstr "Otimizado para Microsoft Azure e Azure App Service (compatível com qualquer hospedagem). Configura e automatiza a sincronização de usuários entre os sites do WordPress em uma instalação multisite."
+msgid "Configures & automates user synchronization between WordPress sites in a multi-site setup."
+msgstr "Configura e automatiza a sincronização de usuários entre os sites do WordPress em uma instalação multisite."
 
 #. Author of the plugin
 #: wpm-user-sync.php

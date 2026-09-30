@@ -34,7 +34,7 @@ Formerly *WPM User Sync*: same plugin, same settings, a new name in the DiluxOne
 * Big networks: a sync too large for one request runs in the background through WP-Cron, in batches, with its progress on the Network Sync Actions screen.
 * Users are never duplicated: one account, added to more sites. Uninstalling removes the plugin's settings and keeps every membership.
 
-Optimized for Microsoft Azure and Azure App Service, and compatible with any WordPress Multisite host.
+Works on any WordPress Multisite host.
 
 = For developers =
 
