@@ -15,9 +15,9 @@ patterns.
 
 A **WordPress Multisite-only** plugin (`Network: true` in the plugin
 header). It synchronises users across the sites of a multisite
-network: when a user is created at network level, when a user logs
-in for the first time, or when a user's role changes on one site,
-the plugin propagates the change to the other configured sites.
+network: when a user is created, when a site is created, or when a
+user's role changes on one site, the plugin propagates the change to
+the other sites. A user removed from a site stays removed.
 
 The plugin runs **only** on multisite installs — it auto-deactivates
 on a single-site install via `wpmus_check_requirements()`. That
@@ -31,28 +31,29 @@ GPL-2.0-or-later. The maintainer is Pablo Diloreto
 
 ## Architecture quick-reference
 
-PR 1 ships the dev-experience stack on top of the legacy procedural
-code. The OOP refactor lands in **PR 2** (planned `WPMUS\` PSR-4
-namespace, classes for Config / SyncEngine / NetworkAdmin /
-SiteAdmin / Repositories). Until that lands, the architecture is:
+The code is object-oriented under the `WPMUS\` PSR-4 namespace:
 
 | Path | Contains |
 |------|----------|
-| `wpm-user-sync.php` | Plugin header + bootstrap. Registers all the WordPress hooks via global function names. |
-| `core/wpmus-variables.php` | Reads site options and exposes them as globals (`$wpmus_newSiteSync`, `$wpmus_newUserSync`, `$wpmus_setUserRoleSync`). Reads plugin metadata via `get_plugin_data()`. |
-| `core/wpmus-functions.php` | Core sync logic: `wpmus_sync_newsite`, `wpmus_sync_newuser`, `wpmus_maybesync_newuser`, `wpmus_sync_newrole`, requirements check, init hooks, CSS enqueue. |
-| `network-admin/*.php` | Network-level admin pages: home, sections, sync options form, sync actions (run sync from scratch). Uses tabs hooked via `do_action('wpmus_network_home_tabs')`. |
-| `site-admin/*.php` | Per-site admin pages: home, sections, sync actions. |
-| `css/wpmus_styles.css` | Admin styles enqueued in `wpmus_add_css()`. |
-| `uninstall.php` | Removes the three site options on plugin uninstall. Users and roles are NOT touched. |
+| `wpm-user-sync.php` | Plugin header + bootstrap: builds `WPMUS\Plugin`. |
+| `src/Plugin.php` | Wiring: builds the dependency graph and registers every hook. |
+| `src/Config.php` | The three network toggles. |
+| `src/Sync/SyncEngine.php` | Every membership write: triggers, manual syncs, the background queue runner, the re-entrancy guard. |
+| `src/Sync/JobQueue.php`, `src/Sync/SyncJob.php` | Big syncs, stored in a network option and run in batches by one WP-Cron event on the main site. |
+| `src/Repositories/` | Thin wrappers over `get_sites()`, `get_users()`, `add_user_to_blog()`, user meta. |
+| `src/Admin/` | Network and site admin pages and their form handlers. |
+| `legacy-deprecated.php` | Deprecated `wpmus_*` functions kept for back-compat. |
+| `uninstall.php` | Removes the plugin's options, queue, cron event and removal record. Users, roles and memberships are NOT touched. |
 | `readme.txt` | wp.org plugin page content. |
 
-Hook registration in `wpm-user-sync.php` is conditional on the three
-site options:
+Sync hooks are always registered; the engine reads each toggle when
+the hook fires:
 
-- `wpmus_newSiteSync == 'yes'` → hooks `wpmu_new_blog → wpmus_sync_newsite`
-- `wpmus_newUserSync == 'yes'` → hooks `wpmu_new_user`, `wp_login`, `social_connect_login`
-- `wpmus_setUserRoleSync == 'yes'` → hooks `set_user_role`
+- `wp_initialize_site` (priority 11) → new-site sync
+- `wpmu_new_user`, `user_register` (+ `shutdown`), `wpmu_activate_user` → new-user sync, once per user
+- `set_user_role` → role replication
+- `remove_user_from_blog` / `add_user_to_blog` → the removal record
+- `wpmus_process_sync_queue` → background batches
 
 Plus `network_admin_edit_*` and `admin_action_*` actions for the form
 submissions.
@@ -79,19 +80,28 @@ Flag a PR if any of these are violated.
   context to perform user role changes on another site, it must
   `switch_to_blog($id)` and pair with `restore_current_blog()`. Failing
   to restore leaks state into the rest of the request.
-- **`wpmu_new_blog` is the legacy hook; modern WP also fires `wp_initialize_site`.**
-  The current code uses `wpmu_new_blog` for back-compat. If a PR adds
-  `wp_initialize_site` handling, that's fine — both should coexist
-  during the transition. Don't remove the legacy hook without
-  documentation.
+- **Site creation is `wp_initialize_site`, not `wpmu_new_blog`.**
+  `wpmu_new_blog` is deprecated since WordPress 5.1 (the plugin needs
+  6.6); listening on both would run the sync twice.
+- **Never re-add a removed user automatically.** Every automatic path
+  must respect the `wpmus_removed_from_blogs` record; only a manual
+  sync with the explicit "add back" box may override it.
+- **Never copy roles across sites on creation.** New memberships get
+  the destination site's own default role. Role replication copies
+  only to sites that define the role, never `administrator` unless
+  the `wpmus_replicate_role` filter allows it.
+- **Nothing proportional to users × sites in one request.** Read users
+  as id pages; jobs above the inline limit go to the queue.
 
 ### Security
 
 - **Capability checks on every admin handler.** Network-level handlers
-  must check `current_user_can('manage_network')` (or
-  `manage_network_options`). Site-level handlers must check
-  `current_user_can('manage_options')`. A handler that mutates state
-  without a capability check is a critical bug.
+  must check `manage_network_options` (settings) or
+  `manage_network_users` (anything that adds users). The site-level
+  sync also checks `manage_network_users`: pulling network accounts
+  into a site is not a site administrator's call, so `manage_options`
+  is NOT enough there. A handler that mutates state without a
+  capability check is a critical bug.
 - **Nonces on every form submission.** The code uses
   `wp_nonce_field()` / `check_admin_referer()` patterns. New forms
   MUST follow the same pattern. Missing or invalidly-scoped nonces
@@ -177,8 +187,8 @@ choices:
 In priority order:
 
 1. **Missing capability checks** on any new admin/AJAX handler that
-   mutates state. Multisite handlers without `manage_network` or
-   `manage_options` checks are critical.
+   mutates state. Multisite handlers without a `manage_network_*`
+   check are critical.
 2. **Missing nonces** on any new form. CSRF-equivalent.
 3. **Missing escaping** on any new output point. Legacy code has
    pre-existing gaps that will be caught in the cleanup PR; new

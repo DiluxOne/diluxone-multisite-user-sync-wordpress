@@ -182,13 +182,13 @@ final class NetworkHomePage {
 		<h4><?php esc_html_e( 'What kind of options do I have at the network level?', 'wpm-user-sync' ); ?></h4>
 		<p><?php esc_html_e( 'At network level you configure the three triggers described above:', 'wpm-user-sync' ); ?></p>
 		<ul>
-			<li>- <strong><?php esc_html_e( 'New Site Automatic Sync', 'wpm-user-sync' ); ?></strong> — <?php esc_html_e( 'when a new site is created, all users in the database are added with the default site role (subscriber if no default is set).', 'wpm-user-sync' ); ?></li>
+			<li>- <strong><?php esc_html_e( 'New Site Automatic Sync', 'wpm-user-sync' ); ?></strong> — <?php esc_html_e( 'when a new site is created, every user on the network is added to it with that site\'s default role (subscriber if no default is set). Super admins and people removed from a site are left out.', 'wpm-user-sync' ); ?></li>
 			<li>- <strong><?php esc_html_e( 'New User Automatic Sync', 'wpm-user-sync' ); ?></strong> — <?php esc_html_e( 'when a new user is created, they are added to all sites with each site default role.', 'wpm-user-sync' ); ?></li>
-			<li>- <strong><?php esc_html_e( 'Set User Role Automatic Sync', 'wpm-user-sync' ); ?></strong> — <?php esc_html_e( 'when a user role changes on one site, the change is propagated to other sites the user already belongs to.', 'wpm-user-sync' ); ?></li>
+			<li>- <strong><?php esc_html_e( 'Set User Role Automatic Sync', 'wpm-user-sync' ); ?></strong> — <?php esc_html_e( 'when a user role changes on one site, the change is copied to the other sites the user already belongs to that have that role. Administrator is never copied.', 'wpm-user-sync' ); ?></li>
 		</ul>
 		<p><?php esc_html_e( 'You can also execute the following actions:', 'wpm-user-sync' ); ?></p>
 		<ul>
-			<li>- <strong><?php esc_html_e( 'Sync from scratch', 'wpm-user-sync' ); ?></strong> — <?php esc_html_e( 'add every network user to every site with each site default role. Existing memberships are not modified.', 'wpm-user-sync' ); ?></li>
+			<li>- <strong><?php esc_html_e( 'Sync from scratch', 'wpm-user-sync' ); ?></strong> — <?php esc_html_e( 'add every network user to every site with each site default role. Existing memberships are not modified, and people removed from a site are only added back if you tick the box.', 'wpm-user-sync' ); ?></li>
 			<li>- <strong><?php esc_html_e( 'Sync specific site', 'wpm-user-sync' ); ?></strong> — <?php esc_html_e( 'same as above but limited to the sites you check off in the form.', 'wpm-user-sync' ); ?></li>
 		</ul>
 

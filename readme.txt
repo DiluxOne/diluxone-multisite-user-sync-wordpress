@@ -56,8 +56,10 @@ At network level you can configure the 3 triggers that we descripted in the past
 
 Also, you can execute the following actions:
 
-- Sync from scratch: Sync all sites with all users. Each site will receive all users with default site role. If no default role is configured, "subscriber" role will be added. Existing users will have not changes.
-- Sync specific site: All selected sites will receive all users with default site role. If no default role is configured, "subscriber" role will be added. Existing users will have not changes.
+- Sync from scratch: Sync all sites with all users. Each site will receive all users with default site role. If no default role is configured, "subscriber" role will be added. Existing users will have not changes. People removed from a site are only added back if you tick "Also add back people who were removed from a site".
+- Sync specific site: All selected sites will receive all users with default site role. If no default role is configured, "subscriber" role will be added. Existing users will have not changes. The same box applies.
+
+None of the triggers or actions adds super admins to sites, or touches archived, spam or deleted sites. Large syncs run in the background in batches, and their progress is shown on the Network Sync Actions page.
 
 = What can configure an administrator at site level? =
 
