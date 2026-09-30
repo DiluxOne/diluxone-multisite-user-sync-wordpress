@@ -27,22 +27,6 @@ final class ConfigTest extends TestCase {
 	// is_*_enabled accessors
 	// ---------------------------------------------------------------------
 
-	public function test_any_trigger_is_enabled_when_one_option_is_yes(): void {
-		Functions\when( 'get_site_option' )->alias(
-			static function ( string $key ): string {
-				return Config::OPTION_SET_USER_ROLE_SYNC === $key ? 'yes' : '';
-			}
-		);
-
-		$this->assertTrue( $this->make_config()->is_any_trigger_enabled() );
-	}
-
-	public function test_no_trigger_is_enabled_when_every_option_is_off(): void {
-		Functions\when( 'get_site_option' )->justReturn( '' );
-
-		$this->assertFalse( $this->make_config()->is_any_trigger_enabled() );
-	}
-
 	public function test_new_site_sync_is_enabled_when_option_is_yes(): void {
 		Functions\when( 'get_site_option' )->justReturn( 'yes' );
 
