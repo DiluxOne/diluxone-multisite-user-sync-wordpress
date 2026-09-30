@@ -39,6 +39,15 @@ add_filter(
 );
 
 add_filter(
+	'wpmus_sync_time_limit',
+	static function ( $seconds ) {
+		$knobs = wpmus_e2e_knobs();
+
+		return isset( $knobs['time_limit'] ) ? (int) $knobs['time_limit'] : $seconds;
+	}
+);
+
+add_filter(
 	'wpmus_excluded_site_ids',
 	static function ( $ids ) {
 		$knobs = wpmus_e2e_knobs();
@@ -56,4 +65,18 @@ add_filter(
 	},
 	10,
 	2
+);
+
+/*
+ * Holds WP-Cron for web requests, so a test can look at a queued sync before
+ * anything works on it; WP-CLI's `wp cron event run` still runs the event,
+ * which is how the test moves it on, one run at a time.
+ */
+add_filter(
+	'pre_get_ready_cron_jobs',
+	static function ( $pre ) {
+		$knobs = wpmus_e2e_knobs();
+
+		return ! empty( $knobs['hold_cron'] ) && ! ( defined( 'WP_CLI' ) && WP_CLI ) ? array() : $pre;
+	}
 );
