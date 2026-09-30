@@ -1,114 +1,119 @@
-# Contributing to WPM User Sync
+# Contributing to DiluxOne Multisite User Sync
 
-Thanks for your interest in contributing. This document covers how to report issues, submit pull requests, and what to expect from the review process.
+Thanks for helping. This page covers issues, pull requests and what CI
+enforces. The organisation's [contributing guide](https://github.com/DiluxOne/.github/blob/main/CONTRIBUTING.md)
+has the general rules; this one adds what is specific to the plugin.
 
-## Reporting bugs and requesting features
+## Bugs, ideas and questions
 
-Open a [new issue](https://github.com/soydiloreto/wpm-user-sync/issues/new). Useful kinds of issue:
+- **A bug or a feature request:** open a new issue with the matching
+  template. Claude reads it first, labels it and replies once (it may ask for
+  versions or steps, or try to reproduce a bug with a unit test); the
+  maintainer decides what happens next. What is planned and what is not is in
+  [`docs/roadmap.md`](docs/roadmap.md).
+- **Using the plugin** (how do I…?, a user did not get a site): the
+  [wordpress.org support forum](https://wordpress.org/support/plugin/wpm-user-sync/),
+  where answers stay public for the next person.
+- **A security vulnerability:** [SECURITY.md](SECURITY.md), never a public
+  issue.
 
-- **Bug report** — something is broken or behaves unexpectedly.
-- **Feature request** — you'd like the plugin to do something it doesn't do today.
-- **Multisite scenario** — a specific multisite topology (subdomain, subdirectory, mapped domains) where sync behaves differently than expected.
+## Pull requests
 
-For **end-user support questions** please use the [wp.org support forum](https://wordpress.org/support/plugin/wpm-user-sync/) instead.
+1. Branch from `main` (your fork, if you are an outside contributor), named
+   `<type>/<kebab-case>`, for example `fix/role-sync-super-admins`.
+2. Make the change with its tests at every layer it touches (unit,
+   integration on a network, end-to-end, and the layout run, the baselines
+   and the listing screenshots when a screen changes; see
+   [`docs/testing-and-quality.md`](docs/testing-and-quality.md)), add its row
+   to [`tests/e2e/COVERAGE.md`](tests/e2e/COVERAGE.md), and update any doc
+   that describes what you changed. A change a user notices adds one bullet to
+   the newest `= X.Y.Z =` entry of `readme.txt`, under its `Unreleased.` line;
+   leave that line alone ([`docs/release.md`](docs/release.md)).
+3. Run `make pre-pr` (needs `make env`): `make check` (PHPCS, PHPStan, Psalm,
+   unit tests), the unit tests on PHP 8.0, the translations check, the docs
+   check, the integration and end-to-end suites, Plugin Check, and the local
+   review (`make review-local`), which checks the branch, the title, the
+   commits and, with `REVIEW_ARGS="--body-file build/pr.md"`, the description
+   as CI will, and runs the same Claude review through the Claude Code CLI on
+   your own account. It clones the organisation's shared scripts from
+   [DiluxOne/.github](https://github.com/DiluxOne/.github) into `build/`.
+4. Open the pull request and fill in the template: 📝 What changes and 💡 Why
+   are required. The description becomes the commit body on `main`, word for
+   word: plain words, short paragraphs.
+5. If AI took part, end the description with one line:
+   `🤖 AI-assisted · <model> (<maker>)`. The rules are in
+   [`docs/ai.md`](docs/ai.md).
 
-For **security vulnerabilities**, see [SECURITY.md](SECURITY.md). Do not open a public issue.
+Pull requests are squash-merged: the title becomes the commit title on
+`main`, the description its body, and `Co-authored-by` trailers are kept.
+Nothing reaches `main` without a green pull request, maintainers included.
 
-## Pull request workflow
+### Titles and commits
 
-1. **Fork** the repository and clone your fork locally.
-2. **Branch** from `main` using a descriptive name following the convention below.
-3. **Commit** your changes (see commit message conventions below).
-4. **Push** the branch to your fork.
-5. **Open a pull request** against `main`. Explain *why* the change matters, not just *what* it does.
-6. **Wait for CI to pass.** All required checks must be green before review.
-7. **Address review feedback** by pushing additional commits to the same branch (we squash on merge, so commit count doesn't matter).
-
-### Branch naming
-
-Use one of these prefixes, followed by a short kebab-case description:
-
-| Prefix | Used for |
-|--------|----------|
-| `feat/` | New user-visible functionality |
-| `fix/` | Bug fixes |
-| `chore/` | Maintenance tasks, version bumps, no behavior change |
-| `docs/` | Documentation-only changes |
-| `ci/` | CI/CD configuration changes |
-| `refactor/` | Internal restructure with no behavior change |
-| `style/` | Code style / linter / formatting changes |
-| `test/` | Test-only additions or changes |
-
-Examples: `fix/sync-loop-on-new-blog`, `refactor/oop-architecture`, `docs/multisite-readme`.
-
-### Commit messages
-
-We follow [Conventional Commits](https://www.conventionalcommits.org/). The first line is `<type>(<optional-scope>): <subject>`, where type is one of `feat`, `fix`, `chore`, `docs`, `ci`, `refactor`, `style`, `test`. Examples:
+[Conventional Commits](https://www.conventionalcommits.org/):
+`<type>(<optional-scope>): <subject>`, with type one of `feat`, `fix`,
+`docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`,
+`revert`, at most 100 characters, no trailing period, for the pull request
+title and every commit. Bodies are plain paragraphs, one line each, never
+hard-wrapped.
 
 ```
-feat(sync): propagate role removal across network
-fix(sync): avoid double-sync when wpmu_new_user fires after wp_login
-chore: bump to 1.5.0
+fix(sync): leave super admins alone when a role changes
+feat(sync): let a filter keep a site out of every automatic sync
 ```
 
-The body explains the *why* — context, motivation, alternatives considered.
+### What CI enforces
 
-## Coding conventions
+Once the repository is in the DiluxOne organisation (until then, the Make
+targets are the gates):
 
-The project enforces a strict quality stack on every PR. Run `make check` locally before pushing.
+- The shared [`conventions`](https://github.com/DiluxOne/.github/blob/main/.github/workflows/conventions.yml)
+  workflow: branch name, title and every commit in the format above; no
+  `Claude-Session:` trailer; "📝 What changes" and "💡 Why" filled; no
+  "Generated with …" footer; relative doc links that resolve.
+- The quality gates: syntax and unit tests on PHP 8.0 to 8.5, PHPCS with the
+  WordPress Coding Standards, PHPStan level 8, Psalm taint analysis, i18n
+  extraction, Plugin Check on the shipped tree, readme and version markers,
+  integration tests on a wp-env network and the Playwright suite on a wp-env
+  network.
+- The Claude review, guided by [`docs/architecture.md`](docs/architecture.md),
+  [`AGENTS.md`](AGENTS.md) and the WordPress review profile: inline comments
+  on blockers and majors, `risk:*`, `complexity:*` and `type:*` labels. Answer
+  in the thread mentioning `@dilux-bot`; every conversation must be resolved
+  before merging. Forks are not reviewed automatically; the maintainer
+  reviews them.
 
-| Gate | Tool | Make target |
-| --- | --- | --- |
-| Code style | PHP_CodeSniffer + WordPress Coding Standards | `make lint` (auto-fix: `make lint-fix`) |
-| Static analysis | PHPStan level 8, no baseline | `make stan` |
-| Security taint analysis | Psalm in taint-only mode (XSS, SQLi, RCE) | `make psalm` |
-| i18n | `wp i18n make-pot` + warning-grep | `make i18n` |
-| Unit tests | PHPUnit | `make test` |
+## Coding rules the linters cannot express
 
-See [`docs/testing-and-quality.md`](docs/testing-and-quality.md) for what each layer enforces.
+- **PHP 8.0 and WordPress 6.6** are the minimums; the plugin needs Multisite.
+- **No Composer dependencies at runtime.** `vendor/` never ships.
+- **Every membership write goes through the sync engine**, with its guards:
+  live sites of this network only, never a super admin, the destination's
+  default role, removals respected, the re-entrancy flag.
+- **Capability and nonce before anything else** in every handler.
+- **Published names are permanent**: slug, text domain, options, meta keys,
+  hooks, filters, page slugs, the 1.4 functions.
+- **Every user-facing string** translatable with the `wpm-user-sync` domain,
+  with a `/* translators: */` comment right before a placeholder; after
+  changing strings, every locale updated (`make i18n-update`, translate,
+  `make i18n-mo`, `make i18n-check`).
+- **Input unslashed and sanitized, output escaped, SQL prepared.**
 
-A few hard rules the linters can't fully express:
+The full list, with the architecture and the review priorities:
+[`docs/architecture.md`](docs/architecture.md).
 
-- **PHP 7.4+** is the minimum supported version. Don't use 8.0+ syntax (named arguments, match expressions, constructor promotion, nullsafe `?->`, enums, readonly, intersection types, first-class callable syntax) without a 7.4 fallback.
-- **Multisite-only.** This plugin runs on multisite and self-deactivates on single-site installs. Don't add code that assumes single-site context.
-- **Use `*_site_option()` for network-level config**, not `*_option()`. Use `get_sites()` to enumerate, never the deprecated `wp_get_sites()`.
-- **`switch_to_blog($id)` MUST be paired with `restore_current_blog()`.** Cross-site sync code that switches context must restore on every code path, including early returns and exceptions.
-- **No hard production dependencies on Composer packages.** The plugin must run on a fresh WordPress install with no extra setup. `composer install` produces only dev tooling — `vendor/` never ships to wp.org.
-- **All plugin globals are prefixed `wpmus_`** (legacy) or `WPMUS\` (new OOP code from PR 2 onward). Enforced by PHPCS.
+## Versions and releases
 
-## Versioning
+Nobody types a version: it is computed from the `type:*` labels of what
+merged, and `main`'s markers say the last version released (1.5.0). The
+changelog is written as the changes merge, under the `Unreleased.` line of
+the newest `readme.txt` entry; the maintainer removes that line when the
+version is ready and approves the deployment. Never bump the version or
+remove that line in your pull request. The whole flow:
+[`docs/release.md`](docs/release.md).
 
-We follow [Semantic Versioning](https://semver.org/) for the plugin's public version (`MAJOR.MINOR.PATCH`):
+## Code of Conduct and licence
 
-- **PATCH** (1.4.0 → 1.4.1): bug fixes only, no behavior change beyond the fix itself.
-- **MINOR** (1.4.x → 1.5.0): new user-visible functionality, backwards-compatible.
-- **MAJOR** (1.x → 2.0): backwards-incompatible changes (rare).
-
-Repository-only changes (this CONTRIBUTING.md, CI workflows, dev tooling, etc.) **do not** trigger a version bump — they are excluded from the wp.org deploy via [`.distignore`](.distignore) and are invisible to end users.
-
-### `-dev` suffix on `main`
-
-The `Version:` header in `wpm-user-sync.php` carries a **`-dev` suffix on `main`** to signal that the working tree is in active development and not a tagged release.
-
-| Where | Looks like | Means |
-|---|---|---|
-| `main` between releases | `Version: 1.5.0-dev` | "Working towards 1.5.0; this is NOT a release" |
-| Final release commit | `Version: 1.5.0` | "This commit IS the 1.5.0 release; tag it" |
-| Tag (e.g. `1.5.0`) | snapshot of the release commit | What ends up at wp.org and on user sites |
-| `main` after release | `Version: 1.6.0-dev` | "Now working towards 1.6.0" |
-
-The `Stable tag:` in `readme.txt` does NOT carry the suffix — it always holds the **last published release version**.
-
-Accepted pre-release suffixes are `-dev`, `-alpha`, `-beta`, `-rc` (optionally followed by `.N`).
-
-## Releasing (maintainers only)
-
-See [`docs/release.md`](docs/release.md) for the full release flow.
-
-## AI-assisted contributions
-
-If you use Copilot, Claude, GPT, Cursor, or any other AI tool to help write code, read [`docs/ai-policy.md`](docs/ai-policy.md) before opening a PR.
-
-## License
-
-By contributing, you agree that your contributions will be licensed under the [GPL-2.0-or-later](https://www.gnu.org/licenses/old-licenses/gpl-2.0.html).
+By participating you agree to the organisation's
+[Code of Conduct](https://github.com/DiluxOne/.github/blob/main/CODE_OF_CONDUCT.md).
+Your contributions are licensed under the [GPL-2.0-or-later](LICENSE).

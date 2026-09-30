@@ -4,100 +4,129 @@ What every quality gate enforces, why, and how to run each one locally.
 
 ## Quality stack at a glance
 
-| Layer | Tool | Catches | CI workflow | Make target |
+Once the repository lives in the DiluxOne organisation, the pull request
+checks run from [`.github/workflows/pull-request.yml`](../.github/workflows/pull-request.yml),
+which calls the shared workflows in [`DiluxOne/.github`](https://github.com/DiluxOne/.github):
+the **fast** suite first, then the Claude review, with the **slow** suite
+alongside it. Until then, the Make targets below are the gates.
+
+| Layer | Tool | Catches | Suite | Make target |
 | --- | --- | --- | --- | --- |
-| Unit tests | PHPUnit | Logic regressions in pure-PHP units. Currently a smoke placeholder; real coverage lands with the OOP refactor. | `pr-checks.yml` | `make test` |
-| Integration tests | PHPUnit on wp-env multisite | Sync flows end-to-end against a real WP runtime. Lands after the OOP refactor. | (added later) | (added later) |
-| Coding style | PHP_CodeSniffer + WordPress Coding Standards | Style, naming, escaping, sanitisation, deprecated APIs, prefix discipline. | (added in cleanup PR) | `make lint` |
-| Static analysis | PHPStan level 8 + szepeviktor/phpstan-wordpress | Type safety, unreachable code, undefined methods/properties, missing return types. **No baseline.** | (added in cleanup PR) | `make stan` |
-| Security taint analysis | Psalm + humanmade/psalm-plugin-wordpress (taint-only mode) | XSS, SQL injection, command injection — user input flowing into dangerous sinks. | (added in cleanup PR) | `make psalm` |
-| i18n | `wp i18n make-pot` | Missing translator comments on placeholders, dynamic text domains, conflicting translator hints, concat'd translatable strings. | `i18n-validate.yml` | `make i18n` |
-| Plugin Check (wp.org) | wordpress/plugin-check | The same checks the wp.org plugin team runs at submission/review time. | `pr-checks.yml` | (no Make target) |
-| PHP syntax matrix | `php -l` on PHP 7.4–8.3 | Hard syntax errors on every supported PHP version. | `pr-checks.yml` | (no Make target) |
+| Conventions | shared `conventions` workflow, lychee | Branch name, PR title and commit headers; the description's What changes and Why; no "Generated with …" footer; broken relative doc links; retired product names. | conventions | `make docs-check` (links, names) |
+| Syntax | `php -l` on PHP 8.0 to 8.5, the shipped files | Syntax the minimum PHP cannot parse. | fast | — |
+| Unit tests | PHPUnit 9 + Brain Monkey + Mockery, same PHP matrix | Logic regressions without WordPress. | fast | `make test`, `make test-unit-min` |
+| Coding style | PHPCS + WordPress Coding Standards + PHPCompatibilityWP (8.0+) | Style, naming, escaping, sanitising, nonces, prefixes, deprecated APIs, syntax newer than 8.0. | fast | `make lint` |
+| Static analysis | PHPStan level 8 + phpstan-wordpress, **no baseline** | Types, dead code, undefined methods. | fast | `make stan` |
+| Taint analysis | Psalm + psalm-plugin-wordpress (taint only) | Request data reaching `echo`, SQL, `header()`, files without an escaper. | fast | `make psalm` |
+| i18n | `wp i18n make-pot` on the shipped tree; `msgfmt`/`msgcmp` | Missing translator comments, dynamic domains, concatenated strings; an incomplete, fuzzy or stale locale. | fast | `make i18n`, `make i18n-check` |
+| Plugin Check | wordpress/plugin-check on the shipped tree | What the wordpress.org review team runs. | fast | `make plugin-check` |
+| Readme and versions | shared `release-markers.sh` | Readme headers; `Version:`, `WPMUS_VERSION` and `Stable tag:` in line and naming the last release (or the one being released, in its release pull request). | fast | — |
+| Claude review | shared `claude-review` workflow | [`architecture.md`](architecture.md), [`AGENTS.md`](../AGENTS.md) and the WordPress review profile; rates risk and complexity. | after fast | `make review-local` |
+| Integration tests | PHPUnit on the wp-env tests network | Behaviour against real WordPress Multisite and MySQL: hooks, options, memberships, cron, uninstall. | slow | `make test-integration` |
+| End-to-end tests | Playwright on the wp-env dev network | Every screen, every trigger and action as a person uses them, permissions, the queue through WP-Cron, uninstall, layout invariants; plus the single-site check. | slow | `make test-e2e` |
+| Visual baselines | Playwright `toHaveScreenshot` | A screen that changed look without a rule breaking. Local only: a baseline is one machine's rendering. | — | `make test-visual`, `make test-visual-update` |
 
-> **Why some workflows say "added in cleanup PR"**: PR 1 brings in the *configuration* for PHPCS / PHPStan / Psalm so contributors can run them locally, but the existing legacy code does not yet pass them. The CI workflows that enforce those gates are added in a later PR after the OOP refactor and a dedicated linter cleanup pass. From that PR onward, all three become required status checks on `main`.
+A change carries its tests **at every layer it touches**, in the same pull
+request: a unit test for logic that stands alone, an integration test on a
+network for what needs WordPress, an end-to-end test for what a person does
+or sees, and, when a screen changes, the layout run, the baselines retaken on
+purpose (`make test-visual-update`) and the listing screenshots
+(`make screenshots`). Which test covers which feature:
+[`tests/e2e/COVERAGE.md`](../tests/e2e/COVERAGE.md); a new feature or state
+adds its row.
 
-Every layer that has a CI workflow today is required to land before a PR can merge (branch protection enforces it).
+**What runs when (in the organisation).** A pull request that changes no code
+runs only the fast checks and the review; the integration and end-to-end
+suites and Plugin Check show as skipped, which the ruleset accepts. "Code"
+is the `code` list of the organisation's policy plus this repository's
+[`.github/review-policy.yml`](../.github/review-policy.yml). A push to `main`
+runs everything unless its tree is the one the pull request tested; once a
+week everything runs against today's WordPress.
 
 ## Unit tests
 
-Located in [`tests/Unit/`](../tests/Unit/). They run in pure PHP without WordPress.
+[`tests/Unit/`](../tests/Unit/), pure PHP: Brain Monkey stubs WordPress
+functions and Mockery mocks the repositories, so the engine's every branch
+runs without a database. [`tests/bootstrap.php`](../tests/bootstrap.php)
+defines `ABSPATH` and `WPMUS_VERSION`.
 
 ```bash
-make test           # default target → unit tests only
-make test-unit      # explicit
+make test            # on the newest PHP
+make test-unit-min   # on PHP 8.0
 ```
 
-The current suite is a smoke placeholder (`SmokeTest.php`). Real unit tests for `Config`, `SyncEngine`, repositories etc. land alongside the OOP refactor. The integration suite (added in a later PR) will exercise the full sync flows against a real wp-env multisite.
+Name a test after the class it tests; keep `$_GET`, the database and real
+hooks out (that is integration).
 
-When you add a unit test, mirror the source path: a new class `WPMUS\SyncEngine` lives in `src/SyncEngine.php` (or wherever the autoload points), and its tests go in `tests/Unit/SyncEngineTest.php`. Don't touch `$_GET`, `$_POST`, the database, the filesystem, or `define()` plugin constants in unit tests — the bootstrap intentionally keeps the WP runtime out.
+## Integration tests
 
-## PHPCS / WordPress Coding Standards
-
-Configuration: [`phpcs.xml.dist`](../phpcs.xml.dist).
+[`tests/Integration/`](../tests/Integration/), inside the wp-env tests
+container, against the tests **network** (8899). The bootstrap loads
+WordPress, refuses to run on a single site, and reads the tests host from
+`.wp-env.json` (`WPMUS_TESTS_HOST` overrides it). Every test starts with the
+three toggles off and deletes the sites and users it made.
 
 ```bash
-make lint           # report violations
-make lint-fix       # auto-fix what can be auto-fixed (PHPCBF)
+make env
+make test-integration
 ```
 
-The ruleset enforces the WordPress Coding Standards plus a small project-specific overlay:
+## End-to-end tests
 
-- **Yoda conditions** are off (we use `$x === 5`, not `5 === $x`).
-- A few cosmetic comment-formatting rules are relaxed.
-- The plugin function-prefix is `wpmus` / `WPMUS` / `wpm_user_sync` (enforced by `WordPress.NamingConventions.PrefixAllGlobals`).
-- The text domain is `wpm-user-sync`.
-- PHP compatibility is checked against PHP 7.4+ via `PHPCompatibilityWP`.
-
-When PHPCS reports a violation, the rule code is in the right column. Search for it in the config or in [WPCS docs](https://github.com/WordPress/WordPress-Coding-Standards/wiki) before suppressing — most warnings are real bugs.
-
-## PHPStan
-
-Configuration: [`phpstan.neon`](../phpstan.neon).
+[`tests/e2e/`](../tests/e2e/): Playwright and Chromium against the dev
+network (8898). How it is built, what it needs and why:
+[`tests/e2e/README.md`](../tests/e2e/README.md).
 
 ```bash
-make stan
+make test-e2e          # the network suite, then the single-site check
+make test-layout       # only the layout measurements
+make test-visual       # compare with the baselines in tests/e2e/snapshots/
+make screenshots       # retake .wordpress-org/screenshot-1..6.png
 ```
 
-We run **level 8 (max strictness) with no baseline** as the target end state. The `szepeviktor/phpstan-wordpress` extension teaches PHPStan about the WordPress API surface so e.g. `get_user_locale()` returns `string`, `get_sites()` returns `WP_Site[]`, and `wp_remote_get()` returns `array|WP_Error`.
+The layout measurements (overlap, overflow, blank boxes, hidden elements,
+sideways scroll, at 1600/1280/960/782 px) need no baseline and run with the
+suite and in CI; the pictures are opt-in because a baseline belongs to the
+machine that took it. Read `git diff --stat tests/e2e/snapshots` before
+committing retaken pictures: that diff is the review of the change.
 
-`WP_DEBUG` is declared `dynamicConstantNames` so PHPStan doesn't collapse `if ( WP_DEBUG )` into a constant — its runtime value is set per-deployment from `wp-config.php`.
+In CI the shared workflow runs `npx playwright test`: the network suite only.
+The single-site check needs the Plugin Check environment and runs locally
+(`make test-e2e`); its logic is covered in CI by `RequirementsCheckerTest`
+and `PluginTest`.
 
-Until the cleanup PR brings violations to 0, `make stan` will print findings on the legacy procedural code. Don't add to a baseline — the project deliberately doesn't have one.
+## PHPCS, PHPStan, Psalm
 
-## Psalm taint analysis
+[`phpcs.xml.dist`](../phpcs.xml.dist), [`phpstan.neon`](../phpstan.neon) with
+[`phpstan-bootstrap.php`](../phpstan-bootstrap.php), [`psalm.xml`](../psalm.xml).
+The `src/` tree is PSR-4 (StudlyCase files), so the WPCS file-naming sniffs
+are off there; everything else is on. PHPStan runs at level 8 with no
+baseline: fix the type, do not record it. Psalm runs in taint mode only
+(types are PHPStan's job); a finding is fixed by the right escaper, not a
+suppression.
 
-Configuration: [`psalm.xml`](../psalm.xml).
+## Translations
 
-```bash
-make psalm
-```
-
-Psalm here runs in **taint-analysis mode only**. The `humanmade/psalm-plugin-wordpress` plugin teaches it that `esc_html()`, `esc_attr()`, `esc_url()`, `wpdb->prepare()`, `sanitize_*()` are sanitisation barriers, so user-controlled values from `$_GET` / `$_POST` / `$_REQUEST` / `$_COOKIE` / `$_FILES` / `$_SERVER` only become findings if they reach a dangerous sink (`echo`, `eval`, `exec`, `$wpdb->query()`, `file_put_contents`, `header`, …) without passing through one.
-
-General static type-checking is suppressed in `psalm.xml` — that's PHPStan's job.
-
-## i18n validation
-
-Configuration: [`.github/workflows/i18n-validate.yml`](../.github/workflows/i18n-validate.yml).
-
-```bash
-make i18n
-```
-
-The Makefile target runs `wp i18n make-pot` and writes the result to `build/wpm-user-sync.pot`. The CI workflow does the same and additionally fails the build if any `Warning:` / `Error:` line appears.
+`languages/wpm-user-sync.pot` ships; eight complete locales (`es_AR`,
+`es_ES`, `es_MX`, `pt_BR`, `pt_PT`, `fr_FR`, `de_DE`, `it_IT`) live beside it
+as `.po` and `.mo`, the source for translate.wordpress.org. After changing a
+string: `make i18n-update`, translate the new entries in every `.po`,
+`make i18n-mo`, and `make i18n-check` must pass (no untranslated, fuzzy or
+missing entry).
 
 ## Plugin Check
 
-CI step in [`pr-checks.yml`](../.github/workflows/pr-checks.yml). Runs the [official WordPress Plugin Check](https://github.com/WordPress/plugin-check-action) action with all categories enabled (`plugin_repo`, `security`, `performance`, `accessibility`, `general`) plus experimental checks. Some codes are explicitly ignored (`hidden_files`, `github_directory`, `unexpected_markdown_file`, `stable_tag_mismatch`) because they false-positive on the GitHub-flat repo layout or on the `-dev` suffix workflow.
+`make plugin-check` builds the dist and runs wordpress.org's Plugin Check on
+it in its own wp-env (8900/8901). `wp plugin check` exits 0 whatever it
+finds, so the target reads the table and fails on any ERROR row.
 
-If you submit a new version to wp.org, the same checks run there. CI catches them earlier so a wp.org reviewer never has to.
+One warning stays by design: `trademarked_term` on the slug `wpm-user-sync`
+("wp"). The slug is permanent since the plugin is published, which is why
+the display name no longer carries it.
 
 ## Running everything at once
 
 ```bash
-make check     # lint + stan + psalm + tests
-make release   # make check + version-alignment dry-run
+make check     # lint + stan + psalm + unit tests
+make pre-pr    # check, PHP 8.0 units, i18n, docs, integration, e2e, Plugin Check, local review
 ```
-
-`make release` is what you should run before pushing a release tag.

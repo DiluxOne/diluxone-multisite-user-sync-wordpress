@@ -1,87 +1,165 @@
-# Release process
+# Releases: how a change becomes a version
 
-For maintainers. End users get the plugin from [wordpress.org/plugins/wpm-user-sync](https://wordpress.org/plugins/wpm-user-sync/) — they don't need to read this document.
+For everyone who touches this repository: outside contributors, maintainers
+and coding agents. End users get the plugin from
+[wordpress.org/plugins/wpm-user-sync](https://wordpress.org/plugins/wpm-user-sync/)
+and never need this page. The short, enforceable version of these rules is
+in [`AGENTS.md`](../AGENTS.md).
 
-## Versioning
+## Where things stand
 
-We follow [Semantic Versioning](https://semver.org/) for the plugin's public version (`MAJOR.MINOR.PATCH`):
+The plugin is published on wordpress.org as `wpm-user-sync`; the last release
+is **1.5.0**, and `main`'s three version markers say so. It is moving into
+the DiluxOne organisation on GitHub, and from that move on it is released by
+the organisation's pipeline, as every DiluxOne plugin is. Until then **nothing
+is released**: the workflows in [`.github/workflows/`](../.github/workflows/)
+call reusable workflows, secrets and GitHub Apps that exist only inside the
+organisation, and they do not run here. What the move takes is in
+[Moving into DiluxOne](#moving-into-diluxone) below.
 
-| Bump | When |
-| --- | --- |
-| **PATCH** (1.4.0 → 1.4.1) | Bug fixes only, no behaviour change beyond the fix itself. |
-| **MINOR** (1.4.x → 1.5.0) | New user-visible functionality, backwards-compatible. |
-| **MAJOR** (1.x → 2.0)     | Backwards-incompatible changes. Avoid unless truly necessary. |
+The next version is being written under `= 1.6.0 =` in `readme.txt`, with its
+`Unreleased.` line in place.
 
-Repository-only changes (CI, dev tooling, this `docs/` directory, …) **do not** trigger a version bump. Those files are excluded from the wp.org deploy via [`.distignore`](../.distignore) and are invisible to end users.
+## Who does what
 
-## The `-dev` suffix
+| | Outside contributor | Maintainer | The pipeline |
+| --- | --- | --- | --- |
+| Writes the change and its changelog bullet | yes, in the pull request | yes | never |
+| Decides the type of the change (`type:*` label) | no | can override with a label | the Claude review, from the diff |
+| Computes the next version | no | no | yes, from the labels |
+| Decides that a version is ready | no | yes, by removing one line in `readme.txt` | never |
+| Approves the publication | no | yes, in the `wordpress-org` environment | never |
+| Sets the version markers | never | yes, in the release pull request | checks them on every pull request and before deploying |
+| Deploys, tags, creates the release | never | never | yes, after the approval |
 
-The PHP `Version:` header in `wpm-user-sync.php` carries a `-dev` suffix on `main` between releases. The `Stable tag:` in `readme.txt` does **not** — it always holds the last published release.
+Nobody types a version into a file by hand, nobody touches SVN, and the tag
+is created by the job.
 
-| State | PHP `Version:` | readme `Stable tag:` |
+## The flow
+
+1. **A pull request merges into `main`**, squash-merged, green
+   ([`CONTRIBUTING.md`](../CONTRIBUTING.md)). The Claude review labelled it
+   `type:*` from the diff (a maintainer's label wins).
+2. **The push to `main` runs [`Release`](../.github/workflows/release.yml).**
+   It computes the next version from the `type:*` labels merged since the last
+   `X.Y.Z` tag (`type:breaking` → major, `type:feat` → minor, `type:fix` or
+   `type:perf` → patch; a maintainer's `version:*` label wins).
+3. **A development build is published**, every time: the shipped tree stamped
+   `<next>-dev.<N>`, as the one **Development build** pre-release (tag `dev`,
+   asset `wpm-user-sync.zip`), replaced on every push. `make dist` builds the
+   same tree locally.
+4. **The readme says whether the version is ready.** The newest entry under
+   `== Changelog ==` is headed `= X.Y.Z =` and, while the version is being
+   built, its first line is exactly `Unreleased.`. With that line in place the
+   run ends green as **Not ready** and nothing waits for anyone.
+5. **The maintainer removes the `Unreleased.` line in a pull request** that
+   also sets the three version markers to the version the labels give
+   (`scripts/release-markers.sh prepare` in DiluxOne/.github does both). That
+   is the release decision.
+6. **The maintainer approves the deployment** in the `wordpress-org`
+   environment.
+7. **The job publishes** from the approved commit: checks the markers,
+   validates the changelog, commits to the wordpress.org SVN (trunk, the tag
+   and `.wordpress-org/` as the listing assets), creates the tag `X.Y.Z` and
+   the GitHub release. wordpress.org holds an update for a few hours before
+   networks receive it.
+
+## Versions
+
+Always three numbers, `X.Y.Z`:
+
+| Part | When | Label |
 | --- | --- | --- |
-| `main` between releases | `1.5.0-dev` | `1.4.0` (last released) |
-| Release-prep PR open | `1.5.0` | `1.5.0` |
-| Tag `1.5.0` pushed | snapshot of the release-prep state | |
-| `main` after release | `1.6.0-dev` | `1.5.0` |
+| **Major** | A big new capability, or anything that breaks something that worked | `version:major`, or `type:breaking` |
+| **Minor** | Additions and improvements, compatible | `type:feat` |
+| **Patch** | Bug fixes, security fixes, performance | `type:fix`, `type:perf` |
 
-The CI version-alignment rule strips the suffix from the PHP `Version:` header before comparing it to `Stable tag:` so this asymmetry is allowed mid-development. At tag time the suffix is gone and the two values must match exactly — `make release` runs the same check locally.
+Breaking means a network or a developer has to change something: a new
+minimum PHP or WordPress beyond what a minor announced, a removed setting, a
+renamed hook, filter or stored key. `docs`, `test`, `ci`, `chore`, `build`,
+`refactor`, `style` release nothing on their own.
 
-Accepted pre-release suffixes are `-dev`, `-alpha`, `-beta`, `-rc` (optionally followed by `.N`).
+The three version markers are the `Version:` header and the `WPMUS_VERSION`
+constant in `wpm-user-sync.php`, and `Stable tag:` in `readme.txt`. They
+always name a real version: the last one released (1.5.0 today), or, in the
+release pull request and on `main` after it, the one being released.
 
-## Cutting a release
+**1.6.0.** The entry is headed `= 1.6.0 =` because what is written there adds
+filters (a `feat`) besides the fixes. It also raises Requires PHP from 7.4 to
+8.0, which the Upgrade Notice announces; if the labels give another number,
+the maintainer settles it in the release pull request (a `version:*` label,
+or the heading).
 
-Once the work for the next version is merged into `main` and CI is green:
+## The changelog is the release switch
 
-1. **Pre-flight locally.**
-   ```bash
-   git checkout main
-   git pull
-   make release        # full quality gate + version-alignment dry-run
-   ```
+```
+= 1.6.0 =
+Unreleased.
 
-2. **Open a release-prep PR.** Branch name: `chore/release-X.Y.Z`. The PR does three things:
-   - Drops the `-dev` suffix in the `Version:` header of `wpm-user-sync.php`.
-   - Updates `readme.txt`: `Stable tag:` to the new version, adds a `= X.Y.Z =` block under `== Changelog ==`, and adds a `= X.Y.Z =` block under `== Upgrade Notice ==` summarising user-visible changes.
-   - Adds the date next to the changelog heading.
+* The plugin is now called DiluxOne Multisite User Sync…
+* Security: the new-site trigger gave each new site's members…
+```
 
-3. **Wait for CI to pass on the release-prep PR.**
+- **Write the notes as the changes merge**: a pull request that changes what a
+  user sees adds its bullet under `Unreleased.`, written for users.
+- **Never remove the `Unreleased.` line as part of another change.** The pull
+  request that removes it contains nothing else but the version markers.
+- **After a release**, the next change that deserves a bullet opens the next
+  entry, `= X.Y.Z =` with `Unreleased.`, above the released one.
 
-4. **Merge** the release-prep PR (squash, as usual).
+## Moving into DiluxOne
 
-5. **Tag.** Bare-number, no `v` prefix:
-   ```bash
-   git checkout main
-   git pull
-   git tag X.Y.Z
-   git push origin X.Y.Z
-   ```
+The repository already carries everything the organisation's adoption guide
+asks for ([DiluxOne/.github, "Adopt it in a new repository"](https://github.com/DiluxOne/.github#adopt-it-in-a-new-repository)):
+the callers in `.github/workflows/` (`pull-request.yml`,
+`pull-request-edited.yml`, `pull-request-comments.yml`, `issues.yml`,
+`release.yml`, `svn-auth-check.yml`) with `slug: wpm-user-sync`,
+`main-file: wpm-user-sync.php` and `version-constant: WPMUS_VERSION`;
+`.github/review-policy.yml`; `AGENTS.md`, `docs/architecture.md` and
+`docs/roadmap.md`; the pull request template, CODEOWNERS and Dependabot. What
+the move itself takes, in order:
 
-6. **The deploy workflow takes it from there.** [`.github/workflows/deploy.yml`](../.github/workflows/deploy.yml) fires on tag push; it does:
-   - Strict tag-format validation (`^[0-9]+\.[0-9]+\.[0-9]+$`).
-   - Strict version-alignment of both markers — PHP `Version:` and readme `Stable tag:` — against the git tag.
-   - [`10up/action-wordpress-plugin-deploy@stable`](https://github.com/10up/action-wordpress-plugin-deploy) to push `/trunk` and tag `/tags/X.Y.Z` on the wp.org SVN, and to upload `.wordpress-org/` assets to the SVN `/assets/` directory.
-   - Generate the GitHub release with the changelog excerpt as the body.
+1. **Transfer the repository** into DiluxOne (GitHub keeps redirects from the
+   old URL). Choose its name then; nothing here depends on it
+   ([`development.md`](development.md#the-repository-name-is-not-the-plugin-slug)).
+2. **Settings:** squash merge only, auto-merge allowed, delete the branch on
+   merge, squash title from the PR title and body from the PR body;
+   Dependabot alerts and updates; private vulnerability reporting (SECURITY.md
+   points to it).
+3. **Ruleset on `main`:** changes only through a pull request, linear history,
+   conversations resolved, required checks green and up to date:
+   `conventions / Conventions (branch, title, commits)`,
+   `conventions / Docs (links and names)`, `review / Claude review`, and every
+   `checks / …` and `tests / …` job.
+4. **Two rulesets on tags `X.Y.Z`:** creation for administrators and the
+   `dilux-release` App only; nobody deletes or moves them.
+5. **Apps:** install `dilux-bot` and `dilux-release` on the repository; add
+   `dilux-release` to the tag-creation ruleset's bypass list.
+6. **Environment `wordpress-org`:** deployment policy tag `*.*.*` plus branch
+   `main`; required reviewers (the maintainers who may publish); environment
+   secrets `SVN_USERNAME`, `SVN_PASSWORD` (the SVN password of the account that
+   owns `wpm-user-sync`, not its login password) and
+   `DILUX_RELEASE_PRIVATE_KEY`; environment variable
+   `DILUX_RELEASE_CLIENT_ID`. Organisation secrets (`ANTHROPIC_API_KEY`,
+   `DILUX_BOT_PRIVATE_KEY`, `DILUX_BOT_CLIENT_ID`) are inherited.
+7. **Prove the credentials:** run **SVN credentials check** from the Actions
+   tab.
+8. **Rehearse:** `release.yml` starts with `dry-run: true`. The first push to
+   `main` rehearses everything but the SVN commit, the tag and the release;
+   when a rehearsal approved in the environment looks right, a pull request of
+   its own sets `dry-run: false`.
+9. **Fill in what could not be known before the move:** the repository's
+   links in [`README.md`](../README.md) and `readme.txt` ("The source… on
+   GitHub"), and, if the old display name should stop coming back, the
+   `retired-names` of both pull-request workflows.
 
-7. **Verify on wp.org** within ~10 minutes. The new version should appear at `https://wordpress.org/plugins/wpm-user-sync/`. wp.org does not run automated rollouts — sites with auto-update enabled pick it up over the next ~12 hours via the WordPress core update check.
+The previous release workflow (`deploy.yml`, a tag pushed by hand) is gone;
+there is no way to publish from this repository until the steps above are
+done.
 
-8. **Bump back to dev.** Open a follow-up PR `chore/bump-(X.Y.Z+1)-dev` that:
-   - Sets the `Version:` header to `(next intended version)-dev`.
-   - Leaves `Stable tag:` alone (it stays at the just-released `X.Y.Z`).
+## Release tags are permanent
 
-   Merge it.
-
-## Required secrets
-
-The deploy workflow needs two secrets in the repo settings:
-
-| Secret | What it's for |
-| --- | --- |
-| `SVN_USERNAME` | wp.org account username (the same one used for the plugin submission). |
-| `SVN_PASSWORD` | wp.org SVN-specific password (rotate from <https://wordpress.org/support/users/profile/svn-password>, **not** the regular login password). |
-
-If either is missing or wrong the deploy step prints a clear error and exits non-zero — `main` and the tag are unaffected. Just rotate the secret and push the tag again.
-
-## Rolling back
-
-There is no "undo" on wp.org for a published release — once a tag is on the SVN, it's there. To roll back, ship `X.Y.Z+1` with the previous version's code. Don't try to delete the bad tag from SVN.
+Every `X.Y.Z` tag is the record of what went to every network: nobody deletes
+or moves one. A deploy that failed before SVN is fixed and re-run; a wrong
+release is fixed by the next patch. There is no undo on wordpress.org: to
+roll back, ship `X.Y.Z+1` with the earlier code.
