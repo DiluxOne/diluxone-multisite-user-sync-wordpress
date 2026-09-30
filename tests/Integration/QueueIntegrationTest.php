@@ -20,7 +20,7 @@ final class QueueIntegrationTest extends IntegrationTestCase {
 
 	private function engine(): SyncEngine {
 		return new SyncEngine(
-			new Config( WP_PLUGIN_DIR . '/wpm-user-sync/wpm-user-sync.php' ),
+			new Config( dirname( __DIR__, 2 ) . '/wpm-user-sync.php' ),
 			new SiteRepository(),
 			new UserRepository()
 		);

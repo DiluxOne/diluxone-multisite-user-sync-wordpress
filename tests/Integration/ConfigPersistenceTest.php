@@ -16,7 +16,7 @@ use WPMUS\Config;
 final class ConfigPersistenceTest extends IntegrationTestCase {
 
 	private function make_config(): Config {
-		return new Config( WP_PLUGIN_DIR . '/wpm-user-sync/wpm-user-sync.php' );
+		return new Config( dirname( __DIR__, 2 ) . '/wpm-user-sync.php' );
 	}
 
 	public function test_save_toggles_persists_yes_for_yes_input(): void {

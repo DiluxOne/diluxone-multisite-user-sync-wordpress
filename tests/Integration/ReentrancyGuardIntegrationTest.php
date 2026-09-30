@@ -43,13 +43,13 @@ final class ReentrancyGuardIntegrationTest extends IntegrationTestCase {
 
 		// Turn role-sync ON so any unintended `set_user_role` cascade
 		// would flow through `on_role_changed` and propagate.
-		( new Config( WP_PLUGIN_DIR . '/wpm-user-sync/wpm-user-sync.php' ) )->save_toggles( '', '', 'yes' );
+		( new Config( dirname( __DIR__, 2 ) . '/wpm-user-sync.php' ) )->save_toggles( '', '', 'yes' );
 
 		// Wire this test's own engine onto WP's hook for the duration
 		// of the test, so the guard under test is the one on the engine
 		// that runs the sync.
 		$engine = new SyncEngine(
-			new Config( WP_PLUGIN_DIR . '/wpm-user-sync/wpm-user-sync.php' ),
+			new Config( dirname( __DIR__, 2 ) . '/wpm-user-sync.php' ),
 			new SiteRepository(),
 			new UserRepository()
 		);

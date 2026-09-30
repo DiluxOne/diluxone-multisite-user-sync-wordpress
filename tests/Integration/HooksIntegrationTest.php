@@ -21,7 +21,7 @@ final class HooksIntegrationTest extends IntegrationTestCase {
 	}
 
 	private function config(): Config {
-		return new Config( WP_PLUGIN_DIR . '/wpm-user-sync/wpm-user-sync.php' );
+		return new Config( dirname( __DIR__, 2 ) . '/wpm-user-sync.php' );
 	}
 
 	public function test_new_site_listens_on_wp_initialize_site_after_core(): void {
