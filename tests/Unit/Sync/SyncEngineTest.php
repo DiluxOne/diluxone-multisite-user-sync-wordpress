@@ -74,30 +74,15 @@ final class SyncEngineTest extends TestCase {
 		$this->engine()->on_new_site( 7 );
 	}
 
-	public function test_on_new_site_uses_user_first_role_when_present(): void {
-		$user           = new \WP_User( 5, array( 'editor' ) );
+	public function test_on_new_site_gives_the_sites_default_role_whatever_role_the_user_has_elsewhere(): void {
+		$editor = new \WP_User( 5, array( 'editor' ) );
+		$admin  = new \WP_User( 6, array( 'administrator' ) );
 		$this->config->shouldReceive( 'is_new_site_sync_enabled' )->andReturn( true );
-		$this->users->shouldReceive( 'all_network_users' )->andReturn( array( $user ) );
-		$this->users->shouldReceive( 'is_member_of' )->with( 5, 7 )->andReturn( false );
-		$this->sites->shouldNotReceive( 'default_role_for_blog' );
-		$this->users->shouldReceive( 'add_to_blog' )
-			->once()
-			->with( 7, 5, 'editor' )
-			->andReturn( true );
-
-		$this->engine()->on_new_site( 7 );
-	}
-
-	public function test_on_new_site_falls_back_to_default_role_when_user_has_no_roles(): void {
-		$user_no_roles  = new \WP_User( 5, array() );
-		$this->config->shouldReceive( 'is_new_site_sync_enabled' )->andReturn( true );
-		$this->users->shouldReceive( 'all_network_users' )->andReturn( array( $user_no_roles ) );
-		$this->users->shouldReceive( 'is_member_of' )->with( 5, 7 )->andReturn( false );
+		$this->users->shouldReceive( 'all_network_users' )->andReturn( array( $editor, $admin ) );
+		$this->users->shouldReceive( 'is_member_of' )->andReturn( false );
 		$this->sites->shouldReceive( 'default_role_for_blog' )->with( 7 )->andReturn( 'subscriber' );
-		$this->users->shouldReceive( 'add_to_blog' )
-			->once()
-			->with( 7, 5, 'subscriber' )
-			->andReturn( true );
+		$this->users->shouldReceive( 'add_to_blog' )->once()->with( 7, 5, 'subscriber' )->andReturn( true );
+		$this->users->shouldReceive( 'add_to_blog' )->once()->with( 7, 6, 'subscriber' )->andReturn( true );
 
 		$this->engine()->on_new_site( 7 );
 	}
@@ -107,6 +92,7 @@ final class SyncEngineTest extends TestCase {
 		$this->config->shouldReceive( 'is_new_site_sync_enabled' )->andReturn( true );
 		$this->users->shouldReceive( 'all_network_users' )->andReturn( array( $existing_member ) );
 		$this->users->shouldReceive( 'is_member_of' )->with( 5, 7 )->andReturn( true );
+		$this->sites->shouldReceive( 'default_role_for_blog' )->with( 7 )->andReturn( 'subscriber' );
 		$this->users->shouldNotReceive( 'add_to_blog' );
 
 		$this->engine()->on_new_site( 7 );

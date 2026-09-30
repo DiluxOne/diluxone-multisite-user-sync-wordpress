@@ -64,7 +64,34 @@ final class SiteRepositoryTest extends TestCase {
 		$this->assertSame( $sites, $result );
 	}
 
+	/**
+	 * Stubs the switch to a site and its role registry: every role
+	 * exists except the ones listed.
+	 *
+	 * @param string[] $missing Roles the site does not define.
+	 */
+	private function roles_on_site( array $missing = array() ): void {
+		Functions\when( 'switch_to_blog' )->justReturn( true );
+		Functions\when( 'restore_current_blog' )->justReturn( true );
+		Functions\when( 'wp_roles' )->justReturn(
+			new class( $missing ) {
+				/** @var string[] */
+				private array $missing;
+
+				/** @param string[] $missing */
+				public function __construct( array $missing ) {
+					$this->missing = $missing;
+				}
+
+				public function is_role( string $role ): bool {
+					return ! in_array( $role, $this->missing, true );
+				}
+			}
+		);
+	}
+
 	public function test_default_role_for_blog_returns_option_value(): void {
+		$this->roles_on_site();
 		Functions\expect( 'get_blog_option' )
 			->once()
 			->with( 5, 'default_role', 'subscriber' )
@@ -76,6 +103,7 @@ final class SiteRepositoryTest extends TestCase {
 	public function test_default_role_for_blog_falls_back_when_option_returns_empty_string(): void {
 		// Some installs persist `default_role => ''`; treat as unset
 		// and use the documented fallback.
+		$this->roles_on_site();
 		Functions\when( 'get_blog_option' )->justReturn( '' );
 
 		$this->assertSame( 'subscriber', ( new SiteRepository() )->default_role_for_blog( 9 ) );
@@ -84,8 +112,30 @@ final class SiteRepositoryTest extends TestCase {
 	public function test_default_role_for_blog_falls_back_when_option_returns_non_string(): void {
 		// `get_blog_option` can return false on missing options; the
 		// repository must coerce non-strings to the documented default.
+		$this->roles_on_site();
 		Functions\when( 'get_blog_option' )->justReturn( false );
 
 		$this->assertSame( 'subscriber', ( new SiteRepository() )->default_role_for_blog( 7 ) );
+	}
+
+	public function test_default_role_for_blog_falls_back_when_the_site_lacks_that_role(): void {
+		$this->roles_on_site( array( 'shop_manager' ) );
+		Functions\when( 'get_blog_option' )->justReturn( 'shop_manager' );
+
+		$this->assertSame( 'subscriber', ( new SiteRepository() )->default_role_for_blog( 7 ) );
+	}
+
+	public function test_role_exists_on_blog_restores_the_site_it_switched_from(): void {
+		Functions\expect( 'switch_to_blog' )->once()->with( 4 )->andReturn( true );
+		Functions\expect( 'restore_current_blog' )->once()->andReturn( true );
+		Functions\when( 'wp_roles' )->justReturn(
+			new class() {
+				public function is_role( string $role ): bool {
+					return 'editor' === $role;
+				}
+			}
+		);
+
+		$this->assertTrue( ( new SiteRepository() )->role_exists_on_blog( 4, 'editor' ) );
 	}
 }

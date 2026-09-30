@@ -79,13 +79,10 @@ final class SyncEngine {
 	 * freshly-created site with every existing network user. No-op when
 	 * the `New Site Sync` toggle is off.
 	 *
-	 * Per the legacy 1.4 behaviour preserved by this refactor, users
-	 * with at least one existing role contribute their first role to
-	 * the new site; users with no roles fall back to the destination
-	 * site's default role. A separate PR may revisit that to match the
-	 * documented "default role" behaviour, but doing so here would
-	 * change observable behaviour for existing installs and is out of
-	 * scope for the OOP refactor.
+	 * Every new membership gets the new site's own default role. The
+	 * role a user holds on the site the request runs on is never
+	 * copied: doing so made every editor or administrator of the main
+	 * site an editor or administrator of each new site.
 	 *
 	 * @param int $blog_id The blog ID of the newly created site.
 	 */
@@ -94,13 +91,11 @@ final class SyncEngine {
 			return;
 		}
 
+		$role = $this->sites->default_role_for_blog( $blog_id );
 		foreach ( $this->users->all_network_users() as $user ) {
 			if ( $this->users->is_member_of( (int) $user->ID, $blog_id ) ) {
 				continue;
 			}
-			$role = is_array( $user->roles ) && isset( $user->roles[0] ) && '' !== $user->roles[0]
-				? (string) $user->roles[0]
-				: $this->sites->default_role_for_blog( $blog_id );
 			$this->add_to_blog_guarded( $blog_id, (int) $user->ID, $role );
 		}
 	}

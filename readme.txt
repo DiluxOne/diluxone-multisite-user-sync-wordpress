@@ -116,6 +116,9 @@ First release. Check help for all features.
 
 == Changelog ==
 
+= Unreleased =
+* **Fix (security)**: the New Site trigger gave each new site's members the role they held on the main site, so main-site editors and administrators became editors and administrators of every new site. Every new membership now gets the new site's own default role, and a default role the site does not define falls back to subscriber.
+
 = 1.5.0 (2026-05-05) =
 * **Description repositioned**: leads with "Optimized for Microsoft Azure and Azure App Service" while explicitly noting compatibility with any WordPress Multisite host (DigitalOcean, AWS, dedicated servers, shared hosting, etc.).
 * **Security hardening**: every admin save handler now requires `manage_network_options` (network forms) or `manage_options` (site form) on top of the existing nonce check. Previously only nonces were enforced.

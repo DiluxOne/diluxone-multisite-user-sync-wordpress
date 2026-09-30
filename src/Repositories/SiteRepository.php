@@ -55,12 +55,29 @@ class SiteRepository {
 	}
 
 	/**
-	 * Resolves the default user role configured for `$blog_id`,
-	 * falling back to `subscriber` when the site has no `default_role`
-	 * option (or it is empty / non-string).
+	 * Resolves the default user role configured for `$blog_id`, read
+	 * on that site: its `default_role` option when the site has that
+	 * role, `subscriber` otherwise (no option, an empty one, or a role
+	 * the site does not define).
 	 */
 	public function default_role_for_blog( int $blog_id ): string {
 		$role = get_blog_option( $blog_id, 'default_role', 'subscriber' );
-		return is_string( $role ) && '' !== $role ? $role : 'subscriber';
+		if ( is_string( $role ) && '' !== $role && $this->role_exists_on_blog( $blog_id, $role ) ) {
+			return $role;
+		}
+		return 'subscriber';
+	}
+
+	/**
+	 * True when `$role` is defined on `$blog_id`. Roles live in each
+	 * site's own options, so the check runs switched to that site.
+	 */
+	public function role_exists_on_blog( int $blog_id, string $role ): bool {
+		switch_to_blog( $blog_id );
+		try {
+			return wp_roles()->is_role( $role );
+		} finally {
+			restore_current_blog();
+		}
 	}
 }
