@@ -1,0 +1,481 @@
+# Copyright (C) 2026 Pablo Ariel Di Loreto
+# This file is distributed under the GPLv2 or later.
+msgid ""
+msgstr ""
+"Project-Id-Version: DiluxOne Multisite User Sync 1.5.0\n"
+"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/wpm-user-sync\n"
+"Last-Translator: Pablo Ariel Di Loreto\n"
+"Language-Team: Italian\n"
+"Language: it_IT\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"POT-Creation-Date: 2026-09-30T16:15:34+00:00\n"
+"PO-Revision-Date: 2026-09-30 12:00+0000\n"
+"X-Generator: WP-CLI 2.12.0\n"
+"X-Domain: wpm-user-sync\n"
+
+#. Plugin Name of the plugin
+#: wpm-user-sync.php
+#: src/Admin/NetworkMenu.php:48
+#: src/Admin/SiteMenu.php:48
+#: src/View/Header.php:31
+msgid "DiluxOne Multisite User Sync"
+msgstr "DiluxOne Multisite User Sync"
+
+#. Plugin URI of the plugin
+#: wpm-user-sync.php
+msgid "https://wordpress.org/plugins/wpm-user-sync/"
+msgstr "https://wordpress.org/plugins/wpm-user-sync/"
+
+#. Description of the plugin
+#: wpm-user-sync.php
+msgid "Optimized for Microsoft Azure and Azure App Service (compatible with any host). Configures & automates user synchronization between WordPress sites in a multi-site setup."
+msgstr "Ottimizzato per Microsoft Azure e Azure App Service (compatibile con qualsiasi hosting). Configura e automatizza la sincronizzazione degli utenti tra i siti WordPress in un'installazione multisite."
+
+#. Author of the plugin
+#: wpm-user-sync.php
+msgid "Pablo Ariel Di Loreto"
+msgstr "Pablo Ariel Di Loreto"
+
+#. Author URI of the plugin
+#: wpm-user-sync.php
+msgid "https://diluxone.com/plugins-wordpress"
+msgstr "https://diluxone.com/plugins-wordpress"
+
+#: src/Admin/NetworkHomePage.php:48
+#: src/Admin/SiteHomePage.php:42
+msgid "Welcome"
+msgstr "Benvenuto"
+
+#: src/Admin/NetworkHomePage.php:49
+#: src/Admin/SiteHomePage.php:43
+msgid "Concepts"
+msgstr "Concetti"
+
+#: src/Admin/NetworkHomePage.php:50
+#: src/Admin/SiteHomePage.php:44
+#: src/Admin/SiteHomePage.php:150
+msgid "About"
+msgstr "Informazioni"
+
+#: src/Admin/NetworkHomePage.php:133
+#: src/Admin/SiteHomePage.php:118
+msgid "Welcome to DiluxOne Multisite User Sync"
+msgstr "Benvenuto in DiluxOne Multisite User Sync"
+
+#: src/Admin/NetworkHomePage.php:134
+msgid "Thank you for choosing DiluxOne Multisite User Sync. Follow the next steps to get started synchronizing:"
+msgstr "Grazie per aver scelto DiluxOne Multisite User Sync. Segui i prossimi passi per iniziare a sincronizzare:"
+
+#: src/Admin/NetworkHomePage.php:136
+#: src/Admin/SiteHomePage.php:122
+msgid "1. Review basic concepts"
+msgstr "1. Rivedi i concetti di base"
+
+#: src/Admin/NetworkHomePage.php:137
+#: src/Admin/SiteHomePage.php:123
+msgid "2. Complete the initial Users Sync"
+msgstr "2. Completa la sincronizzazione iniziale degli utenti"
+
+#: src/Admin/NetworkHomePage.php:138
+msgid "3. Check the network sync options"
+msgstr "3. Controlla le opzioni di sincronizzazione del network"
+
+#: src/Admin/NetworkHomePage.php:139
+msgid "4. Meet the Authors & Support Us"
+msgstr "4. Conosci gli autori e sostienici"
+
+#: src/Admin/NetworkHomePage.php:143
+msgid "support forum"
+msgstr "forum di supporto"
+
+#. translators: %s: link to the plugin's support forum on wordpress.org
+#: src/Admin/NetworkHomePage.php:146
+#, php-format
+msgid "Do you want online help? Check our %s."
+msgstr "Vuoi aiuto online? Consulta il nostro %s."
+
+#: src/Admin/NetworkHomePage.php:160
+msgid "User Sync Concepts"
+msgstr "Concetti della sincronizzazione degli utenti"
+
+#: src/Admin/NetworkHomePage.php:161
+#: src/Admin/SiteHomePage.php:135
+msgid "DiluxOne Multisite User Sync has some simple but important concepts. Knowing all of them will help you get a better experience with the tool."
+msgstr "DiluxOne Multisite User Sync si basa su alcuni concetti semplici ma importanti. Conoscerli tutti ti aiuterà a usare al meglio lo strumento."
+
+#: src/Admin/NetworkHomePage.php:163
+#: src/Admin/SiteHomePage.php:137
+msgid "What exactly does this plugin do?"
+msgstr "Che cosa fa esattamente questo plugin?"
+
+#: src/Admin/NetworkHomePage.php:164
+msgid "DiluxOne Multisite User Sync is a plugin that enables user synchronization in your WordPress Multisite — a type of WordPress installation that allows you to create and manage a network of multiple websites from a single WordPress dashboard."
+msgstr "DiluxOne Multisite User Sync è un plugin che permette di sincronizzare gli utenti nel tuo WordPress Multisite, un tipo di installazione di WordPress che consente di creare e gestire un network di più siti da un'unica bacheca di WordPress."
+
+#: src/Admin/NetworkHomePage.php:165
+msgid "Key concepts:"
+msgstr "Concetti chiave:"
+
+#: src/Admin/NetworkHomePage.php:167
+msgid "DiluxOne Multisite User Sync is a plugin, not a core feature of WordPress. It was built by external developers. However, it goes through a detailed testing process to ensure smooth operation as it interacts with core aspects of the CMS."
+msgstr "DiluxOne Multisite User Sync è un plugin, non una funzionalità del core di WordPress. È stato creato da sviluppatori esterni. Tuttavia, viene sottoposto a un accurato processo di test per garantire un funzionamento stabile, dato che interagisce con parti centrali del CMS."
+
+#: src/Admin/NetworkHomePage.php:168
+msgid "In an out-of-the-box WordPress multisite setup, when you create a new user, it is never synced to other sites in your network. Also, when you create a new site in your network, no users are synced to it. This means that you must manually register or associate users — a tedious manual process."
+msgstr "In una normale installazione multisite di WordPress, quando crei un nuovo utente, questo non viene mai sincronizzato con gli altri siti del network. Inoltre, quando crei un nuovo sito nel network, nessun utente viene sincronizzato con esso. Questo significa che devi registrare o associare gli utenti manualmente, un noioso processo manuale."
+
+#: src/Admin/NetworkHomePage.php:169
+msgid "This plugin lets you automate all those scenarios, or do them manually. You decide."
+msgstr "Questo plugin ti permette di automatizzare tutti questi scenari, oppure di eseguirli manualmente. Decidi tu."
+
+#: src/Admin/NetworkHomePage.php:170
+msgid "When we talk about \"user synchronization\" we never duplicate user data. The user is one identity that is added (referenced) on multiple sites. If you use SUBDOMAIN_INSTALL and want a single-sign-on experience, configure the cookie domain in wp-config.php."
+msgstr "Quando parliamo di «sincronizzazione degli utenti» non duplichiamo mai i dati dell'utente. L'utente è un'unica identità che viene aggiunta (referenziata) su più siti. Se usi SUBDOMAIN_INSTALL e vuoi un accesso singolo (single sign-on), configura il dominio del cookie in wp-config.php."
+
+#: src/Admin/NetworkHomePage.php:173
+msgid "What is a trigger? Which ones exist here?"
+msgstr "Che cos'è un trigger? Quali esistono qui?"
+
+#: src/Admin/NetworkHomePage.php:174
+msgid "A trigger is procedural code that runs automatically in response to certain events. DiluxOne Multisite User Sync exposes three:"
+msgstr "Un trigger è codice procedurale che viene eseguito automaticamente in risposta a determinati eventi. DiluxOne Multisite User Sync ne offre tre:"
+
+#: src/Admin/NetworkHomePage.php:176
+msgid "New user creation"
+msgstr "Creazione di un nuovo utente"
+
+#: src/Admin/NetworkHomePage.php:176
+msgid "when a user registers on your site, or an admin creates a new one."
+msgstr "quando un utente si registra sul tuo sito, o un amministratore ne crea uno nuovo."
+
+#: src/Admin/NetworkHomePage.php:177
+msgid "New site creation"
+msgstr "Creazione di un nuovo sito"
+
+#: src/Admin/NetworkHomePage.php:177
+msgid "when an admin or authorized user creates a new site in your network."
+msgstr "quando un amministratore o un utente autorizzato crea un nuovo sito nel tuo network."
+
+#: src/Admin/NetworkHomePage.php:178
+msgid "User role edited in one site"
+msgstr "Ruolo utente modificato in un sito"
+
+#: src/Admin/NetworkHomePage.php:178
+msgid "when you edit a user's role on one of your network sites."
+msgstr "quando modifichi il ruolo di un utente in uno dei siti del tuo network."
+
+#: src/Admin/NetworkHomePage.php:180
+msgid "All three triggers are configured from network-level options."
+msgstr "Tutti e tre i trigger si configurano dalle opzioni a livello di network."
+
+#: src/Admin/NetworkHomePage.php:182
+msgid "What kind of options do I have at the network level?"
+msgstr "Quali opzioni ho a livello di network?"
+
+#: src/Admin/NetworkHomePage.php:183
+msgid "At network level you configure the three triggers described above:"
+msgstr "A livello di network configuri i tre trigger descritti sopra:"
+
+#: src/Admin/NetworkHomePage.php:185
+#: src/Admin/NetworkSyncOptionsPage.php:50
+msgid "New Site Automatic Sync"
+msgstr "Sincronizzazione automatica dei nuovi siti"
+
+#: src/Admin/NetworkHomePage.php:185
+msgid "when a new site is created, every user on the network is added to it with that site's default role (subscriber if no default is set). Super admins and people removed from a site are left out."
+msgstr "quando viene creato un nuovo sito, tutti gli utenti del network vengono aggiunti con il ruolo predefinito del sito (abbonato se non ne è impostato uno). I super amministratori e le persone rimosse da un sito restano esclusi."
+
+#: src/Admin/NetworkHomePage.php:186
+#: src/Admin/NetworkSyncOptionsPage.php:60
+msgid "New User Automatic Sync"
+msgstr "Sincronizzazione automatica dei nuovi utenti"
+
+#: src/Admin/NetworkHomePage.php:186
+msgid "when a new user is created, they are added to all sites with each site default role."
+msgstr "quando viene creato un nuovo utente, viene aggiunto a tutti i siti con il ruolo predefinito di ciascun sito."
+
+#: src/Admin/NetworkHomePage.php:187
+#: src/Admin/NetworkSyncOptionsPage.php:70
+msgid "Set User Role Automatic Sync"
+msgstr "Sincronizzazione automatica dei ruoli utente"
+
+#: src/Admin/NetworkHomePage.php:187
+msgid "when a user role changes on one site, the change is copied to the other sites the user already belongs to that have that role. Administrator is never copied."
+msgstr "quando il ruolo di un utente cambia in un sito, la modifica viene copiata negli altri siti a cui l'utente già appartiene e che hanno quel ruolo. Amministratore non viene mai copiato."
+
+#: src/Admin/NetworkHomePage.php:189
+msgid "You can also execute the following actions:"
+msgstr "Puoi anche eseguire le seguenti azioni:"
+
+#: src/Admin/NetworkHomePage.php:191
+#: src/Admin/NetworkSyncActionsPage.php:56
+#: src/Admin/NetworkSyncActionsPage.php:66
+#: src/Admin/SiteSyncActionsPage.php:47
+#: src/Admin/SiteSyncActionsPage.php:52
+msgid "Sync from scratch"
+msgstr "Sincronizza da zero"
+
+#: src/Admin/NetworkHomePage.php:191
+msgid "add every network user to every site with each site default role. Existing memberships are not modified, and people removed from a site are only added back if you tick the box."
+msgstr "aggiunge ogni utente del network a ogni sito con il ruolo predefinito di ciascun sito. Le appartenenze esistenti non vengono modificate, e le persone rimosse da un sito vengono aggiunte di nuovo solo se selezioni la casella."
+
+#: src/Admin/NetworkHomePage.php:192
+msgid "Sync specific site"
+msgstr "Sincronizza un sito specifico"
+
+#: src/Admin/NetworkHomePage.php:192
+msgid "same as above but limited to the sites you check off in the form."
+msgstr "come sopra, ma limitato ai siti che selezioni nel modulo."
+
+#: src/Admin/NetworkHomePage.php:195
+#: src/Admin/SiteHomePage.php:140
+msgid "What can a site administrator configure?"
+msgstr "Che cosa può configurare l'amministratore di un sito?"
+
+#: src/Admin/NetworkHomePage.php:196
+msgid "Nothing. Site administrators do not see the plugin. From a site's dashboard, a super admin can sync every network user into that one site. Existing memberships are not modified."
+msgstr "Niente. Gli amministratori dei siti non vedono il plugin. Dalla bacheca di un sito, un super amministratore può sincronizzare tutti gli utenti del network con quel solo sito. Le appartenenze esistenti non vengono modificate."
+
+#: src/Admin/NetworkHomePage.php:198
+msgid "Can I run only manual actions and avoid all triggers?"
+msgstr "Posso eseguire solo azioni manuali ed evitare tutti i trigger?"
+
+#: src/Admin/NetworkHomePage.php:199
+msgid "Yes. Disable all triggers at network level and only manual actions will run."
+msgstr "Sì. Disattiva tutti i trigger a livello di network e verranno eseguite solo le azioni manuali."
+
+#: src/Admin/NetworkHomePage.php:208
+msgid "About DiluxOne Multisite User Sync"
+msgstr "Informazioni su DiluxOne Multisite User Sync"
+
+#: src/Admin/NetworkHomePage.php:209
+#: src/Admin/SiteHomePage.php:151
+msgid "This plugin was developed by Pablo Ariel Di Loreto:"
+msgstr "Questo plugin è stato sviluppato da Pablo Ariel Di Loreto:"
+
+#: src/Admin/NetworkHomePage.php:211
+#: src/Admin/SiteHomePage.php:153
+msgid "LinkedIn Contact"
+msgstr "Contatto LinkedIn"
+
+#: src/Admin/NetworkHomePage.php:212
+#: src/Admin/SiteHomePage.php:154
+msgid "DiluxOne plugins for WordPress"
+msgstr "Plugin DiluxOne per WordPress"
+
+#: src/Admin/NetworkHomePage.php:213
+#: src/Admin/SiteHomePage.php:155
+msgid "Plugin Homepage"
+msgstr "Pagina del plugin"
+
+#: src/Admin/NetworkMenu.php:49
+#: src/Admin/SiteMenu.php:49
+msgid "User Sync"
+msgstr "Sincronizzazione utenti"
+
+#: src/Admin/NetworkMenu.php:59
+#: src/Admin/NetworkMenu.php:60
+msgid "Network Sync Options"
+msgstr "Opzioni di sincronizzazione del network"
+
+#: src/Admin/NetworkMenu.php:68
+#: src/Admin/NetworkMenu.php:69
+#: src/Admin/NetworkSyncActionsPage.php:51
+msgid "Network Sync Actions"
+msgstr "Azioni di sincronizzazione del network"
+
+#: src/Admin/NetworkSyncActionsPage.php:52
+msgid "These actions let you sync users and sites with several options."
+msgstr "Queste azioni ti permettono di sincronizzare utenti e siti con diverse opzioni."
+
+#: src/Admin/NetworkSyncActionsPage.php:63
+#: src/Admin/NetworkSyncActionsPage.php:86
+msgid "Also add back people who were removed from a site"
+msgstr "Aggiungi di nuovo anche le persone rimosse da un sito"
+
+#: src/Admin/NetworkSyncActionsPage.php:68
+msgid "Sync every site with every user. Each site receives every user with the default site role. Existing memberships are not modified, and people removed from a site stay removed unless you tick the box."
+msgstr "Sincronizza ogni sito con ogni utente. Ogni sito riceve tutti gli utenti con il ruolo predefinito del sito. Le appartenenze esistenti non vengono modificate, e le persone rimosse da un sito restano rimosse, a meno che tu non selezioni la casella."
+
+#: src/Admin/NetworkSyncActionsPage.php:72
+msgid "Sync specific sites"
+msgstr "Sincronizza siti specifici"
+
+#: src/Admin/NetworkSyncActionsPage.php:74
+msgid "Select the sites you want to sync users into:"
+msgstr "Seleziona i siti in cui vuoi sincronizzare gli utenti:"
+
+#: src/Admin/NetworkSyncActionsPage.php:89
+msgid "Sync selected sites"
+msgstr "Sincronizza i siti selezionati"
+
+#: src/Admin/NetworkSyncActionsPage.php:91
+msgid "All selected sites will receive every user with the default site role. Existing memberships are not modified, and people removed from a site stay removed unless you tick the box."
+msgstr "Tutti i siti selezionati riceveranno ogni utente con il ruolo predefinito del sito. Le appartenenze esistenti non vengono modificate, e le persone rimosse da un sito restano rimosse, a meno che tu non selezioni la casella."
+
+#: src/Admin/NetworkSyncActionsPage.php:106
+msgid "You do not have permission to run a network-wide sync."
+msgstr "Non hai il permesso di eseguire una sincronizzazione su tutto il network."
+
+#: src/Admin/NetworkSyncActionsPage.php:120
+msgid "You do not have permission to run a network sync."
+msgstr "Non hai il permesso di eseguire una sincronizzazione del network."
+
+#: src/Admin/NetworkSyncActionsPage.php:181
+msgid "New site"
+msgstr "Nuovo sito"
+
+#: src/Admin/NetworkSyncActionsPage.php:182
+msgid "New user"
+msgstr "Nuovo utente"
+
+#: src/Admin/NetworkSyncActionsPage.php:183
+msgid "Manual sync"
+msgstr "Sincronizzazione manuale"
+
+#: src/Admin/NetworkSyncActionsPage.php:186
+msgid "Syncs running in the background"
+msgstr "Sincronizzazioni in background"
+
+#: src/Admin/NetworkSyncActionsPage.php:187
+msgid "Large syncs run in batches through WP-Cron, a few seconds at a time, whenever the main site gets a visit. They are listed here until they finish."
+msgstr "Le sincronizzazioni di grandi dimensioni vengono eseguite a blocchi tramite WP-Cron, pochi secondi alla volta, ogni volta che il sito principale riceve una visita. Restano elencate qui finché non terminano."
+
+#: src/Admin/NetworkSyncActionsPage.php:191
+msgid "Sync"
+msgstr "Sincronizzazione"
+
+#: src/Admin/NetworkSyncActionsPage.php:192
+msgid "Started"
+msgstr "Avviata"
+
+#: src/Admin/NetworkSyncActionsPage.php:193
+msgid "Progress"
+msgstr "Avanzamento"
+
+#. translators: 1: percentage done, 2: user-site pairs processed, 3: user-site pairs in total
+#: src/Admin/NetworkSyncActionsPage.php:208
+#, php-format
+msgid "%1$d%% (%2$s of %3$s user-site pairs)"
+msgstr "%1$d%% (%2$s di %3$s coppie utente-sito)"
+
+#: src/Admin/NetworkSyncOptionsPage.php:44
+msgid "Network Configuration"
+msgstr "Configurazione del network"
+
+#: src/Admin/NetworkSyncOptionsPage.php:45
+msgid "These settings let you customize the sync behavior."
+msgstr "Queste impostazioni ti permettono di personalizzare il comportamento della sincronizzazione."
+
+#: src/Admin/NetworkSyncOptionsPage.php:54
+msgid "Sync new site with all users"
+msgstr "Sincronizza il nuovo sito con tutti gli utenti"
+
+#: src/Admin/NetworkSyncOptionsPage.php:56
+msgid "When a new site is created in the network, all users in the database will be added to this new site with the default site role. If no default role is configured, \"subscriber\" is used."
+msgstr "Quando viene creato un nuovo sito nel network, tutti gli utenti del database vengono aggiunti al nuovo sito con il ruolo predefinito del sito. Se non è configurato alcun ruolo predefinito, viene usato «abbonato»."
+
+#: src/Admin/NetworkSyncOptionsPage.php:64
+msgid "Sync new users with all sites"
+msgstr "Sincronizza i nuovi utenti con tutti i siti"
+
+#: src/Admin/NetworkSyncOptionsPage.php:66
+msgid "When a new user is created in the network, they will be added to all sites with each default site role. If no default role is configured, \"subscriber\" is used."
+msgstr "Quando viene creato un nuovo utente nel network, viene aggiunto a tutti i siti con il ruolo predefinito di ciascun sito. Se non è configurato alcun ruolo predefinito, viene usato «abbonato»."
+
+#: src/Admin/NetworkSyncOptionsPage.php:74
+msgid "Sync new user roles to all sites"
+msgstr "Sincronizza i nuovi ruoli utente con tutti i siti"
+
+#: src/Admin/NetworkSyncOptionsPage.php:76
+msgid "When a user's role changes on any site (e.g. promoted to editor on one site), the change is replicated to every other site where the user is already a member and that defines the role. Administrator is never replicated, and super admins are left alone."
+msgstr "Quando il ruolo di un utente cambia in un sito (ad es. promosso a editor in un sito), la modifica viene replicata in tutti gli altri siti di cui l'utente è già membro e che definiscono quel ruolo. Amministratore non viene mai replicato, e i super amministratori vengono lasciati stare."
+
+#: src/Admin/NetworkSyncOptionsPage.php:94
+msgid "You do not have permission to change network sync options."
+msgstr "Non hai il permesso di modificare le opzioni di sincronizzazione del network."
+
+#: src/Admin/SiteHomePage.php:119
+msgid "Thank you for choosing DiluxOne Multisite User Sync."
+msgstr "Grazie per aver scelto DiluxOne Multisite User Sync."
+
+#: src/Admin/SiteHomePage.php:120
+msgid "If you are new to this plugin we recommend you check the basic synchronization concepts. If this is your first time using the plugin, you can also do your first full sync."
+msgstr "Se non conosci questo plugin, ti consigliamo di dare un'occhiata ai concetti di base della sincronizzazione. Se è la prima volta che usi il plugin, puoi anche eseguire la tua prima sincronizzazione completa."
+
+#: src/Admin/SiteHomePage.php:124
+msgid "3. Meet the Authors & Support Us"
+msgstr "3. Conosci gli autori e sostienici"
+
+#: src/Admin/SiteHomePage.php:134
+msgid "Site User Sync Concepts"
+msgstr "Concetti della sincronizzazione degli utenti del sito"
+
+#: src/Admin/SiteHomePage.php:138
+msgid "DiluxOne Multisite User Sync enables user synchronization in your WordPress Multisite — see the Network admin Concepts tab for the full explanation. Here, a super admin can sync every network user into this one site."
+msgstr "DiluxOne Multisite User Sync permette di sincronizzare gli utenti nel tuo WordPress Multisite: per la spiegazione completa vedi la scheda Concetti dell'Amministrazione network. Qui un super amministratore può sincronizzare tutti gli utenti del network con questo sito."
+
+#: src/Admin/SiteHomePage.php:141
+msgid "Nothing. All triggers and toggles are configured at the network level, and these pages are only shown to super admins: the \"sync from scratch\" action adds every network user to this site with its default role, which is a network decision. Existing memberships are not modified, and people removed from this site stay removed."
+msgstr "Niente. Tutti i trigger e gli interruttori si configurano a livello di network, e queste pagine sono visibili solo ai super amministratori: l'azione «sincronizza da zero» aggiunge tutti gli utenti del network a questo sito con il suo ruolo predefinito, e questa è una decisione del network. Le appartenenze esistenti non vengono modificate, e le persone rimosse da questo sito restano rimosse."
+
+#: src/Admin/SiteMenu.php:59
+#: src/Admin/SiteMenu.php:60
+#: src/Admin/SiteSyncActionsPage.php:43
+msgid "Site Sync Actions"
+msgstr "Azioni di sincronizzazione del sito"
+
+#: src/Admin/SiteSyncActionsPage.php:44
+msgid "These actions let you sync every network user into this site."
+msgstr "Queste azioni ti permettono di sincronizzare tutti gli utenti del network con questo sito."
+
+#: src/Admin/SiteSyncActionsPage.php:54
+msgid "Adds every network user to this site with the default site role. If no default role is configured, \"subscriber\" is used. Existing memberships are not modified."
+msgstr "Aggiunge tutti gli utenti del network a questo sito con il ruolo predefinito del sito. Se non è configurato alcun ruolo predefinito, viene usato «abbonato». Le appartenenze esistenti non vengono modificate."
+
+#: src/Admin/SiteSyncActionsPage.php:72
+msgid "You do not have permission to run a site sync."
+msgstr "Non hai il permesso di eseguire una sincronizzazione del sito."
+
+#: src/Notices.php:42
+msgid "Settings updated. You're the best!"
+msgstr "Impostazioni aggiornate. Sei il migliore!"
+
+#: src/Notices.php:49
+msgid "Sync done. You're a champion!"
+msgstr "Sincronizzazione completata. Sei un campione!"
+
+#: src/Notices.php:56
+msgid "This sync is large, so it runs in the background in batches. Its progress is listed on the Network Sync Actions page."
+msgstr "Questa sincronizzazione è grande, quindi viene eseguita in background a blocchi. L'avanzamento è elencato nella pagina Azioni di sincronizzazione del network."
+
+#: src/Notices.php:63
+msgid "Sync did not happen. You must select at least one site!"
+msgstr "La sincronizzazione non è avvenuta. Devi selezionare almeno un sito!"
+
+#: src/Notices.php:79
+msgid "Dismiss this notice."
+msgstr "Ignora questa notifica."
+
+#: src/RequirementsChecker.php:80
+msgid "Plugins page"
+msgstr "pagina dei plugin"
+
+#. translators: 1: plugin name, 2: required WP version, 3: link back to plugins page
+#: src/RequirementsChecker.php:86
+#, php-format
+msgid "%1$s requires WordPress %2$s or higher, and has been deactivated! Please upgrade WordPress and try again. Back to the WordPress %3$s."
+msgstr "%1$s richiede WordPress %2$s o superiore ed è stato disattivato! Aggiorna WordPress e riprova. Torna alla %3$s di WordPress."
+
+#. translators: 1: plugin name, 2: link back to plugins page
+#: src/RequirementsChecker.php:97
+#, php-format
+msgid "%1$s requires WordPress Multisite, and has been deactivated! Please configure WordPress for multisite and try again. Back to the WordPress %2$s."
+msgstr "%1$s richiede WordPress Multisite ed è stato disattivato! Configura WordPress come multisite e riprova. Torna alla %2$s di WordPress."
+
+#: src/View/Header.php:35
+msgid "Welcome to the <strong>best free user synchronization solution</strong> for WordPress Multisite."
+msgstr "Benvenuto nella <strong>migliore soluzione gratuita per la sincronizzazione degli utenti</strong> per WordPress Multisite."
