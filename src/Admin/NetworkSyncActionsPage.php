@@ -57,6 +57,12 @@ final class NetworkSyncActionsPage {
 					<td>
 						<form method="post" action="<?php echo esc_url( network_admin_url( 'edit.php?action=wpmusSyncNetworkFromScratch' ) ); ?>">
 							<?php wp_nonce_field( Config::NONCE_ACTION ); ?>
+							<p>
+								<label>
+									<input type="checkbox" name="wpmus_force" value="yes" />
+									<?php esc_html_e( 'Also add back people who were removed from a site', 'wpm-user-sync' ); ?>
+								</label>
+							</p>
 							<input type="submit" value="<?php esc_attr_e( 'Sync from scratch', 'wpm-user-sync' ); ?>" class="button" />
 						</form>
 						<p class="description"><?php esc_html_e( 'Sync every site with every user. Each site receives every user with the default site role. Existing memberships are not modified, and people removed from a site stay removed unless you tick the box.', 'wpm-user-sync' ); ?></p>
@@ -74,7 +80,12 @@ final class NetworkSyncActionsPage {
 									<?php echo esc_html( $site->domain . $site->path ); ?>
 								</label><br />
 							<?php endforeach; ?>
-							<br />
+							<p>
+								<label>
+									<input type="checkbox" name="wpmus_force" value="yes" />
+									<?php esc_html_e( 'Also add back people who were removed from a site', 'wpm-user-sync' ); ?>
+								</label>
+							</p>
 							<input type="submit" value="<?php esc_attr_e( 'Sync selected sites', 'wpm-user-sync' ); ?>" class="button" />
 						</form>
 						<p class="description"><?php esc_html_e( 'All selected sites will receive every user with the default site role. Existing memberships are not modified, and people removed from a site stay removed unless you tick the box.', 'wpm-user-sync' ); ?></p>
