@@ -80,7 +80,7 @@ The plugin's own data is removed (the settings, any sync still queued with its s
 
 = Is it in my language? =
 
-It ships complete translations for Spanish (Argentina, Spain, Mexico), Portuguese (Brazil, Portugal), French, German and Italian, which WordPress installs from translate.wordpress.org.
+Translations for Spanish (Argentina, Spain, Mexico), Portuguese (Brazil, Portugal), French, German and Italian are written with the plugin and contributed to translate.wordpress.org. WordPress installs a language from there once it is approved; the plugin itself carries no translation files.
 
 == Screenshots ==
 
@@ -134,7 +134,7 @@ Unreleased.
 * On a site that is not a network, the plugin now only explains that it needs WordPress Multisite and deactivates itself; nothing else of it runs in the meantime.
 * Uninstalling now also removes the background sync queue, its scheduled event and the record of removals.
 * The plugin's stylesheet loads only on its own screens instead of on every admin screen.
-* Translations included for Spanish (Argentina, Spain, Mexico), Portuguese (Brazil, Portugal), French, German and Italian. The plugin no longer loads its translations itself; WordPress does.
+* Translations written for Spanish (Argentina, Spain, Mexico), Portuguese (Brazil, Portugal), French, German and Italian, to be contributed to translate.wordpress.org; WordPress installs them from there. The plugin no longer loads translations itself.
 
 = 1.5.0 (2026-05-05) =
 * **Description repositioned**: leads with "Optimized for Microsoft Azure and Azure App Service" while explicitly noting compatibility with any WordPress Multisite host (DigitalOcean, AWS, dedicated servers, shared hosting, etc.).
