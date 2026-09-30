@@ -18,8 +18,8 @@ final class SmokeTest extends TestCase {
 
 	public function test_php_version_satisfies_plugin_runtime_minimum(): void {
 		$this->assertTrue(
-			PHP_VERSION_ID >= 70400,
-			'wpm-user-sync requires PHP 7.4 or newer per its plugin header.'
+			PHP_VERSION_ID >= 80000,
+			'wpm-user-sync requires PHP 8.0 or newer per its plugin header.'
 		);
 	}
 
@@ -32,7 +32,7 @@ final class SmokeTest extends TestCase {
 	public function test_main_plugin_file_has_plugin_header(): void {
 		$plugin_file = dirname( __DIR__, 2 ) . '/wpm-user-sync.php';
 		$contents    = (string) file_get_contents( $plugin_file );
-		$this->assertStringContainsString( 'Plugin Name: WPM User Sync', $contents );
+		$this->assertStringContainsString( 'Plugin Name: DiluxOne Multisite User Sync', $contents );
 		$this->assertStringContainsString( 'Network: true', $contents );
 	}
 

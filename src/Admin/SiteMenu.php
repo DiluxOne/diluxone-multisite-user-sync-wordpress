@@ -38,15 +38,15 @@ final class SiteMenu {
 
 	/**
 	 * Hooked on `admin_menu` from {@see \WPMUS\Plugin}. Registers the
-	 * WPM User Sync menu plus the Site Sync Actions submenu.
+	 * plugin's menu plus the Site Sync Actions submenu.
 	 */
 	public function register(): void {
 		// Site administrators have nothing to configure or run here:
 		// the one action pulls network accounts into the site, which is
 		// the network's call. The menu shows to super admins only.
 		add_menu_page(
-			__( 'WPM User Sync', 'wpm-user-sync' ),
-			__( 'WPM User Sync', 'wpm-user-sync' ),
+			__( 'DiluxOne Multisite User Sync', 'wpm-user-sync' ),
+			__( 'User Sync', 'wpm-user-sync' ),
 			'manage_network_users',
 			'wpmus-sitehome',
 			array( $this, 'render_home' ),

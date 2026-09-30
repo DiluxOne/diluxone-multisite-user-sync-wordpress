@@ -18,7 +18,7 @@ final class AssetsTest extends TestCase {
 
 	public function test_the_stylesheet_loads_on_the_plugins_screens(): void {
 		Functions\when( 'plugins_url' )->justReturn( 'https://example.test/wp-content/plugins/wpm-user-sync/css/wpmus_styles.css' );
-		Functions\expect( 'wp_enqueue_style' )->once();
+		Functions\expect( 'wp_enqueue_style' )->once()->with( 'wpmus_styles', \Mockery::type( 'string' ), array(), WPMUS_VERSION );
 
 		( new Assets( '/path/to/wpm-user-sync.php' ) )->enqueue_admin_styles( 'toplevel_page_wpmus-networkhome' );
 	}

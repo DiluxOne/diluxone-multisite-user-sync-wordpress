@@ -1,17 +1,16 @@
 <?php
 /**
- * Plugin Name: WPM User Sync
- * Plugin URI: https://pablodiloreto.com/wpm-user-sync/
+ * Plugin Name: DiluxOne Multisite User Sync
+ * Plugin URI: https://wordpress.org/plugins/wpm-user-sync/
  * Description: Optimized for Microsoft Azure and Azure App Service (compatible with any host). Configures & automates user synchronization between WordPress sites in a multi-site setup.
- * Author: Pablo Ariel Di Loreto
  * Version: 1.5.0
- * Requires at least: 6.6
- * Requires PHP: 7.4
- * Tested up to: 7.1
- * Author URI: https://pablodiloreto.com/wpm-user-sync/
- * Text Domain: wpm-user-sync
+ * Author: Pablo Ariel Di Loreto
+ * Author URI: https://diluxone.com/plugins-wordpress
  * License: GPLv2 or later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
+ * Text Domain: wpm-user-sync
+ * Requires at least: 6.6
+ * Requires PHP: 8.0
  * Network: true
  *
  * @package WPMUS
@@ -20,6 +19,8 @@
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
+
+define( 'WPMUS_VERSION', '1.5.0' );
 
 require_once __DIR__ . '/src/Autoloader.php';
 require_once __DIR__ . '/legacy-deprecated.php';

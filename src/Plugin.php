@@ -86,11 +86,18 @@ final class Plugin {
 	 * Wire every WordPress hook the plugin listens on.
 	 */
 	public function register(): void {
-		// Lifecycle.
+		// Lifecycle. The requirements check deactivates the plugin with an
+		// explanation where it cannot run.
+		add_action( 'admin_init', array( $this->requirements, 'check' ) );
+
+		// Outside a network there is nothing to sync, so nothing else is
+		// hooked: no menus, no triggers, no queue.
+		if ( ! is_multisite() ) {
+			return;
+		}
+
 		register_activation_hook( $this->plugin_file, array( $this, 'on_activate' ) );
 		add_action( 'init', array( $this, 'on_init' ) );
-		add_action( 'admin_init', array( $this->requirements, 'check' ) );
-		add_action( 'plugins_loaded', array( $this, 'load_textdomain' ) );
 
 		// Admin menus.
 		add_action( 'network_admin_menu', array( $this->network_menu, 'register' ) );
@@ -170,16 +177,5 @@ final class Plugin {
 	 */
 	public function engine(): SyncEngine {
 		return $this->engine;
-	}
-
-	/**
-	 * `plugins_loaded` callback that registers the plugin's text domain.
-	 */
-	public function load_textdomain(): void {
-		load_plugin_textdomain(
-			'wpm-user-sync',
-			false,
-			dirname( plugin_basename( $this->plugin_file ) ) . '/languages/'
-		);
 	}
 }

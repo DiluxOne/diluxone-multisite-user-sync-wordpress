@@ -24,4 +24,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 	define( 'ABSPATH', sys_get_temp_dir() . '/abspath-stub/' );
 }
 
+if ( ! defined( 'WPMUS_VERSION' ) ) {
+	define( 'WPMUS_VERSION', '0.0.0-test' );
+}
+
 require_once __DIR__ . '/Stubs/wp-classes.php';
