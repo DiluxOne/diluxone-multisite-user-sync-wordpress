@@ -22,6 +22,7 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Sync;
 
+use Brain\Monkey\Functions;
 use Mockery;
 use Mockery\MockInterface;
 use Tests\TestCase;
@@ -204,9 +205,36 @@ final class SyncEngineTest extends TestCase {
 	// ---------------------------------------------------------------------
 
 	public function test_a_removal_is_recorded(): void {
+		Functions\when( 'doing_action' )->justReturn( false );
 		$this->users->shouldReceive( 'record_removal' )->once()->with( 5, 3 );
 
 		$this->engine()->on_user_removed_from_blog( 5, 3 );
+	}
+
+	public function test_core_housekeeping_removals_are_not_recorded(): void {
+		Functions\when( 'doing_action' )->alias(
+			static function ( string $hook ): bool {
+				return 'wp_uninitialize_site' === $hook;
+			}
+		);
+		$this->users->shouldNotReceive( 'record_removal' );
+
+		$this->engine()->on_user_removed_from_blog( 5, 3 );
+	}
+
+	public function test_an_activated_invitee_gets_the_new_user_sync_again(): void {
+		$this->config->shouldReceive( 'is_new_user_sync_enabled' )->andReturn( true );
+		$this->sites->shouldReceive( 'all_blog_ids' )->andReturn( array( 1, 2 ) );
+		$this->users->shouldReceive( 'is_member_of' )->with( 5, 1 )->andReturn( false );
+		$this->users->shouldReceive( 'is_member_of' )->with( 5, 2 )->andReturn( true );
+		$this->sites->shouldReceive( 'default_role_for_blog' )->andReturn( 'subscriber' );
+		// Once from wpmu_new_user, and again after core took the invitee
+		// off site 1: the once-per-request guard does not apply here.
+		$this->users->shouldReceive( 'add_to_blog' )->twice()->with( 1, 5, 'subscriber' )->andReturn( true );
+
+		$engine = $this->engine();
+		$engine->on_new_user( 5 );
+		$engine->on_user_activated( 5 );
 	}
 
 	public function test_someone_else_adding_the_user_back_forgets_the_removal(): void {

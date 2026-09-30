@@ -92,4 +92,16 @@ final class RemovalRespectedIntegrationTest extends IntegrationTestCase {
 		$removed = get_user_meta( $user_id, UserRepository::META_REMOVED_FROM, true );
 		$this->assertNotContains( $blog_id, is_array( $removed ) ? array_map( 'intval', $removed ) : array() );
 	}
+
+	public function test_deleting_a_site_is_not_recorded_as_removing_its_members(): void {
+		$user_id = $this->make_user( $this->slug( 'site-gone' ) );
+		$blog_id = $this->make_site( $this->slug( 'doomed' ) );
+		add_user_to_blog( $blog_id, $user_id, 'subscriber' );
+
+		wpmu_delete_blog( $blog_id, true );
+		$this->created_blog_ids = array_values( array_diff( $this->created_blog_ids, array( $blog_id ) ) );
+
+		$removed = get_user_meta( $user_id, UserRepository::META_REMOVED_FROM, true );
+		$this->assertNotContains( $blog_id, is_array( $removed ) ? array_map( 'intval', $removed ) : array() );
+	}
 }

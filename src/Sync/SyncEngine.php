@@ -202,12 +202,33 @@ final class SyncEngine {
 	 * Callback for `remove_user_from_blog`. Records the removal so no
 	 * automatic sync adds the user back to that site; runs whatever
 	 * the toggles say, so a trigger turned on later still respects it.
+	 *
+	 * Removals core makes as housekeeping are not someone's decision
+	 * and are not recorded: emptying a site that is being deleted
+	 * (`wp_uninitialize_site`), and taking a newly activated invitee
+	 * off the main site (`wpmu_activate_user`).
 	 */
 	public function on_user_removed_from_blog( int $user_id, int $blog_id ): void {
 		if ( $user_id <= 0 || $blog_id <= 0 ) {
 			return;
 		}
+		if ( doing_action( 'wp_uninitialize_site' ) || doing_action( 'wpmu_activate_user' ) ) {
+			return;
+		}
 		$this->users->record_removal( $user_id, $blog_id );
+	}
+
+	/**
+	 * Callback for `wpmu_activate_user`, after core's own handler: an
+	 * invitee activated from a signup was just taken off the main site
+	 * and put on the inviting site, so the new-user sync runs again for
+	 * them (it only adds what is missing).
+	 */
+	public function on_user_activated( int $user_id ): void {
+		if ( $user_id <= 0 || ! $this->config->is_new_user_sync_enabled() ) {
+			return;
+		}
+		$this->start( new SyncJob( 'new_user', array( $user_id ), null, false ) );
 	}
 
 	/**

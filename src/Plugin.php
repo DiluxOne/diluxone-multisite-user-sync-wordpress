@@ -120,6 +120,7 @@ final class Plugin {
 		// own registration). The engine runs each user once.
 		add_action( 'wpmu_new_user', array( $this->engine, 'on_new_user' ) );
 		add_action( 'user_register', array( $this->engine, 'on_user_registered' ) );
+		add_action( 'wpmu_activate_user', array( $this->engine, 'on_user_activated' ), 20 );
 		add_action( 'shutdown', array( $this->engine, 'flush_registered_users' ) );
 		add_action( 'set_user_role', array( $this->engine, 'on_role_changed' ), 10, 3 );
 
