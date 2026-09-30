@@ -63,6 +63,14 @@ final class SyncEngine {
 	private bool $in_sync = false;
 
 	/**
+	 * Default role per blog id, resolved once per sync run: reading it
+	 * switches to the site.
+	 *
+	 * @var array<int,string>
+	 */
+	private array $default_roles = array();
+
+	/**
 	 * @param Config         $config Toggle accessors + plugin metadata.
 	 * @param SiteRepository $sites  Wraps `get_sites()` / `get_blog_option()`.
 	 * @param UserRepository $users  Wraps `get_users()` / `add_user_to_blog()`
@@ -91,13 +99,7 @@ final class SyncEngine {
 			return;
 		}
 
-		$role = $this->sites->default_role_for_blog( $blog_id );
-		foreach ( $this->users->all_network_users() as $user ) {
-			if ( $this->users->is_member_of( (int) $user->ID, $blog_id ) ) {
-				continue;
-			}
-			$this->add_to_blog_guarded( $blog_id, (int) $user->ID, $role );
-		}
+		$this->sync_all_users_to_sites( array( $blog_id ) );
 	}
 
 	/**
@@ -113,26 +115,27 @@ final class SyncEngine {
 	}
 
 	/**
-	 * Trigger callback for `wp_login` and `social_connect_login`.
-	 * Re-runs the new-user sync when the user logs in for the first
-	 * time after creation, in case `wpmu_new_user` did not fire (e.g.
-	 * users imported via SQL or third-party flows).
-	 *
-	 * The legacy `msum_has_caps` user-meta gate is preserved so previous
-	 * installs that stored that flag still skip the redundant sync.
+	 * Callback for `remove_user_from_blog`. Records the removal so no
+	 * automatic sync adds the user back to that site; runs whatever
+	 * the toggles say, so a trigger turned on later still respects it.
 	 */
-	public function maybe_on_login( string $user_login ): void {
-		if ( ! $this->config->is_new_user_sync_enabled() ) {
+	public function on_user_removed_from_blog( int $user_id, int $blog_id ): void {
+		if ( $user_id <= 0 || $blog_id <= 0 ) {
 			return;
 		}
-		$user = $this->users->find_by_login( $user_login );
-		if ( null === $user ) {
+		$this->users->record_removal( $user_id, $blog_id );
+	}
+
+	/**
+	 * Callback for `add_user_to_blog`. When someone other than this
+	 * plugin adds the user to a site (an administrator, another
+	 * plugin), a removal recorded for that site no longer applies.
+	 */
+	public function on_user_added_to_blog( int $user_id, string $role, int $blog_id ): void {
+		if ( $this->in_sync ) {
 			return;
 		}
-		if ( $this->users->has_legacy_msum_caps( (int) $user->ID ) ) {
-			return;
-		}
-		$this->add_user_to_every_site( (int) $user->ID );
+		$this->users->forget_removal( $user_id, $blog_id );
 	}
 
 	/**
@@ -163,19 +166,11 @@ final class SyncEngine {
 	/**
 	 * Manual action: sync every network user to every site. Existing
 	 * memberships are not modified — only missing memberships are
-	 * created with the destination site's default role.
+	 * created with the destination site's default role. A user removed
+	 * from a site is only added back when `$force` is true.
 	 */
-	public function sync_all_users_to_all_sites(): void {
-		$blog_ids = $this->sites->all_blog_ids();
-		$users    = $this->users->all_network_users();
-		foreach ( $users as $user ) {
-			foreach ( $blog_ids as $blog_id ) {
-				if ( $this->users->is_member_of( (int) $user->ID, $blog_id ) ) {
-					continue;
-				}
-				$this->add_to_blog_guarded( $blog_id, (int) $user->ID, $this->sites->default_role_for_blog( $blog_id ) );
-			}
-		}
+	public function sync_all_users_to_all_sites( bool $force = false ): void {
+		$this->sync_all_users_to_sites( $this->sites->all_blog_ids(), $force );
 	}
 
 	/**
@@ -183,36 +178,54 @@ final class SyncEngine {
 	 * (typically chosen via the network-admin UI checkboxes).
 	 *
 	 * @param int[] $blog_ids Sites to populate. Anything outside this
-	 *                       list is left untouched.
+	 *                        list is left untouched.
+	 * @param bool  $force    Also add back users who were removed.
 	 */
-	public function sync_all_users_to_sites( array $blog_ids ): void {
+	public function sync_all_users_to_sites( array $blog_ids, bool $force = false ): void {
+		$this->default_roles = array();
 		// Fetch the user list ONCE for the whole operation. The previous
 		// shape of this loop refetched on every iteration, which on a
 		// large network turns a single expensive query into N queries.
 		$users = $this->users->all_network_users();
 		foreach ( $blog_ids as $blog_id ) {
-			$blog_id = (int) $blog_id;
 			foreach ( $users as $user ) {
-				if ( $this->users->is_member_of( (int) $user->ID, $blog_id ) ) {
-					continue;
-				}
-				$this->add_to_blog_guarded( $blog_id, (int) $user->ID, $this->sites->default_role_for_blog( $blog_id ) );
+				$this->add_if_missing( (int) $user->ID, (int) $blog_id, $force );
 			}
 		}
 	}
 
 	/**
-	 * Helper used by the new-user / login triggers: ensures the user
-	 * is a member of every existing site, with each site's default
-	 * role for the new memberships it creates. Existing memberships
-	 * are not touched.
+	 * Helper used by the new-user trigger: ensures the user is a
+	 * member of every existing site, with each site's default role for
+	 * the new memberships it creates. Existing memberships and
+	 * recorded removals are not touched.
 	 */
 	private function add_user_to_every_site( int $user_id ): void {
+		$this->default_roles = array();
 		foreach ( $this->sites->all_blog_ids() as $blog_id ) {
-			if ( $this->users->is_member_of( $user_id, $blog_id ) ) {
-				continue;
-			}
-			$this->add_to_blog_guarded( $blog_id, $user_id, $this->sites->default_role_for_blog( $blog_id ) );
+			$this->add_if_missing( $user_id, $blog_id, false );
+		}
+	}
+
+	/**
+	 * Adds one user to one site, with that site's default role, unless
+	 * they are already a member or were removed from it. `$force`
+	 * overrides the removal and clears its record.
+	 */
+	private function add_if_missing( int $user_id, int $blog_id, bool $force ): void {
+		if ( $this->users->is_member_of( $user_id, $blog_id ) ) {
+			return;
+		}
+		$removed = in_array( $blog_id, $this->users->removed_blog_ids( $user_id ), true );
+		if ( $removed && ! $force ) {
+			return;
+		}
+		if ( ! isset( $this->default_roles[ $blog_id ] ) ) {
+			$this->default_roles[ $blog_id ] = $this->sites->default_role_for_blog( $blog_id );
+		}
+		$this->add_to_blog_guarded( $blog_id, $user_id, $this->default_roles[ $blog_id ] );
+		if ( $removed ) {
+			$this->users->forget_removal( $user_id, $blog_id );
 		}
 	}
 

@@ -118,6 +118,8 @@ First release. Check help for all features.
 
 = Unreleased =
 * **Fix (security)**: the New Site trigger gave each new site's members the role they held on the main site, so main-site editors and administrators became editors and administrators of every new site. Every new membership now gets the new site's own default role, and a default role the site does not define falls back to subscriber.
+* **Fix**: people removed from a site were put back on it at their next sign-in (and by the new-user trigger and the manual sync). The plugin now remembers who was removed from which site and no automatic sync adds them back; the network "Sync from scratch" and "Sync specific sites" actions only do so when you tick "Also add back people who were removed from a site". Adding someone back yourself clears the record.
+* **Removed**: the catch-up sync that ran on every sign-in (`wp_login`, `social_connect_login`). Accounts created outside the normal flows (imports, SQL) are added with the manual network sync.
 
 = 1.5.0 (2026-05-05) =
 * **Description repositioned**: leads with "Optimized for Microsoft Azure and Azure App Service" while explicitly noting compatibility with any WordPress Multisite host (DigitalOcean, AWS, dedicated servers, shared hosting, etc.).

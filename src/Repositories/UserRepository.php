@@ -22,6 +22,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 class UserRepository {
 
 	/**
+	 * User meta (network-wide, users live in one table) listing the
+	 * blog ids a user was removed from.
+	 */
+	public const META_REMOVED_FROM = 'wpmus_removed_from_blogs';
+
+	/**
 	 * Every WP_User in the network (regardless of which sites they
 	 * currently belong to). The legacy implementation passed `blog_id => 0`
 	 * to `get_users()`, which WP interprets as "all sites".
@@ -54,22 +60,44 @@ class UserRepository {
 	}
 
 	/**
-	 * Find a user by login name. Returns null (not false) when the
-	 * login does not match any user, so callers can pattern-match
-	 * with `=== null`.
+	 * Blog ids the user was removed from while the plugin was active.
+	 * Automatic syncs never add the user back to these sites.
+	 *
+	 * @return int[]
 	 */
-	public function find_by_login( string $login ): ?\WP_User {
-		$user = get_user_by( 'login', $login );
-		return $user instanceof \WP_User ? $user : null;
+	public function removed_blog_ids( int $user_id ): array {
+		$ids = get_user_meta( $user_id, self::META_REMOVED_FROM, true );
+		if ( ! is_array( $ids ) ) {
+			return array();
+		}
+		return array_values( array_unique( array_filter( array_map( 'intval', $ids ) ) ) );
 	}
 
 	/**
-	 * Returns true when the user has the legacy `msum_has_caps` meta
-	 * flag set to the literal string `"true"`. Used by the login
-	 * trigger to skip users that the old MSUM plugin already
-	 * processed.
+	 * Remembers that the user was removed from `$blog_id`.
 	 */
-	public function has_legacy_msum_caps( int $user_id ): bool {
-		return 'true' === (string) get_user_meta( $user_id, 'msum_has_caps', true );
+	public function record_removal( int $user_id, int $blog_id ): void {
+		$ids = $this->removed_blog_ids( $user_id );
+		if ( in_array( $blog_id, $ids, true ) ) {
+			return;
+		}
+		$ids[] = $blog_id;
+		update_user_meta( $user_id, self::META_REMOVED_FROM, $ids );
+	}
+
+	/**
+	 * Forgets a removal, once the user is a member of `$blog_id` again.
+	 */
+	public function forget_removal( int $user_id, int $blog_id ): void {
+		$ids = $this->removed_blog_ids( $user_id );
+		if ( ! in_array( $blog_id, $ids, true ) ) {
+			return;
+		}
+		$ids = array_values( array_diff( $ids, array( $blog_id ) ) );
+		if ( array() === $ids ) {
+			delete_user_meta( $user_id, self::META_REMOVED_FROM );
+			return;
+		}
+		update_user_meta( $user_id, self::META_REMOVED_FROM, $ids );
 	}
 }

@@ -54,7 +54,7 @@ final class NetworkSyncActionsPage {
 							<?php wp_nonce_field( Config::NONCE_ACTION ); ?>
 							<input type="submit" value="<?php esc_attr_e( 'Sync from scratch', 'wpm-user-sync' ); ?>" class="button" />
 						</form>
-						<p class="description"><?php esc_html_e( 'Sync every site with every user. Each site receives every user with the default site role. Existing memberships are not modified.', 'wpm-user-sync' ); ?></p>
+						<p class="description"><?php esc_html_e( 'Sync every site with every user. Each site receives every user with the default site role. Existing memberships are not modified, and people removed from a site stay removed unless you tick the box.', 'wpm-user-sync' ); ?></p>
 					</td>
 				</tr>
 				<tr>
@@ -72,7 +72,7 @@ final class NetworkSyncActionsPage {
 							<br />
 							<input type="submit" value="<?php esc_attr_e( 'Sync selected sites', 'wpm-user-sync' ); ?>" class="button" />
 						</form>
-						<p class="description"><?php esc_html_e( 'All selected sites will receive every user with the default site role. Existing memberships are not modified.', 'wpm-user-sync' ); ?></p>
+						<p class="description"><?php esc_html_e( 'All selected sites will receive every user with the default site role. Existing memberships are not modified, and people removed from a site stay removed unless you tick the box.', 'wpm-user-sync' ); ?></p>
 					</td>
 				</tr>
 			</table>
@@ -90,7 +90,7 @@ final class NetworkSyncActionsPage {
 			wp_die( esc_html__( 'You do not have permission to run a network-wide sync.', 'wpm-user-sync' ), '', array( 'response' => 403 ) );
 		}
 
-		$this->engine->sync_all_users_to_all_sites();
+		$this->engine->sync_all_users_to_all_sites( $this->force_requested() );
 
 		wp_safe_redirect(
 			add_query_arg(
@@ -133,7 +133,7 @@ final class NetworkSyncActionsPage {
 			exit;
 		}
 
-		$this->engine->sync_all_users_to_sites( $blog_ids );
+		$this->engine->sync_all_users_to_sites( $blog_ids, $this->force_requested() );
 
 		wp_safe_redirect(
 			add_query_arg(
@@ -145,5 +145,14 @@ final class NetworkSyncActionsPage {
 			)
 		);
 		exit;
+	}
+
+	/**
+	 * True when the administrator ticked "also add back people who
+	 * were removed". Only called after the nonce check.
+	 */
+	private function force_requested(): bool {
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- verified by check_admin_referer() in the calling handler.
+		return isset( $_POST['wpmus_force'] ) && 'yes' === sanitize_key( wp_unslash( (string) $_POST['wpmus_force'] ) );
 	}
 }

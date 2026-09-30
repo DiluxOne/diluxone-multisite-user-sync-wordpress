@@ -44,6 +44,7 @@ final class SyncEngineTest extends TestCase {
 		$this->config = Mockery::mock( Config::class );
 		$this->sites  = Mockery::mock( SiteRepository::class );
 		$this->users  = Mockery::mock( UserRepository::class );
+		$this->users->shouldReceive( 'removed_blog_ids' )->andReturn( array() )->byDefault();
 	}
 
 	protected function tearDown(): void {
@@ -129,47 +130,41 @@ final class SyncEngineTest extends TestCase {
 	}
 
 	// ---------------------------------------------------------------------
-	// maybe_on_login
+	// Removals
 	// ---------------------------------------------------------------------
 
-	public function test_maybe_on_login_returns_early_when_toggle_off(): void {
-		$this->config->shouldReceive( 'is_new_user_sync_enabled' )->once()->andReturn( false );
-		$this->users->shouldNotReceive( 'find_by_login' );
+	public function test_a_removal_is_recorded(): void {
+		$this->users->shouldReceive( 'record_removal' )->once()->with( 5, 3 );
 
-		$this->engine()->maybe_on_login( 'pablito' );
+		$this->engine()->on_user_removed_from_blog( 5, 3 );
 	}
 
-	public function test_maybe_on_login_returns_early_when_user_not_found(): void {
-		$this->config->shouldReceive( 'is_new_user_sync_enabled' )->andReturn( true );
-		$this->users->shouldReceive( 'find_by_login' )->with( 'ghost' )->andReturn( null );
-		$this->users->shouldNotReceive( 'has_legacy_msum_caps' );
-		$this->sites->shouldNotReceive( 'all_blog_ids' );
+	public function test_someone_else_adding_the_user_back_forgets_the_removal(): void {
+		$this->users->shouldReceive( 'forget_removal' )->once()->with( 5, 3 );
 
-		$this->engine()->maybe_on_login( 'ghost' );
+		$this->engine()->on_user_added_to_blog( 5, 'subscriber', 3 );
 	}
 
-	public function test_maybe_on_login_skips_user_with_legacy_msum_caps(): void {
-		$user = new \WP_User( 5 );
+	public function test_new_user_trigger_skips_sites_the_user_was_removed_from(): void {
 		$this->config->shouldReceive( 'is_new_user_sync_enabled' )->andReturn( true );
-		$this->users->shouldReceive( 'find_by_login' )->with( 'imported' )->andReturn( $user );
-		$this->users->shouldReceive( 'has_legacy_msum_caps' )->with( 5 )->andReturn( true );
-		$this->sites->shouldNotReceive( 'all_blog_ids' );
+		$this->sites->shouldReceive( 'all_blog_ids' )->andReturn( array( 2, 3 ) );
+		$this->sites->shouldReceive( 'default_role_for_blog' )->andReturn( 'subscriber' );
+		$this->users->shouldReceive( 'is_member_of' )->andReturn( false );
+		$this->users->shouldReceive( 'removed_blog_ids' )->with( 5 )->andReturn( array( 3 ) );
+		$this->users->shouldReceive( 'add_to_blog' )->once()->with( 2, 5, 'subscriber' )->andReturn( true );
 
-		$this->engine()->maybe_on_login( 'imported' );
+		$this->engine()->on_new_user( 5 );
 	}
 
-	public function test_maybe_on_login_syncs_when_user_found_and_no_legacy_caps(): void {
-		$user = new \WP_User( 5 );
-		$this->config->shouldReceive( 'is_new_user_sync_enabled' )->andReturn( true );
-		$this->users->shouldReceive( 'find_by_login' )->with( 'pablito' )->andReturn( $user );
-		$this->users->shouldReceive( 'has_legacy_msum_caps' )->with( 5 )->andReturn( false );
+	public function test_forced_manual_sync_adds_a_removed_user_back_and_forgets_the_removal(): void {
+		$this->users->shouldReceive( 'all_network_users' )->andReturn( array( new \WP_User( 5 ) ) );
+		$this->sites->shouldReceive( 'default_role_for_blog' )->andReturn( 'subscriber' );
+		$this->users->shouldReceive( 'is_member_of' )->andReturn( false );
+		$this->users->shouldReceive( 'removed_blog_ids' )->with( 5 )->andReturn( array( 3 ) );
+		$this->users->shouldReceive( 'add_to_blog' )->once()->with( 3, 5, 'subscriber' )->andReturn( true );
+		$this->users->shouldReceive( 'forget_removal' )->once()->with( 5, 3 );
 
-		$this->sites->shouldReceive( 'all_blog_ids' )->andReturn( array( 1 ) );
-		$this->users->shouldReceive( 'is_member_of' )->with( 5, 1 )->andReturn( false );
-		$this->sites->shouldReceive( 'default_role_for_blog' )->with( 1 )->andReturn( 'subscriber' );
-		$this->users->shouldReceive( 'add_to_blog' )->once()->with( 1, 5, 'subscriber' )->andReturn( true );
-
-		$this->engine()->maybe_on_login( 'pablito' );
+		$this->engine()->sync_all_users_to_sites( array( 3 ), true );
 	}
 
 	// ---------------------------------------------------------------------

@@ -115,12 +115,15 @@ final class Plugin {
 		}
 		if ( $this->config->is_new_user_sync_enabled() ) {
 			add_action( 'wpmu_new_user', array( $this->engine, 'on_new_user' ) );
-			add_action( 'wp_login', array( $this->engine, 'maybe_on_login' ), 10, 1 );
-			add_action( 'social_connect_login', array( $this->engine, 'maybe_on_login' ), 10, 1 );
 		}
 		if ( $this->config->is_set_user_role_sync_enabled() ) {
 			add_action( 'set_user_role', array( $this->engine, 'on_role_changed' ), 10, 2 );
 		}
+
+		// Removals are recorded whatever the toggles say, so a trigger
+		// turned on later still leaves those people off those sites.
+		add_action( 'remove_user_from_blog', array( $this->engine, 'on_user_removed_from_blog' ), 10, 2 );
+		add_action( 'add_user_to_blog', array( $this->engine, 'on_user_added_to_blog' ), 10, 3 );
 	}
 
 	/**
