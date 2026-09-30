@@ -7,7 +7,7 @@
  * Version: 1.5.0
  * Requires at least: 6.6
  * Requires PHP: 7.4
- * Tested up to: 6.9
+ * Tested up to: 7.1
  * Author URI: https://pablodiloreto.com/wpm-user-sync/
  * Text Domain: wpm-user-sync
  * License: GPLv2 or later

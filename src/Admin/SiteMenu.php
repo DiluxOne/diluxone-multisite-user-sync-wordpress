@@ -41,10 +41,13 @@ final class SiteMenu {
 	 * WPM User Sync menu plus the Site Sync Actions submenu.
 	 */
 	public function register(): void {
+		// Site administrators have nothing to configure or run here:
+		// the one action pulls network accounts into the site, which is
+		// the network's call. The menu shows to super admins only.
 		add_menu_page(
 			__( 'WPM User Sync', 'wpm-user-sync' ),
 			__( 'WPM User Sync', 'wpm-user-sync' ),
-			'manage_options',
+			'manage_network_users',
 			'wpmus-sitehome',
 			array( $this, 'render_home' ),
 			'dashicons-admin-generic',
@@ -55,7 +58,7 @@ final class SiteMenu {
 			'wpmus-sitehome',
 			__( 'Site Sync Actions', 'wpm-user-sync' ),
 			__( 'Site Sync Actions', 'wpm-user-sync' ),
-			'manage_options',
+			'manage_network_users',
 			'wpmus-sitesyncactions',
 			array( $this, 'render_actions' )
 		);

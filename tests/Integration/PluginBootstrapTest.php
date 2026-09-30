@@ -62,4 +62,17 @@ final class PluginBootstrapTest extends IntegrationTestCase {
 			'Save handler for the site-level sync action must be registered.'
 		);
 	}
+
+	public function test_sync_triggers_are_hooked_whatever_the_toggles_said_at_boot(): void {
+		$plugin = Plugin::instance();
+		$this->assertNotNull( $plugin );
+		$engine = $plugin->engine();
+
+		$this->assertSame( 11, has_action( 'wp_initialize_site', array( $engine, 'on_new_site' ) ) );
+		$this->assertSame( 10, has_action( 'wpmu_new_user', array( $engine, 'on_new_user' ) ) );
+		$this->assertSame( 10, has_action( 'user_register', array( $engine, 'on_user_registered' ) ) );
+		$this->assertSame( 10, has_action( 'set_user_role', array( $engine, 'on_role_changed' ) ) );
+		$this->assertSame( 10, has_action( 'remove_user_from_blog', array( $engine, 'on_user_removed_from_blog' ) ) );
+		$this->assertFalse( has_action( 'wp_login', array( $engine, 'maybe_on_login' ) ) );
+	}
 }

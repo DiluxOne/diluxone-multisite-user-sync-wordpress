@@ -73,7 +73,7 @@ final class NetworkSyncOptionsPage {
 								<input name="wpmus_setUserRoleSync" type="checkbox" value="yes" <?php checked( true, $set_role_sync ); ?> />
 								<?php esc_html_e( 'Sync new user roles to all sites', 'wpm-user-sync' ); ?>
 							</label>
-							<p class="description"><?php esc_html_e( "When a user's role changes on any site (e.g. promoted to administrator on one site), the change is replicated to every other site where the user is already a member.", 'wpm-user-sync' ); ?></p>
+							<p class="description"><?php esc_html_e( "When a user's role changes on any site (e.g. promoted to editor on one site), the change is replicated to every other site where the user is already a member and that defines the role. Administrator is never replicated, and super admins are left alone.", 'wpm-user-sync' ); ?></p>
 						</td>
 					</tr>
 				</table>

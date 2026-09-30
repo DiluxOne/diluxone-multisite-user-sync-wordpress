@@ -135,10 +135,10 @@ final class SiteHomePage {
 		<p><?php esc_html_e( 'WPM User Sync has some simple but important concepts. Knowing all of them will help you get a better experience with the tool.', 'wpm-user-sync' ); ?></p>
 
 		<h4><?php esc_html_e( 'What exactly does this plugin do?', 'wpm-user-sync' ); ?></h4>
-		<p><?php esc_html_e( 'WPM User Sync enables user synchronization in your WordPress Multisite — see the Network admin Concepts tab for the full explanation. As a site admin you have one action available: sync every network user into this site.', 'wpm-user-sync' ); ?></p>
+		<p><?php esc_html_e( 'WPM User Sync enables user synchronization in your WordPress Multisite — see the Network admin Concepts tab for the full explanation. Here, a super admin can sync every network user into this one site.', 'wpm-user-sync' ); ?></p>
 
 		<h4><?php esc_html_e( 'What can a site administrator configure?', 'wpm-user-sync' ); ?></h4>
-		<p><?php esc_html_e( 'Nothing. All triggers and toggles are configured at the network level by the network administrator. As a site admin you can run the manual "sync from scratch" action: it adds every network user to this site with the default site role. Existing memberships are not modified.', 'wpm-user-sync' ); ?></p>
+		<p><?php esc_html_e( 'Nothing. All triggers and toggles are configured at the network level, and these pages are only shown to super admins: the "sync from scratch" action adds every network user to this site with its default role, which is a network decision. Existing memberships are not modified, and people removed from this site stay removed.', 'wpm-user-sync' ); ?></p>
 		<?php
 	}
 

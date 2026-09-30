@@ -19,18 +19,36 @@ use WPMUS\Repositories\UserRepository;
 
 final class UserRepositoryTest extends TestCase {
 
-	public function test_all_network_users_passes_blog_id_zero(): void {
-		// `blog_id => 0` is the legacy idiom that asks WordPress for
-		// every user across the network. The refactor must keep this
-		// arg so the same dataset is returned.
+	public function test_network_user_ids_reads_one_page_of_ids(): void {
+		// `blog_id => 0` asks WordPress for every user across the
+		// network; only ids are loaded, oldest first, one page at a time.
 		Functions\expect( 'get_users' )
 			->once()
-			->with( array( 'blog_id' => 0 ) )
-			->andReturn( array( new \WP_User( 1 ), new \WP_User( 2 ) ) );
+			->with(
+				array(
+					'blog_id'     => 0,
+					'fields'      => 'ID',
+					'orderby'     => 'ID',
+					'order'       => 'ASC',
+					'number'      => 50,
+					'offset'      => 100,
+					'count_total' => false,
+				)
+			)
+			->andReturn( array( '7', 9 ) );
 
-		$users = ( new UserRepository() )->all_network_users();
+		$this->assertSame( array( 7, 9 ), ( new UserRepository() )->network_user_ids( 100, 50 ) );
+	}
 
-		$this->assertCount( 2, $users );
+	public function test_super_admin_ids_resolves_logins(): void {
+		Functions\when( 'get_super_admins' )->justReturn( array( 'admin', 'gone' ) );
+		Functions\when( 'get_user_by' )->alias(
+			static function ( string $field, string $login ) {
+				return 'admin' === $login ? new \WP_User( 1 ) : false;
+			}
+		);
+
+		$this->assertSame( array( 1 ), ( new UserRepository() )->super_admin_ids() );
 	}
 
 	public function test_is_member_of_returns_bool(): void {
@@ -61,48 +79,33 @@ final class UserRepositoryTest extends TestCase {
 		$this->assertTrue( $result );
 	}
 
-	public function test_find_by_login_returns_wp_user_when_found(): void {
-		$expected = new \WP_User( 12 );
-		Functions\expect( 'get_user_by' )
-			->once()
-			->with( 'login', 'pablito' )
-			->andReturn( $expected );
-
-		$user = ( new UserRepository() )->find_by_login( 'pablito' );
-
-		$this->assertSame( $expected, $user );
-	}
-
-	public function test_find_by_login_returns_null_when_not_found(): void {
-		// `get_user_by` returns false (not null) when no match exists.
-		// The repository normalises that to null so the caller can
-		// pattern-match without `=== false` checks.
-		Functions\when( 'get_user_by' )->justReturn( false );
-
-		$this->assertNull( ( new UserRepository() )->find_by_login( 'nobody' ) );
-	}
-
-	public function test_has_legacy_msum_caps_true_for_string_true(): void {
+	public function test_removed_blog_ids_normalises_the_stored_list(): void {
 		Functions\expect( 'get_user_meta' )
 			->once()
-			->with( 5, 'msum_has_caps', true )
-			->andReturn( 'true' );
+			->with( 5, UserRepository::META_REMOVED_FROM, true )
+			->andReturn( array( '3', 3, 0, 'x', 7 ) );
 
-		$this->assertTrue( ( new UserRepository() )->has_legacy_msum_caps( 5 ) );
+		$this->assertSame( array( 3, 7 ), ( new UserRepository() )->removed_blog_ids( 5 ) );
 	}
 
-	public function test_has_legacy_msum_caps_false_for_anything_else(): void {
-		// MSUM (the legacy "Multisite User Manager" plugin this code
-		// originally interoperated with) wrote the flag as the literal
-		// string 'true'. Anything else — bool true, '1', '', missing —
-		// must NOT skip the new-user sync.
+	public function test_removed_blog_ids_is_empty_without_a_record(): void {
 		Functions\when( 'get_user_meta' )->justReturn( '' );
-		$this->assertFalse( ( new UserRepository() )->has_legacy_msum_caps( 5 ) );
 
-		Functions\when( 'get_user_meta' )->justReturn( true );
-		$this->assertFalse( ( new UserRepository() )->has_legacy_msum_caps( 5 ) );
+		$this->assertSame( array(), ( new UserRepository() )->removed_blog_ids( 5 ) );
+	}
 
-		Functions\when( 'get_user_meta' )->justReturn( '1' );
-		$this->assertFalse( ( new UserRepository() )->has_legacy_msum_caps( 5 ) );
+	public function test_record_removal_appends_once(): void {
+		Functions\when( 'get_user_meta' )->justReturn( array( 2 ) );
+		Functions\expect( 'update_user_meta' )->once()->with( 5, UserRepository::META_REMOVED_FROM, array( 2, 3 ) );
+
+		( new UserRepository() )->record_removal( 5, 3 );
+		( new UserRepository() )->record_removal( 5, 2 );
+	}
+
+	public function test_forget_removal_deletes_the_record_when_it_empties(): void {
+		Functions\when( 'get_user_meta' )->justReturn( array( 3 ) );
+		Functions\expect( 'delete_user_meta' )->once()->with( 5, UserRepository::META_REMOVED_FROM );
+
+		( new UserRepository() )->forget_removal( 5, 3 );
 	}
 }

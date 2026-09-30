@@ -24,6 +24,7 @@ use WPMUS\Admin\SiteMenu;
 use WPMUS\Admin\SiteSyncActionsPage;
 use WPMUS\Repositories\SiteRepository;
 use WPMUS\Repositories\UserRepository;
+use WPMUS\Sync\JobQueue;
 use WPMUS\Sync\SyncEngine;
 use WPMUS\View\Header;
 
@@ -67,12 +68,13 @@ final class Plugin {
 
 		$site_repo    = new SiteRepository();
 		$user_repo    = new UserRepository();
-		$this->engine = new SyncEngine( $this->config, $site_repo, $user_repo );
+		$queue        = new JobQueue();
+		$this->engine = new SyncEngine( $this->config, $site_repo, $user_repo, $queue );
 
 		$header                = new Header();
 		$network_home          = new NetworkHomePage();
 		$this->network_options = new NetworkSyncOptionsPage( $this->config );
-		$this->network_actions = new NetworkSyncActionsPage( $site_repo, $this->engine );
+		$this->network_actions = new NetworkSyncActionsPage( $site_repo, $this->engine, $queue );
 		$this->network_menu    = new NetworkMenu( $header, $network_home, $this->network_options, $this->network_actions );
 
 		$site_home          = new SiteHomePage();
@@ -81,11 +83,7 @@ final class Plugin {
 	}
 
 	/**
-	 * Wire every WordPress hook the plugin listens on. Conditional
-	 * trigger registration depends on the three site options — the
-	 * legacy implementation read those once at bootstrap, so behaviour
-	 * is preserved (changing a toggle requires the next page load to
-	 * re-register).
+	 * Wire every WordPress hook the plugin listens on.
 	 */
 	public function register(): void {
 		// Lifecycle.
@@ -108,19 +106,31 @@ final class Plugin {
 		add_action( 'network_admin_notices', array( $this->notices, 'render' ) );
 		add_action( 'admin_notices', array( $this->notices, 'render' ) );
 
-		// Sync triggers (conditional on site options at boot time —
-		// matches legacy behaviour where toggling required a page load).
-		if ( $this->config->is_new_site_sync_enabled() ) {
-			add_action( 'wpmu_new_blog', array( $this->engine, 'on_new_site' ) );
-		}
-		if ( $this->config->is_new_user_sync_enabled() ) {
-			add_action( 'wpmu_new_user', array( $this->engine, 'on_new_user' ) );
-			add_action( 'wp_login', array( $this->engine, 'maybe_on_login' ), 10, 1 );
-			add_action( 'social_connect_login', array( $this->engine, 'maybe_on_login' ), 10, 1 );
-		}
-		if ( $this->config->is_set_user_role_sync_enabled() ) {
-			add_action( 'set_user_role', array( $this->engine, 'on_role_changed' ), 10, 2 );
-		}
+		// Sync triggers. They are always hooked and each callback reads
+		// its toggle when it runs, so turning a trigger on or off takes
+		// effect at once, and the toggle is checked in one place.
+		//
+		// A new site: `wp_initialize_site` (WordPress 5.1+) replaces the
+		// deprecated `wpmu_new_blog`; priority 11 runs after core has
+		// populated the site at 10 and switched back.
+		add_action( 'wp_initialize_site', array( $this->engine, 'on_new_site' ), 11, 1 );
+		// A new user: `wpmu_new_user` fires from wpmu_create_user() once
+		// core has stripped the default membership; `user_register`
+		// catches accounts made with wp_insert_user() alone (a plugin's
+		// own registration). The engine runs each user once.
+		add_action( 'wpmu_new_user', array( $this->engine, 'on_new_user' ) );
+		add_action( 'user_register', array( $this->engine, 'on_user_registered' ) );
+		add_action( 'wpmu_activate_user', array( $this->engine, 'on_user_activated' ), 20 );
+		add_action( 'shutdown', array( $this->engine, 'flush_registered_users' ) );
+		add_action( 'set_user_role', array( $this->engine, 'on_role_changed' ), 10, 3 );
+
+		// Big syncs run in batches from WP-Cron.
+		add_action( JobQueue::CRON_HOOK, array( $this->engine, 'process_queue' ) );
+
+		// Removals are recorded whatever the toggles say, so a trigger
+		// turned on later still leaves those people off those sites.
+		add_action( 'remove_user_from_blog', array( $this->engine, 'on_user_removed_from_blog' ), 10, 2 );
+		add_action( 'add_user_to_blog', array( $this->engine, 'on_user_added_to_blog' ), 10, 3 );
 	}
 
 	/**

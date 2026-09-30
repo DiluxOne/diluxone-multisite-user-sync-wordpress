@@ -1,6 +1,6 @@
 # WPM User Sync
 
-> WordPress Multisite plugin that synchronises users across the sites of a network — when a user is added at network level, when they log in for the first time, or when their role changes on one site, the plugin propagates the change to the other configured sites.
+> WordPress Multisite plugin that synchronises users across the sites of a network — when a user is created, when a site is created, or when a user's role changes on one site, the plugin propagates the change to the other sites. People an administrator removed from a site stay removed.
 
 [![License: GPL v2+](https://img.shields.io/badge/license-GPL--2.0--or--later-blue.svg)](https://www.gnu.org/licenses/old-licenses/gpl-2.0.html)
 
@@ -39,15 +39,14 @@ When it finishes, open <http://localhost:8888/wp-admin/network/>. Log in with `a
 
 | Path | What it contains |
 |------|------------------|
-| `wpm-user-sync.php` | Plugin header + bootstrap. Hooks every WordPress action this plugin listens on. |
-| `core/` | Globals/options bootstrap (`wpmus-variables.php`) and the core sync logic (`wpmus-functions.php`). |
-| `network-admin/` | Network-level admin pages: home (Welcome / Concepts / About tabs), sync options form, sync actions (run sync from scratch). |
-| `site-admin/` | Per-site admin pages: home, sync actions for a specific site. |
+| `wpm-user-sync.php` | Plugin header + bootstrap: builds `WPMUS\Plugin`, which registers every hook. |
+| `src/` | The plugin, PSR-4 under `WPMUS\`: `Plugin` (wiring), `Config` (toggles), `Sync/` (`SyncEngine`, the background `JobQueue` and `SyncJob`), `Repositories/` (sites and users), `Admin/` (network and site pages). |
+| `legacy-deprecated.php` | Deprecated `wpmus_*` functions kept for back-compat. |
 | `css/` | Admin styles enqueued via `wpmus_add_css()`. |
-| `uninstall.php` | Removes the three site options on plugin uninstall. **Users and roles are NOT touched.** |
+| `uninstall.php` | Removes the plugin's data on uninstall: its network options, the background sync queue and its cron event, and the record of removals. **Users, roles and memberships are NOT touched.** |
 | `readme.txt` | wp.org plugin page content. |
 | `.wordpress-org/` | wp.org listing visuals — banner, icon, screenshots. Uploaded by CI to the SVN `assets/` directory. |
-| `tests/` | PHPUnit unit tests. |
+| `tests/` | PHPUnit unit tests (`tests/Unit`) and multisite integration tests on wp-env (`tests/Integration`). |
 | `docs/` | Developer documentation. |
 | `.github/workflows/` | CI/CD: deploy to wp.org SVN on tag push, plus PR checks. |
 | `.distignore` | Paths excluded from the wp.org deploy. |

@@ -16,7 +16,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Enqueues the plugin's admin stylesheet on every admin page.
+ * Enqueues the plugin's admin stylesheet on its own admin pages.
  */
 final class Assets {
 
@@ -32,8 +32,15 @@ final class Assets {
 
 	/**
 	 * Hooked on `admin_enqueue_scripts` from {@see \WPMUS\Plugin}.
+	 * Loads the stylesheet on the plugin's own screens only, whose
+	 * hook suffixes all carry the `wpmus-` page slug.
+	 *
+	 * @param string $hook_suffix The current admin screen.
 	 */
-	public function enqueue_admin_styles(): void {
+	public function enqueue_admin_styles( string $hook_suffix = '' ): void {
+		if ( false === strpos( $hook_suffix, 'wpmus-' ) ) {
+			return;
+		}
 		wp_enqueue_style(
 			'wpmus_styles',
 			plugins_url( 'css/wpmus_styles.css', $this->plugin_file ),

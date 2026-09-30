@@ -22,45 +22,82 @@ if ( ! defined( 'ABSPATH' ) ) {
 class SiteRepository {
 
 	/**
-	 * Every blog ID in the current network. Returns int[] regardless of
-	 * how WP encodes them internally.
+	 * Every active blog ID in the current network: archived, spam and
+	 * deleted sites are left out, and so are the sites of any other
+	 * network on the install. Returns int[] regardless of how WP
+	 * encodes them internally.
 	 *
 	 * @return int[]
 	 */
 	public function all_blog_ids(): array {
-		$sites = get_sites(
-			array(
-				'fields'                 => 'ids',
-				'number'                 => 0,
-				'update_site_meta_cache' => false,
-			)
-		);
+		$args           = $this->active_site_query();
+		$args['fields'] = 'ids';
+		/** @var int[] $sites */
+		$sites = get_sites( $args );
 		return array_map( 'intval', $sites );
 	}
 
 	/**
-	 * Site rows for UI rendering (domain + path + blog_id).
+	 * Active site rows for UI rendering (domain + path + blog_id).
 	 *
 	 * @return \WP_Site[]
 	 */
 	public function all_sites(): array {
-		$sites = get_sites(
-			array(
-				'number'                 => 0,
-				'update_site_meta_cache' => false,
-			)
-		);
+		$sites = get_sites( $this->active_site_query() );
 		/** @var \WP_Site[] $sites */
 		return $sites;
 	}
 
 	/**
-	 * Resolves the default user role configured for `$blog_id`,
-	 * falling back to `subscriber` when the site has no `default_role`
-	 * option (or it is empty / non-string).
+	 * The site the current request runs on.
+	 */
+	public function current_blog_id(): int {
+		return get_current_blog_id();
+	}
+
+	/**
+	 * `get_sites()` arguments shared by every lookup: this network's
+	 * sites that are not archived, spam or deleted.
+	 *
+	 * @return array{network_id:int,archived:int,spam:int,deleted:int,number:int,orderby:string,order:string,update_site_meta_cache:bool}
+	 */
+	private function active_site_query(): array {
+		return array(
+			'network_id'             => get_current_network_id(),
+			'archived'               => 0,
+			'spam'                   => 0,
+			'deleted'                => 0,
+			'number'                 => 0,
+			'orderby'                => 'id',
+			'order'                  => 'ASC',
+			'update_site_meta_cache' => false,
+		);
+	}
+
+	/**
+	 * Resolves the default user role configured for `$blog_id`, read
+	 * on that site: its `default_role` option when the site has that
+	 * role, `subscriber` otherwise (no option, an empty one, or a role
+	 * the site does not define).
 	 */
 	public function default_role_for_blog( int $blog_id ): string {
 		$role = get_blog_option( $blog_id, 'default_role', 'subscriber' );
-		return is_string( $role ) && '' !== $role ? $role : 'subscriber';
+		if ( is_string( $role ) && '' !== $role && $this->role_exists_on_blog( $blog_id, $role ) ) {
+			return $role;
+		}
+		return 'subscriber';
+	}
+
+	/**
+	 * True when `$role` is defined on `$blog_id`. Roles live in each
+	 * site's own options, so the check runs switched to that site.
+	 */
+	public function role_exists_on_blog( int $blog_id, string $role ): bool {
+		switch_to_blog( $blog_id );
+		try {
+			return wp_roles()->is_role( $role );
+		} finally {
+			restore_current_blog();
+		}
 	}
 }

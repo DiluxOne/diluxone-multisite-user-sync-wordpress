@@ -99,10 +99,9 @@ final class NetworkHomePage {
 	 * to `welcome` and rejecting any value not in the allow-list.
 	 */
 	private function active_tab(): string {
-		// The page is gated by `manage_options` (capability check via
-		// add_menu_page), so we trust the URL parameter at the gate
-		// level — the only thing this value drives is which static
-		// content block we render.
+		// The page is gated by `manage_network_options` (capability
+		// check via add_menu_page); the value only picks which static
+		// content block we render, from an allow-list.
 		$tab = isset( $_GET['tab'] ) ? sanitize_key( wp_unslash( (string) $_GET['tab'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		return in_array( $tab, array( 'welcome', 'concepts', 'about' ), true ) ? $tab : 'welcome';
 	}
@@ -183,18 +182,18 @@ final class NetworkHomePage {
 		<h4><?php esc_html_e( 'What kind of options do I have at the network level?', 'wpm-user-sync' ); ?></h4>
 		<p><?php esc_html_e( 'At network level you configure the three triggers described above:', 'wpm-user-sync' ); ?></p>
 		<ul>
-			<li>- <strong><?php esc_html_e( 'New Site Automatic Sync', 'wpm-user-sync' ); ?></strong> — <?php esc_html_e( 'when a new site is created, all users in the database are added with the default site role (subscriber if no default is set).', 'wpm-user-sync' ); ?></li>
+			<li>- <strong><?php esc_html_e( 'New Site Automatic Sync', 'wpm-user-sync' ); ?></strong> — <?php esc_html_e( 'when a new site is created, every user on the network is added to it with that site\'s default role (subscriber if no default is set). Super admins and people removed from a site are left out.', 'wpm-user-sync' ); ?></li>
 			<li>- <strong><?php esc_html_e( 'New User Automatic Sync', 'wpm-user-sync' ); ?></strong> — <?php esc_html_e( 'when a new user is created, they are added to all sites with each site default role.', 'wpm-user-sync' ); ?></li>
-			<li>- <strong><?php esc_html_e( 'Set User Role Automatic Sync', 'wpm-user-sync' ); ?></strong> — <?php esc_html_e( 'when a user role changes on one site, the change is propagated to other sites the user already belongs to.', 'wpm-user-sync' ); ?></li>
+			<li>- <strong><?php esc_html_e( 'Set User Role Automatic Sync', 'wpm-user-sync' ); ?></strong> — <?php esc_html_e( 'when a user role changes on one site, the change is copied to the other sites the user already belongs to that have that role. Administrator is never copied.', 'wpm-user-sync' ); ?></li>
 		</ul>
 		<p><?php esc_html_e( 'You can also execute the following actions:', 'wpm-user-sync' ); ?></p>
 		<ul>
-			<li>- <strong><?php esc_html_e( 'Sync from scratch', 'wpm-user-sync' ); ?></strong> — <?php esc_html_e( 'add every network user to every site with each site default role. Existing memberships are not modified.', 'wpm-user-sync' ); ?></li>
+			<li>- <strong><?php esc_html_e( 'Sync from scratch', 'wpm-user-sync' ); ?></strong> — <?php esc_html_e( 'add every network user to every site with each site default role. Existing memberships are not modified, and people removed from a site are only added back if you tick the box.', 'wpm-user-sync' ); ?></li>
 			<li>- <strong><?php esc_html_e( 'Sync specific site', 'wpm-user-sync' ); ?></strong> — <?php esc_html_e( 'same as above but limited to the sites you check off in the form.', 'wpm-user-sync' ); ?></li>
 		</ul>
 
 		<h4><?php esc_html_e( 'What can a site administrator configure?', 'wpm-user-sync' ); ?></h4>
-		<p><?php esc_html_e( 'At site level there are no options — only one action: sync all network users into the current site. Existing memberships are not modified.', 'wpm-user-sync' ); ?></p>
+		<p><?php esc_html_e( "Nothing. Site administrators do not see the plugin. From a site's dashboard, a super admin can sync every network user into that one site. Existing memberships are not modified.", 'wpm-user-sync' ); ?></p>
 
 		<h4><?php esc_html_e( 'Can I run only manual actions and avoid all triggers?', 'wpm-user-sync' ); ?></h4>
 		<p><?php esc_html_e( 'Yes. Disable all triggers at network level and only manual actions will run.', 'wpm-user-sync' ); ?></p>

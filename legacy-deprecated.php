@@ -49,14 +49,15 @@ function wpmus_sync_newuser( int $user_id ): void {
 }
 
 /**
- * @deprecated 1.5.0 Use \WPMUS\Sync\SyncEngine::maybe_on_login() instead.
+ * The sign-in catch-up sync is gone: it added people back to sites an
+ * administrator had removed them from. Kept as a no-op so a caller
+ * does not fatal.
+ *
+ * @deprecated 1.5.0 No replacement; use the manual network sync.
  */
 function wpmus_maybesync_newuser( string $user_login ): void {
-	_deprecated_function( __FUNCTION__, '1.5.0', '\\WPMUS\\Sync\\SyncEngine::maybe_on_login' );
-	$plugin = \WPMUS\Plugin::instance();
-	if ( null !== $plugin ) {
-		$plugin->engine()->maybe_on_login( $user_login );
-	}
+	_deprecated_function( __FUNCTION__, '1.5.0' );
+	unset( $user_login );
 }
 
 /**
