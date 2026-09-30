@@ -23,7 +23,7 @@ images.
 ## First run
 
 ```bash
-git clone <this repository>
+git clone https://github.com/DiluxOne/diluxone-multisite-user-sync-wordpress.git
 cd <its folder>
 make install     # composer, npm, Playwright's Chromium
 make env         # the dev network at http://localhost:8898, the tests network at :8899

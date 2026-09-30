@@ -38,7 +38,7 @@ Works on any WordPress Multisite host.
 
 = For developers =
 
-Filters: `wpmus_excluded_site_ids` (sites the sync never writes to), `wpmus_should_sync_user` (skip one user on one site), `wpmus_replicate_role` (which roles the role trigger copies), `wpmus_sync_inline_limit`, `wpmus_sync_batch_size` and `wpmus_sync_time_limit` (how big syncs are split). The source, its tests and the whole list are on GitHub.
+Filters: `wpmus_excluded_site_ids` (sites the sync never writes to), `wpmus_should_sync_user` (skip one user on one site), `wpmus_replicate_role` (which roles the role trigger copies), `wpmus_sync_inline_limit`, `wpmus_sync_batch_size` and `wpmus_sync_time_limit` (how big syncs are split). The source, its tests and the whole list are on GitHub: https://github.com/DiluxOne/diluxone-multisite-user-sync-wordpress
 
 == Installation ==
 
