@@ -3,6 +3,7 @@ import {
 	TOGGLES,
 	Toggle,
 	clearKnobs,
+	clearQueue,
 	createSite,
 	createUser,
 	cronScheduled,
