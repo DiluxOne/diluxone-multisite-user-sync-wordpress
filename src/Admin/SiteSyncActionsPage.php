@@ -78,13 +78,13 @@ final class SiteSyncActionsPage {
 			exit;
 		}
 
-		$this->engine->sync_all_users_to_sites( array( $blog_id ) );
+		$finished = $this->engine->sync_all_users_to_sites( array( $blog_id ) );
 
 		wp_safe_redirect(
 			add_query_arg(
 				array(
-					'page'   => 'wpmus-sitesyncactions',
-					'synced' => 'true',
+					'page'                              => 'wpmus-sitesyncactions',
+					( $finished ? 'synced' : 'queued' ) => 'true',
 				),
 				admin_url( 'admin.php' )
 			)

@@ -19,18 +19,25 @@ use WPMUS\Repositories\UserRepository;
 
 final class UserRepositoryTest extends TestCase {
 
-	public function test_all_network_users_passes_blog_id_zero(): void {
-		// `blog_id => 0` is the legacy idiom that asks WordPress for
-		// every user across the network. The refactor must keep this
-		// arg so the same dataset is returned.
+	public function test_network_user_ids_reads_one_page_of_ids(): void {
+		// `blog_id => 0` asks WordPress for every user across the
+		// network; only ids are loaded, oldest first, one page at a time.
 		Functions\expect( 'get_users' )
 			->once()
-			->with( array( 'blog_id' => 0 ) )
-			->andReturn( array( new \WP_User( 1 ), new \WP_User( 2 ) ) );
+			->with(
+				array(
+					'blog_id'     => 0,
+					'fields'      => 'ID',
+					'orderby'     => 'ID',
+					'order'       => 'ASC',
+					'number'      => 50,
+					'offset'      => 100,
+					'count_total' => false,
+				)
+			)
+			->andReturn( array( '7', 9 ) );
 
-		$users = ( new UserRepository() )->all_network_users();
-
-		$this->assertCount( 2, $users );
+		$this->assertSame( array( 7, 9 ), ( new UserRepository() )->network_user_ids( 100, 50 ) );
 	}
 
 	public function test_super_admin_ids_resolves_logins(): void {

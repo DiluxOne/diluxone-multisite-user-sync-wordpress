@@ -50,9 +50,34 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 final class SyncEngine {
 
+	/**
+	 * A job of at most this many user-site pairs runs in the request
+	 * that starts it; a bigger one goes to the background queue.
+	 * Filter: `wpmus_sync_inline_limit`.
+	 */
+	public const INLINE_LIMIT = 500;
+
+	/**
+	 * User-site pairs per background batch. Filter:
+	 * `wpmus_sync_batch_size`.
+	 */
+	public const BATCH_SIZE = 500;
+
+	/**
+	 * Seconds one cron run keeps taking batches. Filter:
+	 * `wpmus_sync_time_limit`.
+	 */
+	public const TIME_LIMIT = 20;
+
+	/**
+	 * Most users fetched per query, however large the batch.
+	 */
+	private const USER_PAGE_MAX = 500;
+
 	private Config $config;
 	private SiteRepository $sites;
 	private UserRepository $users;
+	private JobQueue $queue;
 
 	/**
 	 * Re-entrancy guard. Set to `true` while any sync method is in the
@@ -98,11 +123,13 @@ final class SyncEngine {
 	 * @param SiteRepository $sites  Wraps `get_sites()` / `get_blog_option()`.
 	 * @param UserRepository $users  Wraps `get_users()` / `add_user_to_blog()`
 	 *                               / `is_user_member_of_blog()`.
+	 * @param JobQueue|null  $queue  Background jobs; a fresh one when null.
 	 */
-	public function __construct( Config $config, SiteRepository $sites, UserRepository $users ) {
+	public function __construct( Config $config, SiteRepository $sites, UserRepository $users, ?JobQueue $queue = null ) {
 		$this->config = $config;
 		$this->sites  = $sites;
 		$this->users  = $users;
+		$this->queue  = $queue ?? new JobQueue();
 	}
 
 	/**
@@ -127,7 +154,7 @@ final class SyncEngine {
 			return;
 		}
 
-		$this->sync_users_to_sites( array( $blog_id ), false, 'new_site' );
+		$this->start( new SyncJob( 'new_site', null, array( $blog_id ), false ) );
 	}
 
 	/**
@@ -144,7 +171,7 @@ final class SyncEngine {
 			return;
 		}
 		$this->synced_new_users[ $user_id ] = true;
-		$this->add_user_to_every_site( $user_id );
+		$this->start( new SyncJob( 'new_user', array( $user_id ), null, false ) );
 	}
 
 	/**
@@ -254,9 +281,12 @@ final class SyncEngine {
 	 * memberships are not modified — only missing memberships are
 	 * created with the destination site's default role. A user removed
 	 * from a site is only added back when `$force` is true.
+	 *
+	 * @return bool True when the sync finished in this request, false
+	 *              when it was queued to run in the background.
 	 */
-	public function sync_all_users_to_all_sites( bool $force = false ): void {
-		$this->sync_users_to_sites( null, $force, 'manual' );
+	public function sync_all_users_to_all_sites( bool $force = false ): bool {
+		return $this->start( new SyncJob( 'manual', null, null, $force ) );
 	}
 
 	/**
@@ -266,46 +296,158 @@ final class SyncEngine {
 	 * @param int[] $blog_ids Sites to populate. Anything outside this
 	 *                        list, or not active, is left untouched.
 	 * @param bool  $force    Also add back users who were removed.
+	 * @return bool True when the sync finished in this request, false
+	 *              when it was queued to run in the background.
 	 */
-	public function sync_all_users_to_sites( array $blog_ids, bool $force = false ): void {
-		$this->sync_users_to_sites( array_map( 'intval', $blog_ids ), $force, 'manual' );
+	public function sync_all_users_to_sites( array $blog_ids, bool $force = false ): bool {
+		return $this->start( new SyncJob( 'manual', null, $blog_ids, $force ) );
 	}
 
 	/**
-	 * Every network user to the given sites (null: every active site).
-	 *
-	 * @param int[]|null $blog_ids Requested sites.
-	 * @param bool       $force    Also add back users who were removed.
-	 * @param string     $context  new_site, new_user or manual.
+	 * WP-Cron callback (`wpmus_process_sync_queue`): works through the
+	 * queued jobs, one batch at a time, until the queue is empty or the
+	 * run's time is up, and schedules another run while jobs remain.
+	 * Each batch stores its progress, so a run that dies loses at most
+	 * one batch, which the next run redoes harmlessly.
 	 */
-	private function sync_users_to_sites( ?array $blog_ids, bool $force, string $context ): void {
-		$this->begin_run();
-		$targets = $this->target_blog_ids( $blog_ids, $context );
-		if ( array() === $targets ) {
+	public function process_queue(): void {
+		if ( ! $this->queue->acquire_lock() ) {
 			return;
 		}
-		// Fetch the user list ONCE for the whole operation. The previous
-		// shape of this loop refetched on every iteration, which on a
-		// large network turns a single expensive query into N queries.
-		$users = $this->users->all_network_users();
-		foreach ( $targets as $blog_id ) {
-			foreach ( $users as $user ) {
-				$this->add_if_missing( (int) $user->ID, $blog_id, $force, $context );
+		/**
+		 * Filters how many seconds one cron run keeps taking batches.
+		 * With 0, a run takes a single batch.
+		 *
+		 * @param int $seconds Default {@see SyncEngine::TIME_LIMIT}.
+		 */
+		$deadline = microtime( true ) + (float) apply_filters( 'wpmus_sync_time_limit', self::TIME_LIMIT );
+		try {
+			do {
+				$job = $this->queue->first();
+				if ( null === $job ) {
+					break;
+				}
+				$this->run_batch( $job, $this->batch_size() );
+				if ( $job->done ) {
+					$this->queue->remove( $job->id );
+				} else {
+					$this->queue->update( $job );
+				}
+			} while ( microtime( true ) < $deadline );
+		} finally {
+			$this->queue->release_lock();
+		}
+		if ( null !== $this->queue->first() ) {
+			$this->queue->schedule();
+		}
+	}
+
+	/**
+	 * Runs a job now when it is small, or queues it for WP-Cron.
+	 *
+	 * @return bool True when it finished now, false when queued.
+	 */
+	private function start( SyncJob $job ): bool {
+		$this->begin_run();
+		$sites = $this->target_blog_ids( $job->blog_ids, $job->context );
+		$users = null === $job->user_ids ? $this->users->count_network_users() : count( $job->user_ids );
+
+		$job->total = count( $sites ) * $users;
+		if ( 0 === $job->total ) {
+			return true;
+		}
+
+		/**
+		 * Filters the largest job, in user-site pairs, that runs in the
+		 * request that starts it. Bigger jobs run in the background.
+		 *
+		 * @param int    $limit   Default {@see SyncEngine::INLINE_LIMIT}.
+		 * @param string $context `new_site`, `new_user` or `manual`.
+		 */
+		$limit = (int) apply_filters( 'wpmus_sync_inline_limit', self::INLINE_LIMIT, $job->context );
+		if ( $job->total <= $limit ) {
+			$this->run_batch( $job, PHP_INT_MAX, $sites );
+			return true;
+		}
+
+		$this->queue->add( $job );
+		$this->queue->schedule();
+		return false;
+	}
+
+	/**
+	 * Processes up to `$budget` user-site pairs of a job, moving its
+	 * cursor, and sets `$job->done` once nothing is left. Users are read
+	 * a page at a time (ids only); sites are walked in id order so the
+	 * cursor survives sites created in the meantime.
+	 *
+	 * @param SyncJob    $job    The job; its cursor and counters move.
+	 * @param int        $budget Most pairs to process.
+	 * @param int[]|null $sites  Target sites when the caller just
+	 *                           resolved them in this run.
+	 */
+	private function run_batch( SyncJob $job, int $budget, ?array $sites = null ): void {
+		if ( null === $sites ) {
+			$this->begin_run();
+			$sites = $this->target_blog_ids( $job->blog_ids, $job->context );
+		}
+		$count = count( $sites );
+		if ( 0 === $count ) {
+			$job->done = true;
+			return;
+		}
+		$page_size = $budget >= self::USER_PAGE_MAX * $count
+			? self::USER_PAGE_MAX
+			: max( 1, intdiv( $budget + $count - 1, $count ) );
+
+		while ( true ) {
+			$user_ids = $this->user_page( $job, $page_size );
+			foreach ( $user_ids as $user_id ) {
+				foreach ( $sites as $blog_id ) {
+					if ( $blog_id <= $job->last_blog_id ) {
+						continue;
+					}
+					if ( $budget <= 0 ) {
+						return;
+					}
+					$this->add_if_missing( $user_id, $blog_id, $job->force, $job->context );
+					$job->last_blog_id = $blog_id;
+					++$job->processed;
+					--$budget;
+				}
+				++$job->user_offset;
+				$job->last_blog_id = 0;
+			}
+			if ( count( $user_ids ) < $page_size ) {
+				$job->done = true;
+				return;
 			}
 		}
 	}
 
 	/**
-	 * Helper used by the new-user trigger: ensures the user is a
-	 * member of every active site, with each site's default role for
-	 * the new memberships it creates. Existing memberships and
-	 * recorded removals are not touched.
+	 * The next page of the job's users, from its cursor.
+	 *
+	 * @return int[]
 	 */
-	private function add_user_to_every_site( int $user_id ): void {
-		$this->begin_run();
-		foreach ( $this->target_blog_ids( null, 'new_user' ) as $blog_id ) {
-			$this->add_if_missing( $user_id, $blog_id, false, 'new_user' );
+	private function user_page( SyncJob $job, int $limit ): array {
+		if ( null !== $job->user_ids ) {
+			return array_slice( $job->user_ids, $job->user_offset, $limit );
 		}
+		return $this->users->network_user_ids( $job->user_offset, $limit );
+	}
+
+	/**
+	 * Pairs per background batch, from the `wpmus_sync_batch_size`
+	 * filter; at least 1.
+	 */
+	private function batch_size(): int {
+		/**
+		 * Filters how many user-site pairs one background batch takes.
+		 *
+		 * @param int $size Default {@see SyncEngine::BATCH_SIZE}.
+		 */
+		return max( 1, (int) apply_filters( 'wpmus_sync_batch_size', self::BATCH_SIZE ) );
 	}
 
 	/**
@@ -340,6 +482,7 @@ final class SyncEngine {
 		if ( is_array( $excluded ) && array() !== $excluded ) {
 			$targets = array_values( array_diff( $targets, array_map( 'intval', $excluded ) ) );
 		}
+		sort( $targets );
 		return $targets;
 	}
 

@@ -28,16 +28,40 @@ class UserRepository {
 	public const META_REMOVED_FROM = 'wpmus_removed_from_blogs';
 
 	/**
-	 * Every WP_User in the network (regardless of which sites they
-	 * currently belong to). The legacy implementation passed `blog_id => 0`
-	 * to `get_users()`, which WP interprets as "all sites".
+	 * One page of the ids of every user on the network (regardless of
+	 * which sites they belong to), oldest account first. `blog_id => 0`
+	 * asks WordPress for all users; only ids are loaded.
 	 *
-	 * @return \WP_User[]
+	 * @return int[]
 	 */
-	public function all_network_users(): array {
-		$users = get_users( array( 'blog_id' => 0 ) );
-		/** @var \WP_User[] $users */
-		return $users;
+	public function network_user_ids( int $offset, int $limit ): array {
+		$ids = get_users(
+			array(
+				'blog_id'     => 0,
+				'fields'      => 'ID',
+				'orderby'     => 'ID',
+				'order'       => 'ASC',
+				'number'      => $limit,
+				'offset'      => $offset,
+				'count_total' => false,
+			)
+		);
+		return array_map( 'intval', $ids );
+	}
+
+	/**
+	 * How many users the network has.
+	 */
+	public function count_network_users(): int {
+		$query = new \WP_User_Query(
+			array(
+				'blog_id'     => 0,
+				'fields'      => 'ID',
+				'number'      => 1,
+				'count_total' => true,
+			)
+		);
+		return (int) $query->get_total();
 	}
 
 	/**

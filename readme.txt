@@ -126,6 +126,7 @@ First release. Check help for all features.
 * **Fix (security)**: any site administrator could run the site-level "Sync from scratch" and pull every account on the network into their site. The site-level pages and action now require the `manage_network_users` capability (super admins), and so do the network sync actions.
 * **Fix**: the New Site trigger listened on the deprecated `wpmu_new_blog` hook; it now uses `wp_initialize_site`. The New User trigger also covers accounts created with `wp_insert_user()` alone (some registration plugins), and runs once per account.
 * **Fix**: turning a trigger on or off now takes effect immediately, instead of from the next page load.
+* **Performance**: syncs no longer load every user of the network into memory, and large ones (a new site or a manual sync on a big network, a new user on a network with many sites) run in the background through WP-Cron in batches instead of in the request that started them, with their progress listed on the Network Sync Actions page. Small syncs still finish immediately. Developers can tune this with the `wpmus_sync_inline_limit`, `wpmus_sync_batch_size` and `wpmus_sync_time_limit` filters.
 
 = 1.5.0 (2026-05-05) =
 * **Description repositioned**: leads with "Optimized for Microsoft Azure and Azure App Service" while explicitly noting compatibility with any WordPress Multisite host (DigitalOcean, AWS, dedicated servers, shared hosting, etc.).

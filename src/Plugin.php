@@ -24,6 +24,7 @@ use WPMUS\Admin\SiteMenu;
 use WPMUS\Admin\SiteSyncActionsPage;
 use WPMUS\Repositories\SiteRepository;
 use WPMUS\Repositories\UserRepository;
+use WPMUS\Sync\JobQueue;
 use WPMUS\Sync\SyncEngine;
 use WPMUS\View\Header;
 
@@ -67,12 +68,13 @@ final class Plugin {
 
 		$site_repo    = new SiteRepository();
 		$user_repo    = new UserRepository();
-		$this->engine = new SyncEngine( $this->config, $site_repo, $user_repo );
+		$queue        = new JobQueue();
+		$this->engine = new SyncEngine( $this->config, $site_repo, $user_repo, $queue );
 
 		$header                = new Header();
 		$network_home          = new NetworkHomePage();
 		$this->network_options = new NetworkSyncOptionsPage( $this->config );
-		$this->network_actions = new NetworkSyncActionsPage( $site_repo, $this->engine );
+		$this->network_actions = new NetworkSyncActionsPage( $site_repo, $this->engine, $queue );
 		$this->network_menu    = new NetworkMenu( $header, $network_home, $this->network_options, $this->network_actions );
 
 		$site_home          = new SiteHomePage();
@@ -120,6 +122,9 @@ final class Plugin {
 		add_action( 'user_register', array( $this->engine, 'on_user_registered' ) );
 		add_action( 'shutdown', array( $this->engine, 'flush_registered_users' ) );
 		add_action( 'set_user_role', array( $this->engine, 'on_role_changed' ), 10, 3 );
+
+		// Big syncs run in batches from WP-Cron.
+		add_action( JobQueue::CRON_HOOK, array( $this->engine, 'process_queue' ) );
 
 		// Removals are recorded whatever the toggles say, so a trigger
 		// turned on later still leaves those people off those sites.
