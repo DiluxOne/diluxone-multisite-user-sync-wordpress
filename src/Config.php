@@ -69,6 +69,15 @@ class Config {
 	}
 
 	/**
+	 * True when at least one of the three automatic triggers is on.
+	 */
+	public function is_any_trigger_enabled(): bool {
+		return $this->is_new_site_sync_enabled()
+			|| $this->is_new_user_sync_enabled()
+			|| $this->is_set_user_role_sync_enabled();
+	}
+
+	/**
 	 * Persist the three toggles. Values that are not exactly `'yes'`
 	 * are stored as the empty string, so re-reads return `false` from
 	 * the matching `is_*_enabled()` accessor.

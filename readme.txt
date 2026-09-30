@@ -69,6 +69,10 @@ Nothing. Site administrators do not see the plugin: pulling every network accoun
 
 Yes! You can. Disable all triggers at network level & you will allow to execute only manual actions.
 
+= Does it work with DiluxOne Users+? =
+
+Yes. If DiluxOne Users+ is active, its network membership policy defers to WPM User Sync while any automatic trigger is on.
+
 = Does this plugin host information in the local WordPress database? =
 
 Yes. This plugin host information in "sitemeta" table to remember network sync options.
@@ -127,6 +131,7 @@ First release. Check help for all features.
 * **Fix**: the New Site trigger listened on the deprecated `wpmu_new_blog` hook; it now uses `wp_initialize_site`. The New User trigger also covers accounts created with `wp_insert_user()` alone (some registration plugins), and runs once per account.
 * **Fix**: turning a trigger on or off now takes effect immediately, instead of from the next page load.
 * **Performance**: syncs no longer load every user of the network into memory, and large ones (a new site or a manual sync on a big network, a new user on a network with many sites) run in the background through WP-Cron in batches instead of in the request that started them, with their progress listed on the Network Sync Actions page. Small syncs still finish immediately. Developers can tune this with the `wpmus_sync_inline_limit`, `wpmus_sync_batch_size` and `wpmus_sync_time_limit` filters.
+* **New**: works alongside DiluxOne Users+ without depending on it: while any automatic trigger is on, WPM User Sync answers Users+'s `diluxone_users_membership_managed_by` filter, so Users+'s network membership policy steps aside.
 
 = 1.5.0 (2026-05-05) =
 * **Description repositioned**: leads with "Optimized for Microsoft Azure and Azure App Service" while explicitly noting compatibility with any WordPress Multisite host (DigitalOcean, AWS, dedicated servers, shared hosting, etc.).

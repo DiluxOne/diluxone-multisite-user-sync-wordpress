@@ -126,6 +126,11 @@ final class Plugin {
 		// Big syncs run in batches from WP-Cron.
 		add_action( JobQueue::CRON_HOOK, array( $this->engine, 'process_queue' ) );
 
+		// DiluxOne Users+ asks who manages network membership, so its
+		// own policy steps aside while this plugin does. No dependency:
+		// without Users+ the filter is never applied.
+		add_filter( 'diluxone_users_membership_managed_by', array( $this, 'membership_managed_by' ) );
+
 		// Removals are recorded whatever the toggles say, so a trigger
 		// turned on later still leaves those people off those sites.
 		add_action( 'remove_user_from_blog', array( $this->engine, 'on_user_removed_from_blog' ), 10, 2 );
@@ -149,6 +154,18 @@ final class Plugin {
 	 */
 	public function on_init(): void {
 		add_action( 'admin_enqueue_scripts', array( $this->assets, 'enqueue_admin_styles' ) );
+	}
+
+	/**
+	 * `diluxone_users_membership_managed_by` callback: claims network
+	 * membership while any automatic trigger is on, and passes the
+	 * value through otherwise.
+	 *
+	 * @param mixed $by Who manages membership so far.
+	 * @return mixed
+	 */
+	public function membership_managed_by( $by ) {
+		return $this->config->is_any_trigger_enabled() ? 'WPM User Sync' : $by;
 	}
 
 	/**
