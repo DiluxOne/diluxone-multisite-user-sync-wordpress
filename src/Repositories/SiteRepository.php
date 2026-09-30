@@ -22,36 +22,49 @@ if ( ! defined( 'ABSPATH' ) ) {
 class SiteRepository {
 
 	/**
-	 * Every blog ID in the current network. Returns int[] regardless of
-	 * how WP encodes them internally.
+	 * Every active blog ID in the current network: archived, spam and
+	 * deleted sites are left out, and so are the sites of any other
+	 * network on the install. Returns int[] regardless of how WP
+	 * encodes them internally.
 	 *
 	 * @return int[]
 	 */
 	public function all_blog_ids(): array {
-		$sites = get_sites(
-			array(
-				'fields'                 => 'ids',
-				'number'                 => 0,
-				'update_site_meta_cache' => false,
-			)
-		);
+		$args           = $this->active_site_query();
+		$args['fields'] = 'ids';
+		/** @var int[] $sites */
+		$sites = get_sites( $args );
 		return array_map( 'intval', $sites );
 	}
 
 	/**
-	 * Site rows for UI rendering (domain + path + blog_id).
+	 * Active site rows for UI rendering (domain + path + blog_id).
 	 *
 	 * @return \WP_Site[]
 	 */
 	public function all_sites(): array {
-		$sites = get_sites(
-			array(
-				'number'                 => 0,
-				'update_site_meta_cache' => false,
-			)
-		);
+		$sites = get_sites( $this->active_site_query() );
 		/** @var \WP_Site[] $sites */
 		return $sites;
+	}
+
+	/**
+	 * `get_sites()` arguments shared by every lookup: this network's
+	 * sites that are not archived, spam or deleted.
+	 *
+	 * @return array{network_id:int,archived:int,spam:int,deleted:int,number:int,orderby:string,order:string,update_site_meta_cache:bool}
+	 */
+	private function active_site_query(): array {
+		return array(
+			'network_id'             => get_current_network_id(),
+			'archived'               => 0,
+			'spam'                   => 0,
+			'deleted'                => 0,
+			'number'                 => 0,
+			'orderby'                => 'id',
+			'order'                  => 'ASC',
+			'update_site_meta_cache' => false,
+		);
 	}
 
 	/**

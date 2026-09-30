@@ -41,6 +41,23 @@ class UserRepository {
 	}
 
 	/**
+	 * Ids of the network's super admins. `get_super_admins()` returns
+	 * logins, so each one is resolved to its user.
+	 *
+	 * @return int[]
+	 */
+	public function super_admin_ids(): array {
+		$ids = array();
+		foreach ( get_super_admins() as $login ) {
+			$user = get_user_by( 'login', $login );
+			if ( $user instanceof \WP_User ) {
+				$ids[] = (int) $user->ID;
+			}
+		}
+		return $ids;
+	}
+
+	/**
 	 * Returns true when the user is a member of the given blog.
 	 * Coerces the int/bool union historic versions of WordPress
 	 * sometimes returned to a strict `bool`.

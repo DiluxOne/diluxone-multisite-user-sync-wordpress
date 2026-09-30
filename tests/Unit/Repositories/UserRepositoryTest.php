@@ -33,6 +33,17 @@ final class UserRepositoryTest extends TestCase {
 		$this->assertCount( 2, $users );
 	}
 
+	public function test_super_admin_ids_resolves_logins(): void {
+		Functions\when( 'get_super_admins' )->justReturn( array( 'admin', 'gone' ) );
+		Functions\when( 'get_user_by' )->alias(
+			static function ( string $field, string $login ) {
+				return 'admin' === $login ? new \WP_User( 1 ) : false;
+			}
+		);
+
+		$this->assertSame( array( 1 ), ( new UserRepository() )->super_admin_ids() );
+	}
+
 	public function test_is_member_of_returns_bool(): void {
 		Functions\expect( 'is_user_member_of_blog' )
 			->once()

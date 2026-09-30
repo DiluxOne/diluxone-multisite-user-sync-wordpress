@@ -20,16 +20,27 @@ use WPMUS\Repositories\SiteRepository;
 
 final class SiteRepositoryTest extends TestCase {
 
-	public function test_all_blog_ids_passes_correct_args_and_casts_to_int(): void {
+	/**
+	 * @return array<string,int|bool|string>
+	 */
+	private function active_query(): array {
+		return array(
+			'network_id'             => 1,
+			'archived'               => 0,
+			'spam'                   => 0,
+			'deleted'                => 0,
+			'number'                 => 0,
+			'orderby'                => 'id',
+			'order'                  => 'ASC',
+			'update_site_meta_cache' => false,
+		);
+	}
+
+	public function test_all_blog_ids_asks_for_this_networks_active_sites_and_casts_to_int(): void {
+		Functions\when( 'get_current_network_id' )->justReturn( 1 );
 		Functions\expect( 'get_sites' )
 			->once()
-			->with(
-				array(
-					'fields'                 => 'ids',
-					'number'                 => 0,
-					'update_site_meta_cache' => false,
-				)
-			)
+			->with( array( 'fields' => 'ids' ) + $this->active_query() )
 			->andReturn( array( '1', 2, '3' ) );
 
 		$ids = ( new SiteRepository() )->all_blog_ids();
@@ -38,6 +49,7 @@ final class SiteRepositoryTest extends TestCase {
 	}
 
 	public function test_all_blog_ids_returns_empty_array_when_no_sites(): void {
+		Functions\when( 'get_current_network_id' )->justReturn( 1 );
 		Functions\when( 'get_sites' )->justReturn( array() );
 
 		$this->assertSame( array(), ( new SiteRepository() )->all_blog_ids() );
@@ -48,14 +60,10 @@ final class SiteRepositoryTest extends TestCase {
 			new \WP_Site( 1, 'localhost', '/' ),
 			new \WP_Site( 2, 'localhost', '/sitio01/' ),
 		);
+		Functions\when( 'get_current_network_id' )->justReturn( 1 );
 		Functions\expect( 'get_sites' )
 			->once()
-			->with(
-				array(
-					'number'                 => 0,
-					'update_site_meta_cache' => false,
-				)
-			)
+			->with( $this->active_query() )
 			->andReturn( $sites );
 
 		$result = ( new SiteRepository() )->all_sites();

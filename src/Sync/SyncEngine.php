@@ -71,6 +71,14 @@ final class SyncEngine {
 	private array $default_roles = array();
 
 	/**
+	 * Super admin user ids, as keys, loaded once per run. Super admins
+	 * reach every site already and are never added as members.
+	 *
+	 * @var array<int,bool>|null
+	 */
+	private ?array $super_admins = null;
+
+	/**
 	 * @param Config         $config Toggle accessors + plugin metadata.
 	 * @param SiteRepository $sites  Wraps `get_sites()` / `get_blog_option()`.
 	 * @param UserRepository $users  Wraps `get_users()` / `add_user_to_blog()`
@@ -99,7 +107,7 @@ final class SyncEngine {
 			return;
 		}
 
-		$this->sync_all_users_to_sites( array( $blog_id ) );
+		$this->sync_users_to_sites( array( $blog_id ), false, 'new_site' );
 	}
 
 	/**
@@ -170,7 +178,7 @@ final class SyncEngine {
 	 * from a site is only added back when `$force` is true.
 	 */
 	public function sync_all_users_to_all_sites( bool $force = false ): void {
-		$this->sync_all_users_to_sites( $this->sites->all_blog_ids(), $force );
+		$this->sync_users_to_sites( null, $force, 'manual' );
 	}
 
 	/**
@@ -178,33 +186,83 @@ final class SyncEngine {
 	 * (typically chosen via the network-admin UI checkboxes).
 	 *
 	 * @param int[] $blog_ids Sites to populate. Anything outside this
-	 *                        list is left untouched.
+	 *                        list, or not active, is left untouched.
 	 * @param bool  $force    Also add back users who were removed.
 	 */
 	public function sync_all_users_to_sites( array $blog_ids, bool $force = false ): void {
-		$this->default_roles = array();
+		$this->sync_users_to_sites( array_map( 'intval', $blog_ids ), $force, 'manual' );
+	}
+
+	/**
+	 * Every network user to the given sites (null: every active site).
+	 *
+	 * @param int[]|null $blog_ids Requested sites.
+	 * @param bool       $force    Also add back users who were removed.
+	 * @param string     $context  new_site, new_user or manual.
+	 */
+	private function sync_users_to_sites( ?array $blog_ids, bool $force, string $context ): void {
+		$this->begin_run();
+		$targets = $this->target_blog_ids( $blog_ids, $context );
+		if ( array() === $targets ) {
+			return;
+		}
 		// Fetch the user list ONCE for the whole operation. The previous
 		// shape of this loop refetched on every iteration, which on a
 		// large network turns a single expensive query into N queries.
 		$users = $this->users->all_network_users();
-		foreach ( $blog_ids as $blog_id ) {
+		foreach ( $targets as $blog_id ) {
 			foreach ( $users as $user ) {
-				$this->add_if_missing( (int) $user->ID, (int) $blog_id, $force );
+				$this->add_if_missing( (int) $user->ID, $blog_id, $force, $context );
 			}
 		}
 	}
 
 	/**
 	 * Helper used by the new-user trigger: ensures the user is a
-	 * member of every existing site, with each site's default role for
+	 * member of every active site, with each site's default role for
 	 * the new memberships it creates. Existing memberships and
 	 * recorded removals are not touched.
 	 */
 	private function add_user_to_every_site( int $user_id ): void {
-		$this->default_roles = array();
-		foreach ( $this->sites->all_blog_ids() as $blog_id ) {
-			$this->add_if_missing( $user_id, $blog_id, false );
+		$this->begin_run();
+		foreach ( $this->target_blog_ids( null, 'new_user' ) as $blog_id ) {
+			$this->add_if_missing( $user_id, $blog_id, false, 'new_user' );
 		}
+	}
+
+	/**
+	 * Resets what a run caches: default roles and super admins can
+	 * change between runs.
+	 */
+	private function begin_run(): void {
+		$this->default_roles = array();
+		$this->super_admins  = null;
+	}
+
+	/**
+	 * The sites a run may write to: the requested ones (or all) that
+	 * are active on this network (not archived, spam or deleted),
+	 * minus the ones the `wpmus_excluded_site_ids` filter lists.
+	 *
+	 * @param int[]|null $requested Requested sites, null for all.
+	 * @param string     $context   new_site, new_user or manual.
+	 * @return int[]
+	 */
+	private function target_blog_ids( ?array $requested, string $context ): array {
+		$active  = $this->sites->all_blog_ids();
+		$targets = null === $requested ? $active : array_values( array_intersect( $requested, $active ) );
+
+		/**
+		 * Filters the sites the sync never writes to.
+		 *
+		 * @param int[]  $excluded Blog ids to leave alone. Default empty.
+		 * @param string $context  `new_site`, `new_user` or `manual`.
+		 */
+		$excluded = apply_filters( 'wpmus_excluded_site_ids', array(), $context );
+		if ( is_array( $excluded ) && array() !== $excluded ) {
+			$targets = array_values( array_diff( $targets, array_map( 'intval', $excluded ) ) );
+		}
+		return $targets;
 	}
 
 	/**
@@ -212,12 +270,32 @@ final class SyncEngine {
 	 * they are already a member or were removed from it. `$force`
 	 * overrides the removal and clears its record.
 	 */
-	private function add_if_missing( int $user_id, int $blog_id, bool $force ): void {
+	private function add_if_missing( int $user_id, int $blog_id, bool $force, string $context ): void {
+		if ( null === $this->super_admins ) {
+			$this->super_admins = array_fill_keys( $this->users->super_admin_ids(), true );
+		}
+		if ( isset( $this->super_admins[ $user_id ] ) ) {
+			return;
+		}
 		if ( $this->users->is_member_of( $user_id, $blog_id ) ) {
 			return;
 		}
 		$removed = in_array( $blog_id, $this->users->removed_blog_ids( $user_id ), true );
 		if ( $removed && ! $force ) {
+			return;
+		}
+		/**
+		 * Filters whether the sync adds a user to a site.
+		 *
+		 * Runs only for a membership the sync is about to create: super
+		 * admins, existing members and removed users are already out.
+		 *
+		 * @param bool   $sync    True to add the user. Default true.
+		 * @param int    $user_id The user.
+		 * @param int    $blog_id The site.
+		 * @param string $context `new_site`, `new_user` or `manual`.
+		 */
+		if ( ! apply_filters( 'wpmus_should_sync_user', true, $user_id, $blog_id, $context ) ) {
 			return;
 		}
 		if ( ! isset( $this->default_roles[ $blog_id ] ) ) {

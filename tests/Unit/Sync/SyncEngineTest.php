@@ -45,6 +45,7 @@ final class SyncEngineTest extends TestCase {
 		$this->sites  = Mockery::mock( SiteRepository::class );
 		$this->users  = Mockery::mock( UserRepository::class );
 		$this->users->shouldReceive( 'removed_blog_ids' )->andReturn( array() )->byDefault();
+		$this->users->shouldReceive( 'super_admin_ids' )->andReturn( array() )->byDefault();
 	}
 
 	protected function tearDown(): void {
@@ -76,6 +77,7 @@ final class SyncEngineTest extends TestCase {
 	}
 
 	public function test_on_new_site_gives_the_sites_default_role_whatever_role_the_user_has_elsewhere(): void {
+		$this->sites->shouldReceive( 'all_blog_ids' )->andReturn( array( 1, 7 ) );
 		$editor = new \WP_User( 5, array( 'editor' ) );
 		$admin  = new \WP_User( 6, array( 'administrator' ) );
 		$this->config->shouldReceive( 'is_new_site_sync_enabled' )->andReturn( true );
@@ -89,6 +91,7 @@ final class SyncEngineTest extends TestCase {
 	}
 
 	public function test_on_new_site_skips_users_already_member(): void {
+		$this->sites->shouldReceive( 'all_blog_ids' )->andReturn( array( 1, 7 ) );
 		$existing_member = new \WP_User( 5, array( 'editor' ) );
 		$this->config->shouldReceive( 'is_new_site_sync_enabled' )->andReturn( true );
 		$this->users->shouldReceive( 'all_network_users' )->andReturn( array( $existing_member ) );
@@ -157,6 +160,7 @@ final class SyncEngineTest extends TestCase {
 	}
 
 	public function test_forced_manual_sync_adds_a_removed_user_back_and_forgets_the_removal(): void {
+		$this->sites->shouldReceive( 'all_blog_ids' )->andReturn( array( 1, 3 ) );
 		$this->users->shouldReceive( 'all_network_users' )->andReturn( array( new \WP_User( 5 ) ) );
 		$this->sites->shouldReceive( 'default_role_for_blog' )->andReturn( 'subscriber' );
 		$this->users->shouldReceive( 'is_member_of' )->andReturn( false );
@@ -225,6 +229,7 @@ final class SyncEngineTest extends TestCase {
 		// Regression test: previously the user list was fetched inside
 		// the outer site loop, turning a single expensive query into
 		// N. The hoisted version does it once.
+		$this->sites->shouldReceive( 'all_blog_ids' )->andReturn( array( 1, 2, 3, 4, 5 ) );
 		$this->users->shouldReceive( 'all_network_users' )
 			->once() // <-- the assertion
 			->andReturn( array( new \WP_User( 5 ) ) );
@@ -234,6 +239,57 @@ final class SyncEngineTest extends TestCase {
 		$this->users->shouldReceive( 'add_to_blog' )->andReturn( true );
 
 		$this->engine()->sync_all_users_to_sites( array( 1, 2, 3, 4, 5 ) );
+	}
+
+	// ---------------------------------------------------------------------
+	// Exclusions
+	// ---------------------------------------------------------------------
+
+	public function test_super_admins_are_never_added(): void {
+		$this->sites->shouldReceive( 'all_blog_ids' )->andReturn( array( 3 ) );
+		$this->users->shouldReceive( 'all_network_users' )->andReturn( array( new \WP_User( 1 ), new \WP_User( 5 ) ) );
+		$this->users->shouldReceive( 'super_admin_ids' )->andReturn( array( 1 ) );
+		$this->users->shouldReceive( 'is_member_of' )->andReturn( false );
+		$this->sites->shouldReceive( 'default_role_for_blog' )->andReturn( 'subscriber' );
+		$this->users->shouldReceive( 'add_to_blog' )->once()->with( 3, 5, 'subscriber' )->andReturn( true );
+
+		$this->engine()->sync_all_users_to_all_sites();
+	}
+
+	public function test_requested_sites_that_are_not_active_are_left_alone(): void {
+		$this->sites->shouldReceive( 'all_blog_ids' )->andReturn( array( 1, 2 ) );
+		$this->users->shouldReceive( 'all_network_users' )->andReturn( array( new \WP_User( 5 ) ) );
+		$this->users->shouldReceive( 'is_member_of' )->andReturn( false );
+		$this->sites->shouldReceive( 'default_role_for_blog' )->andReturn( 'subscriber' );
+		$this->users->shouldReceive( 'add_to_blog' )->once()->with( 2, 5, 'subscriber' )->andReturn( true );
+
+		$this->engine()->sync_all_users_to_sites( array( 2, 9 ) );
+	}
+
+	public function test_the_site_filter_excludes_sites(): void {
+		\Brain\Monkey\Filters\expectApplied( 'wpmus_excluded_site_ids' )->once()->with( array(), 'manual' )->andReturn( array( 2 ) );
+		$this->sites->shouldReceive( 'all_blog_ids' )->andReturn( array( 1, 2 ) );
+		$this->users->shouldReceive( 'all_network_users' )->andReturn( array( new \WP_User( 5 ) ) );
+		$this->users->shouldReceive( 'is_member_of' )->andReturn( false );
+		$this->sites->shouldReceive( 'default_role_for_blog' )->andReturn( 'subscriber' );
+		$this->users->shouldReceive( 'add_to_blog' )->once()->with( 1, 5, 'subscriber' )->andReturn( true );
+
+		$this->engine()->sync_all_users_to_all_sites();
+	}
+
+	public function test_the_user_filter_excludes_a_user_from_a_site(): void {
+		\Brain\Monkey\Filters\expectApplied( 'wpmus_should_sync_user' )->twice()->andReturnUsing(
+			static function ( bool $sync, int $user_id, int $blog_id ): bool {
+				return 2 !== $blog_id;
+			}
+		);
+		$this->sites->shouldReceive( 'all_blog_ids' )->andReturn( array( 1, 2 ) );
+		$this->users->shouldReceive( 'all_network_users' )->andReturn( array( new \WP_User( 5 ) ) );
+		$this->users->shouldReceive( 'is_member_of' )->andReturn( false );
+		$this->sites->shouldReceive( 'default_role_for_blog' )->andReturn( 'subscriber' );
+		$this->users->shouldReceive( 'add_to_blog' )->once()->with( 1, 5, 'subscriber' )->andReturn( true );
+
+		$this->engine()->sync_all_users_to_all_sites();
 	}
 
 	// ---------------------------------------------------------------------
