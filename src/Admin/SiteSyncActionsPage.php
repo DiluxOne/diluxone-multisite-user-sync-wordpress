@@ -20,7 +20,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Per-site Sync Actions page — a single "Sync from scratch" button
  * that pulls every network user into the current site, plus the
- * matching save handler.
+ * matching save handler. Only for people who manage the network's
+ * users (super admins), never for a site administrator.
  */
 final class SiteSyncActionsPage {
 
@@ -60,13 +61,14 @@ final class SiteSyncActionsPage {
 
 	/**
 	 * Hooked on `admin_action_wpmusSyncSiteSiteFromScratch`. Always
-	 * acts on the CURRENT blog id from the WP runtime — the form
-	 * carries the id only as a hint; the handler doesn't trust it.
+	 * acts on the CURRENT blog id from the WP runtime.
 	 */
 	public function handle_sync_current_site(): void {
 		check_admin_referer( Config::NONCE_ACTION );
 
-		if ( ! current_user_can( 'manage_options' ) ) {
+		// Pulling every account on the network into a site is a network
+		// decision: a site administrator (manage_options) cannot do it.
+		if ( ! current_user_can( 'manage_network_users' ) ) {
 			wp_die( esc_html__( 'You do not have permission to run a site sync.', 'wpm-user-sync' ), '', array( 'response' => 403 ) );
 		}
 

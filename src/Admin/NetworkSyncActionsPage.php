@@ -86,7 +86,7 @@ final class NetworkSyncActionsPage {
 	public function handle_sync_all(): void {
 		check_admin_referer( Config::NONCE_ACTION );
 
-		if ( ! current_user_can( 'manage_network_options' ) ) {
+		if ( ! current_user_can( 'manage_network_users' ) ) {
 			wp_die( esc_html__( 'You do not have permission to run a network-wide sync.', 'wpm-user-sync' ), '', array( 'response' => 403 ) );
 		}
 
@@ -110,7 +110,7 @@ final class NetworkSyncActionsPage {
 	public function handle_sync_selected(): void {
 		check_admin_referer( Config::NONCE_ACTION );
 
-		if ( ! current_user_can( 'manage_network_options' ) ) {
+		if ( ! current_user_can( 'manage_network_users' ) ) {
 			wp_die( esc_html__( 'You do not have permission to run a network sync.', 'wpm-user-sync' ), '', array( 'response' => 403 ) );
 		}
 

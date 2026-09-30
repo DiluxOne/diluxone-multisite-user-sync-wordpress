@@ -47,7 +47,7 @@ final class NetworkMenu {
 		add_menu_page(
 			__( 'WPM User Sync', 'wpm-user-sync' ),
 			__( 'WPM User Sync', 'wpm-user-sync' ),
-			'manage_options',
+			'manage_network_options',
 			'wpmus-networkhome',
 			array( $this, 'render_home' ),
 			'dashicons-admin-generic',
@@ -58,7 +58,7 @@ final class NetworkMenu {
 			'wpmus-networkhome',
 			__( 'Network Sync Options', 'wpm-user-sync' ),
 			__( 'Network Sync Options', 'wpm-user-sync' ),
-			'manage_options',
+			'manage_network_options',
 			'wpmus-networksyncoptions',
 			array( $this, 'render_options' )
 		);
@@ -67,7 +67,7 @@ final class NetworkMenu {
 			'wpmus-networkhome',
 			__( 'Network Sync Actions', 'wpm-user-sync' ),
 			__( 'Network Sync Actions', 'wpm-user-sync' ),
-			'manage_options',
+			'manage_network_users',
 			'wpmus-networksyncactions',
 			array( $this, 'render_actions' )
 		);

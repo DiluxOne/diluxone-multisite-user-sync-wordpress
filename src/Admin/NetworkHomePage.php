@@ -99,10 +99,9 @@ final class NetworkHomePage {
 	 * to `welcome` and rejecting any value not in the allow-list.
 	 */
 	private function active_tab(): string {
-		// The page is gated by `manage_options` (capability check via
-		// add_menu_page), so we trust the URL parameter at the gate
-		// level — the only thing this value drives is which static
-		// content block we render.
+		// The page is gated by `manage_network_options` (capability
+		// check via add_menu_page); the value only picks which static
+		// content block we render, from an allow-list.
 		$tab = isset( $_GET['tab'] ) ? sanitize_key( wp_unslash( (string) $_GET['tab'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		return in_array( $tab, array( 'welcome', 'concepts', 'about' ), true ) ? $tab : 'welcome';
 	}
@@ -194,7 +193,7 @@ final class NetworkHomePage {
 		</ul>
 
 		<h4><?php esc_html_e( 'What can a site administrator configure?', 'wpm-user-sync' ); ?></h4>
-		<p><?php esc_html_e( 'At site level there are no options — only one action: sync all network users into the current site. Existing memberships are not modified.', 'wpm-user-sync' ); ?></p>
+		<p><?php esc_html_e( "Nothing. Site administrators do not see the plugin. From a site's dashboard, a super admin can sync every network user into that one site. Existing memberships are not modified.", 'wpm-user-sync' ); ?></p>
 
 		<h4><?php esc_html_e( 'Can I run only manual actions and avoid all triggers?', 'wpm-user-sync' ); ?></h4>
 		<p><?php esc_html_e( 'Yes. Disable all triggers at network level and only manual actions will run.', 'wpm-user-sync' ); ?></p>

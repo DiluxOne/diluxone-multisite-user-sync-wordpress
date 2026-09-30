@@ -61,9 +61,9 @@ Also, you can execute the following actions:
 
 = What can configure an administrator at site level? =
 
-At site level you can not configure any option. But you can execute the following action:
+Nothing. Site administrators do not see the plugin: pulling every network account into a site is a network decision. From a site's dashboard, a super admin (anyone who can manage the network's users) can run one action:
 
-- Sync from scratch: Add all network users in your site with default site role. If no default role is configured, "subscriber" role will be added. Existing users will have not changes.
+- Sync from scratch: Add all network users to that site with its default role. If no default role is configured, "subscriber" role will be added. Existing users will have not changes, and people removed from the site stay removed.
 
 = Can I avoid automatic actions and only act with manual actions? =
 
@@ -123,6 +123,7 @@ First release. Check help for all features.
 * **Fix**: super admins are no longer added as members of every site (they already reach every site), and archived, spam and deleted sites, and the sites of other networks on the same install, are no longer synced.
 * **New**: two filters for developers, `wpmus_excluded_site_ids` (sites the sync never writes to) and `wpmus_should_sync_user` (skip one user on one site).
 * **Fix (security)**: the Set User Role trigger copied any role, administrator included, to every site the user belonged to, including roles those sites do not define. It now copies a role only to sites that define it, never copies administrator unless the new `wpmus_replicate_role` filter allows it, leaves super admins alone, and ignores calls where the role did not change.
+* **Fix (security)**: any site administrator could run the site-level "Sync from scratch" and pull every account on the network into their site. The site-level pages and action now require the `manage_network_users` capability (super admins), and so do the network sync actions.
 
 = 1.5.0 (2026-05-05) =
 * **Description repositioned**: leads with "Optimized for Microsoft Azure and Azure App Service" while explicitly noting compatibility with any WordPress Multisite host (DigitalOcean, AWS, dedicated servers, shared hosting, etc.).
