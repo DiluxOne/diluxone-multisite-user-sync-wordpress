@@ -1,0 +1,29 @@
+# DiluxOne Multisite User Sync's review policy, added to the organisation
+# defaults in DiluxOne/.github (policy/review-policy.default.yml). Read before
+# the Claude review; the review can raise the risk these rules set, never
+# lower it.
+
+# Code where a mistake gives the wrong person a role on every site, pulls the
+# whole network into a site, or loses the settings: always high risk, always
+# a human merge.
+high-risk:
+  - "wpm-user-sync.php"
+  - "uninstall.php"
+  - "legacy-deprecated.php"
+  # Who is added where, with which role, and when.
+  - "src/Sync/**"
+  - "src/Repositories/**"
+  # Who can run what: the menus' capabilities and the save handlers.
+  - "src/Admin/**"
+  - "src/Plugin.php"
+  - "src/RequirementsChecker.php"
+  - "src/Config.php"
+
+# Every review setting can be overridden here, key by key; what is left out
+# keeps the organisation's default. Uncomment to change it for this
+# repository only.
+#
+# review:
+#   medium: { model: claude-sonnet-5, effort: medium }
+# budget-usd: 3
+# auto-merge: true

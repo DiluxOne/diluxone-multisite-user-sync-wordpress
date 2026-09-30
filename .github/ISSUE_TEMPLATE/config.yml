@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 💬 Usage question
+    url: https://wordpress.org/support/plugin/wpm-user-sync/
+    about: For "how do I configure this?", "a user did not get a site", and other usage questions, please use the wordpress.org support forum, where most users look for answers.

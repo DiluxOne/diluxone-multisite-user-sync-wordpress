@@ -1,0 +1,39 @@
+name: Issues
+
+# What happens to an issue, from the shared workflows in DiluxOne/.github: the
+# triage classifies it when it opens (from docs/roadmap.md, the README and
+# readme.txt) and the reproduction job tries to write a failing unit test when
+# the triage labels it bug:unconfirmed. Usage questions go to the wordpress.org
+# forum.
+
+on:
+  issues:
+    types: [opened, labeled]
+  schedule:
+    - cron: '0 13 * * *'
+
+permissions:
+  contents: read
+
+jobs:
+  triage:
+    permissions:
+      contents: read
+      issues: write
+    uses: DiluxOne/.github/.github/workflows/issue-triage.yml@v2
+    with:
+      support-url: https://wordpress.org/support/plugin/wpm-user-sync/
+    secrets:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      DILUX_BOT_PRIVATE_KEY: ${{ secrets.DILUX_BOT_PRIVATE_KEY }}
+
+  repro:
+    permissions:
+      actions: read
+      contents: write
+      issues: write
+      pull-requests: write
+    uses: DiluxOne/.github/.github/workflows/issue-repro.yml@v2
+    secrets:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      DILUX_BOT_PRIVATE_KEY: ${{ secrets.DILUX_BOT_PRIVATE_KEY }}

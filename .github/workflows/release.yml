@@ -1,0 +1,45 @@
+name: Release
+
+# Publishes DiluxOne Multisite User Sync (slug wpm-user-sync) to wordpress.org
+# as a deployment the maintainer approves, through the shared workflow in
+# DiluxOne/.github: every push to main publishes the development build (the
+# shipped tree stamped <next>-dev.<N>) as the one "Development build"
+# pre-release on the moving tag `dev`, and computes the next version from the
+# type:* labels of what merged. While the newest changelog entry of readme.txt
+# starts with the line `Unreleased.` the version is not ready and nothing
+# waits; once a pull request removed that line (and set the version markers to
+# the version it releases), the job waits for approval in the environment
+# `wordpress-org`, then checks that the markers say that version, deploys,
+# tags and creates the release. Release tags are permanent: a failed deploy is
+# fixed and re-run, never re-tagged. See docs/release.md.
+#
+# The SVN credentials and the release App's key live in the environment
+# `wordpress-org`. An environment's secrets reach a called workflow only
+# through `secrets: inherit`, which passes every repository and organisation
+# secret too; that is why this workflow runs only on main and on X.Y.Z tags
+# and calls the shared workflow at a fixed commit (Dependabot keeps the pin
+# current; a bump of it is reviewed as the secret-bearing change it is).
+#
+# It starts as a rehearsal (dry-run: true): everything but the SVN commit, the
+# tag and the release. The maintainer turns it to false after a rehearsal
+# approved in the environment, in a pull request of its own.
+
+on:
+  push:
+    branches: [main]
+    # X.Y.Z tags only: an administrator's, or the release App's.
+    tags: ['[0-9]+.[0-9]+.[0-9]+']
+
+permissions:
+  contents: write
+  pull-requests: read # the labels of what merged decide the version
+
+jobs:
+  release:
+    uses: DiluxOne/.github/.github/workflows/plugin-release-wp.yml@5d0f8511e1158c3ac23e3a647347f290f015eebb # v2.6.1
+    with:
+      slug: wpm-user-sync
+      main-file: wpm-user-sync.php
+      version-constant: WPMUS_VERSION
+      dry-run: true
+    secrets: inherit
