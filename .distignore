@@ -18,6 +18,9 @@
 README.md
 CONTRIBUTING.md
 SECURITY.md
+CODE_OF_CONDUCT.md
+AGENTS.md
+CLAUDE.md
 docs
 
 # Dev dependencies
@@ -39,11 +42,17 @@ phpcs.xml.dist
 phpstan.neon
 phpstan.neon.dist
 phpstan-baseline.neon
+phpstan-bootstrap.php
 .phpstan
 psalm.xml
 psalm.xml.dist
 psalm-baseline.xml
 .psalm
+
+# End-to-end runner (browser tests; never part of what ships)
+playwright*.config.ts
+playwright-report
+test-results
 
 # Tests and test artifacts
 phpunit.xml
@@ -64,11 +73,27 @@ tools
 bin
 scripts
 
-# IDE
+# IDE and AI tooling
 .idea
 .vscode
+.claude
+.cursor
+
+# Bundled translations are never loaded from the plugin folder: without
+# load_plugin_textdomain() (discouraged for directory-hosted plugins) WordPress
+# reads plugin translations from wp-content/languages/plugins/, where
+# translate.wordpress.org's language packs go. The .pot stays; the .po/.mo are
+# the source for translate.wordpress.org, and `make deploy-test` puts the .mo
+# where WordPress reads them on a test site.
+languages/*.po
+languages/*.mo
+
+# Local secrets: never in a build, whatever their name
+.env
+.env.*
 
 # Build artifacts and logs
+build
 *.zip
 *.log
 *.tar

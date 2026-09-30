@@ -17,25 +17,23 @@ vendor/
 # diffs without runtime benefit (the plugin ships with no vendor/).
 composer.lock
 
-# npm lock file — same reasoning. Only @wordpress/env lives in
-# devDependencies; CI never installs it. Local devs regenerate via
-# `npm install` after a clone.
-package-lock.json
-
 # Build artifacts
 dist/
 build/
 *.log
 
-# Test caches
+# Test caches and end-to-end results
 .phpunit.result.cache
 .phpunit.cache/
 .phpunit-integration.result.cache
 .phpcs-cache/
+playwright-report/
+test-results/
 
 # Local env
 .env
 .env.local
+.env.*
 
 # wp-env local override (machine-specific dev config)
 .wp-env.override.json

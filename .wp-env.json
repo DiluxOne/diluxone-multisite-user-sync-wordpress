@@ -1,13 +1,18 @@
 {
   "$schema": "https://raw.githubusercontent.com/WordPress/gutenberg/HEAD/schemas/json/wp-env.json",
   "core": null,
-  "phpVersion": "8.2",
+  "phpVersion": "8.5",
   "plugins": ["."],
+  "mappings": {
+    "wp-content/mu-plugins/wpmus-e2e.php": "./tests/e2e/mu-plugin/wpmus-e2e.php"
+  },
   "config": {
     "WP_DEBUG": true,
     "WP_DEBUG_LOG": true,
     "WP_DEBUG_DISPLAY": false,
     "SCRIPT_DEBUG": true
   },
-  "multisite": true
+  "multisite": true,
+  "port": 8898,
+  "testsPort": 8899
 }
