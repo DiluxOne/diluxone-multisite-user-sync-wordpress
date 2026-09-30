@@ -133,6 +133,7 @@ First release. Check help for all features.
 * **Performance**: syncs no longer load every user of the network into memory, and large ones (a new site or a manual sync on a big network, a new user on a network with many sites) run in the background through WP-Cron in batches instead of in the request that started them, with their progress listed on the Network Sync Actions page. Small syncs still finish immediately. Developers can tune this with the `wpmus_sync_inline_limit`, `wpmus_sync_batch_size` and `wpmus_sync_time_limit` filters.
 * **New**: works alongside DiluxOne Users+ without depending on it: while any automatic trigger is on, WPM User Sync answers Users+'s `diluxone_users_membership_managed_by` filter, so Users+'s network membership policy steps aside.
 * **Fix**: uninstalling now also removes the background sync queue, its scheduled event and the record of removals.
+* **Performance**: the plugin's admin stylesheet now loads only on its own pages instead of on every admin screen.
 
 = 1.5.0 (2026-05-05) =
 * **Description repositioned**: leads with "Optimized for Microsoft Azure and Azure App Service" while explicitly noting compatibility with any WordPress Multisite host (DigitalOcean, AWS, dedicated servers, shared hosting, etc.).
