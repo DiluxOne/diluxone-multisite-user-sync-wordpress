@@ -75,7 +75,7 @@ Yes. If DiluxOne Users+ is active, its network membership policy defers to WPM U
 
 = Does this plugin host information in the local WordPress database? =
 
-Yes. This plugin host information in "sitemeta" table to remember network sync options.
+Yes. This plugin host information in the "sitemeta" table to remember network sync options and the progress of large syncs running in the background, and in the "usermeta" table to remember which sites each person was removed from.
 
 = Does this plugin connect to any external web service? =
 
@@ -83,7 +83,7 @@ Nope.
 
 = What happens if I uninstall the plugin? Do I lose my users? =
 
-No. Your users and their roles will remain untouched. When you uninstall WPM User Sync, only the plugin's own configuration options (the automatic sync triggers) are removed from the database. All user/site relationships created while the plugin was active remain as they are.
+No. Your users and their roles will remain untouched. When you uninstall WPM User Sync, only the plugin's own data is removed from the database: the automatic sync triggers, any sync still queued in the background, and its record of who was removed from which site. All user/site relationships created while the plugin was active remain as they are.
 
 = I love it, how can I show my appreciation? =
 
@@ -132,6 +132,7 @@ First release. Check help for all features.
 * **Fix**: turning a trigger on or off now takes effect immediately, instead of from the next page load.
 * **Performance**: syncs no longer load every user of the network into memory, and large ones (a new site or a manual sync on a big network, a new user on a network with many sites) run in the background through WP-Cron in batches instead of in the request that started them, with their progress listed on the Network Sync Actions page. Small syncs still finish immediately. Developers can tune this with the `wpmus_sync_inline_limit`, `wpmus_sync_batch_size` and `wpmus_sync_time_limit` filters.
 * **New**: works alongside DiluxOne Users+ without depending on it: while any automatic trigger is on, WPM User Sync answers Users+'s `diluxone_users_membership_managed_by` filter, so Users+'s network membership policy steps aside.
+* **Fix**: uninstalling now also removes the background sync queue, its scheduled event and the record of removals.
 
 = 1.5.0 (2026-05-05) =
 * **Description repositioned**: leads with "Optimized for Microsoft Azure and Azure App Service" while explicitly noting compatibility with any WordPress Multisite host (DigitalOcean, AWS, dedicated servers, shared hosting, etc.).
