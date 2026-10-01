@@ -24,6 +24,6 @@ high-risk:
 # repository only.
 #
 # review:
-#   medium: { model: claude-sonnet-5, effort: medium }
+#   medium: { model: claude-sonnet-5-5, effort: medium }
 # budget-usd: 3
 # auto-merge: true
