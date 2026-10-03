@@ -295,7 +295,7 @@ plugin-check-down: ## Stop the Plugin Check environment.
 # Line coverage of everything that ships (src/, the main file, uninstall.php,
 # legacy-deprecated.php), per layer and all together, on the
 # wp-env network with Xdebug in coverage mode (`make coverage` restarts it that
-# way, and without Xdebug again when it is done). The end-to-end layer is
+# way, and both environments without Xdebug again when it is done). The end-to-end layer is
 # recorded per request by tests/e2e/mu-plugin/wpmus-coverage.php. COVERAGE_MIN is the
 # floor for all layers together, COVERAGE_LAYER_MIN for each layer; below
 # either, `make coverage` fails. See docs/testing-and-quality.md.
@@ -334,7 +334,8 @@ coverage-e2e-single: pcp-env ## The single-site check with line coverage (restar
 	@cd "$(PCP_DIR)" && npx @wordpress/env start --xdebug=coverage >/dev/null
 	@rm -rf "$(DIST_DIR)/build" && mkdir -p "$(DIST_DIR)/build/coverage/e2e" build/coverage/e2e && chmod 777 "$(DIST_DIR)/build/coverage/e2e"
 	WPMUS_SINGLE_URL=http://localhost:$(PCP_TESTS_PORT) WPMUS_SINGLE_ENV=$(PCP_DIR) npx playwright test --project=single; status=$$?; \
-	  find "$(DIST_DIR)/build/coverage/e2e" -name '*.json' -exec mv {} build/coverage/e2e/ \; ; rm -rf "$(DIST_DIR)/build"; exit $$status
+	  find "$(DIST_DIR)/build/coverage/e2e" -name '*.json' -exec mv {} build/coverage/e2e/ \; ; rm -rf "$(DIST_DIR)/build"; \
+	  cd "$(PCP_DIR)" && npx @wordpress/env start >/dev/null; exit $$status
 
 .PHONY: coverage-report
 coverage-report: ## The coverage table from build/coverage; COVERAGE_SHOW=unit|integration|e2e lists that layer's missing lines.
