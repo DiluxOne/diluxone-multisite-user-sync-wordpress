@@ -14,6 +14,7 @@ the same pull request. How many of the plugin's lines each layer runs is
 | New user, on: joins every live site with each site's default role | `triggers` › New User › on: a user added in Network Admin… | `SyncEngineIntegrationTest`, `HooksIntegrationTest` | `SyncEngineTest` |
 | New user, off: joins no site | `triggers` › New User › off | `SyncEngineIntegrationTest` | `SyncEngineTest` |
 | New user made with `wp_insert_user()` alone (another plugin), once per account | `triggers` › …with wp_insert_user() alone | `HooksIntegrationTest` | `SyncEngineTest` |
+| Self-registration: a visitor signs up from a site's "Register" link and activates from the email; on, every live site; off, none | `triggers` › …for someone who signs up on their own (on and off) | `TriggerStatesIntegrationTest` | `SyncEngineTest` |
 | Invitee activated from a signup is synced again | — | `TriggerStatesIntegrationTest` | `SyncEngineTest` |
 | New site, on: every user with the new site's default role | `triggers` › New Site › on | `NewSiteRoleIntegrationTest` | `SyncEngineTest` |
 | New site never copies main-site roles | `triggers` › …the main site's editors… | `NewSiteRoleIntegrationTest` | `SyncEngineTest` |
@@ -65,6 +66,7 @@ the same pull request. How many of the plugin's lines each layer runs is
 | A run that finds the queue locked leaves a retry for when the lock goes stale; a stale lock is taken over | `network-admin` › a run that died holding the lock… | `QueueIntegrationTest`, `PluginWiringIntegrationTest` | `JobQueueTest`, `SyncEngineTest` |
 | A job queued while a batch runs is kept; a queue emptied meanwhile stays empty | `triggers` › a site added while a background sync is running… | `QueueIntegrationTest` | `JobQueueTest` |
 | A cron run commits its writes in groups of about a second (only there), reading at READ COMMITTED; a group refused, or rolled back behind a successful COMMIT (checked in the database), leaves the batch to a run a minute later with its users read afresh; one by one where the database logs statements; `wpmus_sync_group_writes` turns it off | every background-sync test (grouping is on by default) | `WriteGroupsIntegrationTest` | `WriteGroupsTest`, `SyncEngineTest`, `UserRepositoryTest` |
+| A big network with the real limits: fast start, each run bounded in time and memory, every membership once (`make test-load`) | — | `NetworkLoadTest` (`tests/Load`) | — |
 | `wpmus_sync_inline_limit`, `wpmus_sync_batch_size`, `wpmus_sync_time_limit` | the queued tests above (through the e2e knobs) | `QueueIntegrationTest` | `SyncEngineTest` |
 
 ## A site's dashboard and permissions

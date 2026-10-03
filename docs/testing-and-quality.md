@@ -25,6 +25,7 @@ alongside it. Until then, the Make targets below are the gates.
 | Integration tests | PHPUnit on the wp-env tests network | Behaviour against real WordPress Multisite and MySQL: hooks, options, memberships, cron, uninstall. | slow | `make test-integration` |
 | End-to-end tests | Playwright on the wp-env dev network | Every screen, every trigger and action as a person uses them, permissions, the queue through WP-Cron, uninstall, layout invariants; plus the single-site check. | slow | `make test-e2e` |
 | Coverage | Xdebug on the wp-env network, `tests/coverage/` | Code no test runs: each layer's share of the lines that ship, and all together. | local | `make coverage` |
+| Load | PHPUnit on the wp-env tests network, `tests/Load/` | A big network with the plugin's real limits: the request that starts a sync stays fast, each background run stays within its time and memory, no membership is missed or doubled. Minutes, so not in `pre-pr`. | local | `make test-load` |
 | Visual baselines | Playwright `toHaveScreenshot` | A screen that changed look without a rule breaking. Local only: a baseline is one machine's rendering. | — | `make test-visual`, `make test-visual-update` |
 
 A change carries its tests **at every layer it touches**, in the same pull
@@ -122,6 +123,30 @@ The floors are `COVERAGE_MIN` (all layers together, 100) and
 at every layer it touches; a floor is never lowered to let a change in. The
 only lines excluded are the `exit` of the direct-access guards
 (`// @codeCoverageIgnore`), which no request through WordPress can reach.
+
+## Load
+
+`make test-load` builds a big network on the tests site (`LOAD_USERS`
+accounts, 3000 by default, written straight to the users table as an import
+would; `LOAD_SITES` sites, 10 by default) and runs the plugin on it with its
+real batch size and time limit, no filter shrinking them. A manual sync of
+every site and a new site's sync each go to the background; every run of the
+queue is timed and its memory measured, and each site must end with every
+user exactly once, also after a second pass. It prints what it measured:
+
+```text
+Manual sync: 30000 user-site pairs. Start 0.01s; … background runs in …s (… pairs/s); slowest run …s; most memory one run added … MB.
+```
+
+Its bounds: the starting request under 5 s; a run under the time limit plus
+15 s; a run adding under 64 MB, whatever the network's size. The speed itself
+is printed, not judged: it depends on the database's disk far more than on
+the plugin (core's `add_user_to_blog()` commits each of its writes).
+
+```bash
+make test-load                               # 3000 users × 10 sites
+make test-load LOAD_USERS=10000 LOAD_SITES=50
+```
 
 ## PHPCS, PHPStan, Psalm
 

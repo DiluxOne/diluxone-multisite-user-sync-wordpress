@@ -90,6 +90,7 @@ npx wp-env run cli wp cron event run wpmus_process_sync_queue       # move a que
 | `make test-layout` | Only the layout measurements. |
 | `make test-visual` / `make test-visual-update` | Compare every screen with its baseline picture / retake them. |
 | `make screenshots` | Retake the wordpress.org listing screenshots from the real screens. |
+| `make test-load` | The load test: a big network with the real limits; prints the timings (`LOAD_USERS`, `LOAD_SITES`). |
 | `make coverage` / `make coverage-report` | Line coverage per layer and all together, on the network with Xdebug; fails below the floors ([testing-and-quality.md](testing-and-quality.md#coverage)). |
 | `make check` | The fast gates: lint, stan, psalm, unit tests. |
 | `make i18n` / `make i18n-update` / `make i18n-mo` / `make i18n-check` | Refresh the `.pot`; merge it into every `.po`; compile the `.mo`; fail on an incomplete, fuzzy, stale or malformed locale. |

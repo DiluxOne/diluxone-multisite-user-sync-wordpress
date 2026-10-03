@@ -161,6 +161,17 @@ test-unit-min: ## Unit suite on the oldest PHP the plugin supports (8.0).
 test-integration: ## Run the integration suite on the wp-env tests network (needs `make env`).
 	npx @wordpress/env run tests-cli --env-cwd=wp-content/plugins/$(REPO_DIR) ./vendor/bin/phpunit -c phpunit-integration.xml
 
+# The load test: thousands of users and tens of sites on the tests network,
+# with the plugin's real batch size and time limit. It prints what the request
+# that starts a sync and each background run took, and checks every
+# membership at the end. Minutes, so not part of `pre-pr`.
+LOAD_USERS ?= 3000
+LOAD_SITES ?= 10
+
+.PHONY: test-load
+test-load: ## The load test on the tests network (LOAD_USERS, LOAD_SITES; needs `make env`).
+	npx @wordpress/env run tests-cli --env-cwd=wp-content/plugins/$(REPO_DIR) env LOAD_USERS=$(LOAD_USERS) LOAD_SITES=$(LOAD_SITES) ./vendor/bin/phpunit -c phpunit-load.xml
+
 # The end-to-end suite drives a real browser against the wp-env dev network
 # (8898): network admin, a site's admin, every trigger. It needs `make env`
 # and Playwright's Chromium (`make install`). The single-site check runs after
