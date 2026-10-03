@@ -104,7 +104,7 @@ together. It restarts the wp-env network with Xdebug in coverage mode, runs
 the unit, integration and end-to-end suites (the network suite, then the
 single-site check on the Plugin Check environment), and prints a table per
 file with the lines no layer runs. The end-to-end layer is recorded per
-request by [`tests/coverage/mu-plugins/wpmus-coverage.php`](../tests/coverage/mu-plugins/wpmus-coverage.php),
+request by [`tests/e2e/mu-plugin/wpmus-coverage.php`](../tests/e2e/mu-plugin/wpmus-coverage.php),
 a must-use plugin that does nothing unless Xdebug is in coverage mode and
 `build/coverage/e2e/` exists. [`tests/coverage/report.php`](../tests/coverage/report.php)
 counts a line the way PHPUnit does: code to the static analysis and runnable

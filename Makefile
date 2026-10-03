@@ -266,7 +266,7 @@ pcp-env: dist
 	  '  "core": null,' \
 	  '  "phpVersion": "8.5",' \
 	  '  "plugins": [ "../$(SLUG)" ],' \
-	  '  "mappings": { "wp-content/mu-plugins": "$(CURDIR)/tests/coverage/mu-plugins" },' \
+	  '  "mappings": { "wp-content/mu-plugins": "$(CURDIR)/tests/e2e/mu-plugin" },' \
 	  '  "port": $(PCP_PORT),' \
 	  '  "testsPort": $(PCP_TESTS_PORT)' \
 	  '}' > "$(PCP_DIR)/.wp-env.json"
@@ -296,7 +296,7 @@ plugin-check-down: ## Stop the Plugin Check environment.
 # legacy-deprecated.php), per layer and all together, on the
 # wp-env network with Xdebug in coverage mode (`make coverage` restarts it that
 # way; `make env` afterwards turns Xdebug off again). The end-to-end layer is
-# recorded per request by tests/coverage/mu-plugins/wpmus-coverage.php. COVERAGE_MIN is the
+# recorded per request by tests/e2e/mu-plugin/wpmus-coverage.php. COVERAGE_MIN is the
 # floor for all layers together, COVERAGE_LAYER_MIN for each layer; below
 # either, `make coverage` fails. See docs/testing-and-quality.md.
 COVERAGE_MIN       ?= 100

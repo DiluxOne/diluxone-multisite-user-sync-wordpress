@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name: WPMUS end-to-end coverage
- * Description: Test-only. While `make coverage-e2e` runs (Xdebug in coverage mode and build/coverage/e2e/ present in the plugin's folder), records which of the plugin's lines each request executes, so the end-to-end suite's coverage can be measured. Does nothing otherwise. Mapped into mu-plugins by .wp-env.json; never shipped (tests/ is in .distignore).
+ * Description: Test-only. While `make coverage-e2e` runs (Xdebug in coverage mode and build/coverage/e2e/ present in the plugin's folder), records which of the plugin's lines each request executes, so the end-to-end suite's coverage can be measured. Does nothing otherwise. Its folder is mapped as mu-plugins by .wp-env.json and the Plugin Check environment; never shipped (tests/ is in .distignore).
  *
  * @package WPMUS\Tests\Coverage
  */
