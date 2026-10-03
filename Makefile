@@ -295,7 +295,7 @@ plugin-check-down: ## Stop the Plugin Check environment.
 # Line coverage of everything that ships (src/, the main file, uninstall.php,
 # legacy-deprecated.php), per layer and all together, on the
 # wp-env network with Xdebug in coverage mode (`make coverage` restarts it that
-# way; `make env` afterwards turns Xdebug off again). The end-to-end layer is
+# way, and without Xdebug again when it is done). The end-to-end layer is
 # recorded per request by tests/e2e/mu-plugin/wpmus-coverage.php. COVERAGE_MIN is the
 # floor for all layers together, COVERAGE_LAYER_MIN for each layer; below
 # either, `make coverage` fails. See docs/testing-and-quality.md.
@@ -307,8 +307,9 @@ TESTS_CLI := npx @wordpress/env run tests-cli --env-cwd=wp-content/plugins/$(REP
 .PHONY: coverage
 coverage: ## Line coverage of every layer and all together; fails below COVERAGE_MIN / COVERAGE_LAYER_MIN.
 	npx @wordpress/env start --xdebug=coverage
-	$(MAKE) --no-print-directory coverage-unit coverage-integration coverage-e2e coverage-e2e-single
-	$(MAKE) --no-print-directory coverage-report
+	@$(MAKE) --no-print-directory coverage-unit coverage-integration coverage-e2e coverage-e2e-single \
+	  && $(MAKE) --no-print-directory coverage-report; status=$$?; \
+	  npx @wordpress/env start >/dev/null; exit $$status
 
 .PHONY: coverage-unit
 coverage-unit: ## Unit suite with line coverage (needs `make env` with Xdebug: see `coverage`).

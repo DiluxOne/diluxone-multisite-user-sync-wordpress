@@ -13,7 +13,9 @@ defined( 'ABSPATH' ) || exit;
 		return;
 	}
 
-	// The plugin's folder is the repository's, whatever it is named.
+	// The plugin's folder is the repository's, whatever it is named: the
+	// first folder holding the main file. Both wp-env environments mount the
+	// plugin once; a second copy would be measured in its place.
 	$main = glob( WP_PLUGIN_DIR . '/*/wpm-user-sync.php' );
 	if ( ! $main ) {
 		return;

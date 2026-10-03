@@ -68,7 +68,12 @@ foreach ( array( 'unit', 'integration' ) as $layer ) {
 }
 $ran_statements = array();
 foreach ( glob( "$dir/e2e/*.json" ) ?: array() as $file ) {
-	foreach ( json_decode( (string) file_get_contents( $file ), true ) as $relative => $lines ) {
+	$recorded = json_decode( (string) file_get_contents( $file ), true );
+	if ( ! is_array( $recorded ) ) {
+		fwrite( STDERR, "✖ $file is not a coverage record: run make coverage again.\n" );
+		exit( 1 );
+	}
+	foreach ( $recorded as $relative => $lines ) {
 		foreach ( $lines as $line ) {
 			if ( isset( $statement[ $relative ][ $line ] ) ) {
 				$ran_statements[ $relative ][ $statement[ $relative ][ $line ] ] = true;
