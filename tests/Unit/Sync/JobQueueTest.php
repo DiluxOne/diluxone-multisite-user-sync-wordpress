@@ -264,6 +264,14 @@ final class JobQueueTest extends TestCase {
 		$this->assertSame( 1700000000 + JobQueue::LOCK_TTL, ( new JobQueue() )->lock_stale_at() );
 	}
 
+	public function test_a_lock_released_meanwhile_is_stale_now(): void {
+		$before = time();
+		$stale  = ( new JobQueue() )->lock_stale_at();
+
+		$this->assertGreaterThanOrEqual( $before, $stale );
+		$this->assertLessThanOrEqual( time(), $stale );
+	}
+
 	public function test_a_released_lock_can_be_taken_again(): void {
 		$queue = new JobQueue();
 		$queue->acquire_lock();
