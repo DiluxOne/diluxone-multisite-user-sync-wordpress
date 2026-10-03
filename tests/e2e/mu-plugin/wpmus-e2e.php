@@ -68,6 +68,24 @@ add_filter(
 );
 
 /*
+ * Pauses the first background batch after the knob is set, for that many
+ * seconds, and marks it in the network option `wpmus_e2e_batch_paused`, so a
+ * test can change the queue from another request while a run works on it.
+ */
+add_filter(
+	'wpmus_sync_batch_size',
+	static function ( $size ) {
+		$knobs = wpmus_e2e_knobs();
+		if ( ! empty( $knobs['pause_first_batch'] ) && add_site_option( 'wpmus_e2e_batch_paused', time() ) ) {
+			sleep( (int) $knobs['pause_first_batch'] );
+		}
+
+		return $size;
+	},
+	20
+);
+
+/*
  * Holds WP-Cron for web requests, so a test can look at a queued sync before
  * anything works on it; WP-CLI's `wp cron event run` still runs the event,
  * which is how the test moves it on, one run at a time.

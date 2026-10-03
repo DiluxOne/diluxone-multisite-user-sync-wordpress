@@ -130,6 +130,7 @@ Unreleased.
 * The new-site trigger now listens on `wp_initialize_site` instead of the deprecated `wpmu_new_blog`, and the new-user trigger also covers accounts created with `wp_insert_user()` alone (some registration plugins), once per account.
 * Turning a trigger on or off takes effect immediately instead of from the next page load.
 * Big networks: syncs no longer load every user into memory, and a large one (a new site or a manual sync on a big network, a new user on a network with many sites) runs in the background through WP-Cron in batches, with its progress on the Network Sync Actions screen. Small syncs still finish at once.
+* A site or user added while a background sync was running could lose its own sync, and a background sync emptied from the queue could come back. Every change to the queue now starts from what is stored.
 * New filters for developers: `wpmus_excluded_site_ids`, `wpmus_should_sync_user`, `wpmus_replicate_role`, `wpmus_sync_inline_limit`, `wpmus_sync_batch_size` and `wpmus_sync_time_limit`.
 * On a site that is not a network, the plugin now only explains that it needs WordPress Multisite and deactivates itself; nothing else of it runs in the meantime.
 * Uninstalling now also removes the background sync queue, its scheduled event and the record of removals.

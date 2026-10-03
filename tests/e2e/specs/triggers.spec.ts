@@ -2,6 +2,7 @@ import { test, expect, Page } from '@playwright/test';
 import { php, wp } from '../support/cli';
 import { DEV_URL } from '../support/env';
 import {
+	batchPaused,
 	clearKnobs,
 	clearQueue,
 	createSite,
@@ -174,6 +175,43 @@ test.describe('New Site Automatic Sync', () => {
 		for (const person of people) {
 			expect(memberships(person.id)[site.id]).toBe('subscriber');
 		}
+	});
+
+	test('on: a site added while a background sync is running still gets filled', async ({ page }) => {
+		test.setTimeout(180_000);
+		const first = createSite('ns-busy-first');
+		const person = createUser('ns-busy');
+		setKnobs({ inline_limit: 1, batch_size: 1, time_limit: 0, pause_first_batch: 10 });
+		php(`switch_to_blog( get_main_site_id() ); delete_transient( 'doing_cron' ); restore_current_blog(); return true;`);
+
+		await page.goto(networkScreen('wpmus-networksyncactions'));
+		const form = syncForm(page, 'wpmusSyncNetworkSiteFromScratch');
+		await form.locator(`input[name="listSites[]"][value="${first.id}"]`).check();
+		await submit(page, form);
+
+		// A visit spawns WP-Cron, whose first batch holds the queue it read.
+		await expect
+			.poll(
+				async () => {
+					await page.request.get('/');
+					return batchPaused();
+				},
+				{ timeout: 60_000, intervals: [1_000] }
+			)
+			.toBe(true);
+
+		setToggles({ newSite: true });
+		const site = await addSiteInNetworkAdmin(page, 'ns-busy');
+		expect(queue().map((job) => job.context)).toContain('new_site');
+
+		// The paused run stores its batch and lets go of the lock; the new
+		// site's job has to be in the queue it leaves.
+		await expect.poll(() => php<boolean>(`return false !== get_site_option( 'wpmus_sync_lock' );`), { timeout: 60_000 }).toBe(false);
+		expect(queue().map((job) => job.context)).toContain('new_site');
+
+		drainQueue(500);
+		expect(memberships(person.id)[first.id]).toBe('subscriber');
+		expect(memberships(person.id)[site.id], 'the new site\'s sync, queued during the batch, ran too').toBe('subscriber');
 	});
 });
 

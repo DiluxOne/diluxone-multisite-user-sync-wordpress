@@ -41,6 +41,7 @@ class JobQueue {
 	 * @return SyncJob[]
 	 */
 	public function all(): array {
+		$this->forget_cached_jobs();
 		$stored = get_site_option( self::OPTION_JOBS, array() );
 		if ( ! is_array( $stored ) ) {
 			return array();
@@ -159,6 +160,24 @@ class JobQueue {
 			}
 		);
 		return $scheduled;
+	}
+
+	/**
+	 * Drops this request's cached copy of the job list, so the next read
+	 * comes from the database. Every request shares the queue: a cron run
+	 * working a batch, a new site or user queueing its sync, Network Admin
+	 * emptying it. A request that kept its first read would write that old
+	 * copy back over whatever the others changed meanwhile, losing a job
+	 * queued during a batch or bringing back an emptied one.
+	 */
+	private function forget_cached_jobs(): void {
+		$network_id = get_current_network_id();
+		wp_cache_delete( $network_id . ':' . self::OPTION_JOBS, 'site-options' );
+		$missing = wp_cache_get( $network_id . ':notoptions', 'site-options' );
+		if ( is_array( $missing ) && isset( $missing[ self::OPTION_JOBS ] ) ) {
+			unset( $missing[ self::OPTION_JOBS ] );
+			wp_cache_set( $network_id . ':notoptions', $missing, 'site-options' );
+		}
 	}
 
 	/**
