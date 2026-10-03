@@ -6,7 +6,8 @@
  * on the main site.
  *
  * The network options live in an array here; Brain Monkey routes the
- * `*_site_option()` calls to it.
+ * `*_site_option()` calls to it. The object cache is another array, so a
+ * test can see what the queue drops from it before each read.
  *
  * @package WPMUS\Tests\Unit\Sync
  */
@@ -29,10 +30,32 @@ final class JobQueueTest extends TestCase {
 	/** @var string[] Blog switches, in order: `to:N` and `restore`. */
 	private array $switches = array();
 
+	/** @var array<string,mixed> The `site-options` cache group, by key. */
+	private array $cache = array();
+
 	protected function setUp(): void {
 		parent::setUp();
 		$options  = &$this->options;
 		$switches = &$this->switches;
+		$cache    = &$this->cache;
+		Functions\when( 'get_current_network_id' )->justReturn( 1 );
+		Functions\when( 'wp_cache_get' )->alias(
+			static function ( string $key, string $group ) use ( &$cache ) {
+				return 'site-options' === $group && array_key_exists( $key, $cache ) ? $cache[ $key ] : false;
+			}
+		);
+		Functions\when( 'wp_cache_set' )->alias(
+			static function ( string $key, $value, string $group ) use ( &$cache ): bool {
+				$cache[ $key ] = $value;
+				return 'site-options' === $group;
+			}
+		);
+		Functions\when( 'wp_cache_delete' )->alias(
+			static function ( string $key, string $group ) use ( &$cache ): bool {
+				unset( $cache[ $key ] );
+				return 'site-options' === $group;
+			}
+		);
 		Functions\when( 'get_site_option' )->alias(
 			static function ( string $name, $fallback = false ) use ( &$options ) {
 				return array_key_exists( $name, $options ) ? $options[ $name ] : $fallback;
@@ -115,6 +138,27 @@ final class JobQueueTest extends TestCase {
 
 		$this->assertSame( array( $first->to_array(), $second->to_array() ), $this->options[ JobQueue::OPTION_JOBS ] );
 		$this->assertSame( $first->id, $queue->first()->id );
+	}
+
+	public function test_every_read_drops_the_requests_cached_copy_of_the_queue(): void {
+		$this->cache['1:' . JobQueue::OPTION_JOBS] = array( 'stale' );
+		$this->cache['1:notoptions']               = array(
+			JobQueue::OPTION_JOBS => true,
+			'another_option'      => true,
+		);
+
+		( new JobQueue() )->all();
+
+		$this->assertArrayNotHasKey( '1:' . JobQueue::OPTION_JOBS, $this->cache );
+		$this->assertSame( array( 'another_option' => true ), $this->cache['1:notoptions'], 'Only the queue leaves the "not there" record.' );
+	}
+
+	public function test_a_not_there_record_without_the_queue_is_left_alone(): void {
+		$this->cache['1:notoptions'] = array( 'another_option' => true );
+
+		( new JobQueue() )->all();
+
+		$this->assertSame( array( 'another_option' => true ), $this->cache['1:notoptions'] );
 	}
 
 	public function test_update_stores_the_progress_of_that_job_only(): void {
@@ -220,7 +264,7 @@ final class JobQueueTest extends TestCase {
 		$this->assertSame( 1700000000 + JobQueue::LOCK_TTL, ( new JobQueue() )->lock_stale_at() );
 	}
 
-		public function test_a_released_lock_can_be_taken_again(): void {
+	public function test_a_released_lock_can_be_taken_again(): void {
 		$queue = new JobQueue();
 		$queue->acquire_lock();
 
