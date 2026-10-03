@@ -124,6 +124,42 @@ final class QueueIntegrationTest extends IntegrationTestCase {
 		$this->assertSame( array(), $this->queued_ids(), 'A batch that ends after Network Admin emptied the queue does not bring its job back.' );
 	}
 
+	/**
+	 * When the queue's cron event is due on the main site, or false.
+	 *
+	 * @return int|false
+	 */
+	private function next_run() {
+		switch_to_blog( get_main_site_id() );
+		$next = wp_next_scheduled( JobQueue::CRON_HOOK );
+		restore_current_blog();
+		return $next;
+	}
+
+	public function test_a_run_that_finds_the_queue_locked_leaves_a_retry_for_when_the_lock_goes_stale(): void {
+		$user_id = $this->make_user( $this->slug( 'locked' ) );
+		$blog_id = $this->make_site( $this->slug( 'locked-site' ) );
+		$engine  = $this->engine();
+		$queue   = new JobQueue();
+		$queue->add( new SyncJob( 'manual', null, array( $blog_id ), false ) );
+
+		$held_since = time() - 60;
+		update_site_option( JobQueue::OPTION_LOCK, $held_since );
+		$engine->process_queue();
+
+		$this->assertSame( 0, $queue->first()->processed, 'The run leaves the job alone.' );
+		$this->assertSame( $held_since + JobQueue::LOCK_TTL, $this->next_run(), 'A retry waits for the lock to go stale.' );
+
+		$queue->schedule();
+		$this->assertLessThanOrEqual( time(), $this->next_run(), 'A run that ends first brings the retry forward.' );
+
+		update_site_option( JobQueue::OPTION_LOCK, time() - JobQueue::LOCK_TTL - 1 );
+		$engine->process_queue();
+		$this->assertSame( array(), $queue->all(), 'A stale lock is taken over and the job finishes.' );
+		$this->assertTrue( $this->is_member( $user_id, $blog_id ) );
+		$this->assertFalse( get_site_option( JobQueue::OPTION_LOCK ), 'The run releases the lock it took over.' );
+	}
+
 	public function test_a_small_sync_finishes_in_the_request(): void {
 		$user_id = $this->make_user( $this->slug( 'small' ) );
 		$blog_id = $this->make_site( $this->slug( 'small-site' ) );

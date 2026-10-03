@@ -226,6 +226,31 @@ test.describe('Network Sync Actions', () => {
 		expect(memberships(person.id)[site.id]).toBe('subscriber');
 	});
 
+	test('a run that died holding the lock blocks the queue only until the lock goes stale', async ({ page }) => {
+		const site = createSite('stale-lock');
+		const person = createUser('stale-lock');
+		setKnobs({ inline_limit: 0, hold_cron: true });
+
+		await page.goto(networkScreen('wpmus-networksyncactions'));
+		const form = syncForm(page, 'wpmusSyncNetworkSiteFromScratch');
+		await form.locator(`input[name="listSites[]"][value="${site.id}"]`).check();
+		await submit(page, form);
+		expect(queue()).toHaveLength(1);
+
+		// Another run holds the lock: this one leaves the job alone.
+		php(`update_site_option( 'wpmus_sync_lock', time() ); return true;`);
+		runCron();
+		expect(queue()[0].processed).toBe(0);
+		expect(memberships(person.id)).toEqual({});
+		expect(cronScheduled(), 'a retry is left for when the lock goes stale').toBe(true);
+
+		// That run died ten minutes ago: the next one takes the lock over and finishes the job.
+		php(`update_site_option( 'wpmus_sync_lock', time() - 601 ); return true;`);
+		drainQueue();
+		expect(memberships(person.id)[site.id]).toBe('subscriber');
+		expect(php(`return get_site_option( 'wpmus_sync_lock', 'released' );`)).toBe('released');
+	});
+
 	test('the actions are refused without the form nonce', async ({ page }) => {
 		const site = createSite('forged');
 		const person = createUser('forged-person');
