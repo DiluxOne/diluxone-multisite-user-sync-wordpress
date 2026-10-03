@@ -116,7 +116,8 @@ apply_filters( 'wpmus_sync_time_limit', int $seconds ): int
 ### `wpmus_sync_group_writes`
 
 Whether a background run (the queue's WP-Cron event) commits its database
-writes in transactions of about a second instead of one by one. Default
+writes in transactions of about a second (longer when code hooked to
+`add_user_to_blog` is slow) instead of one by one. Default
 `true`, about three times faster on a big network. A sync that runs inside
 another request (a new user's, a new site's, a small manual one) always
 writes one by one, and so does every run on a database that logs statements

@@ -28,6 +28,9 @@ final class WriteGroupsIntegrationTest extends IntegrationTestCase {
 	/** When true, the next COMMIT is rolled back and reported failed. */
 	private bool $fail_next_commit = false;
 
+	/** When true, the group is rolled back just before the next COMMIT, which then succeeds. */
+	private bool $deadlock_before_commit = false;
+
 	private function engine(): SyncEngine {
 		return new SyncEngine(
 			new Config( dirname( __DIR__, 2 ) . '/wpm-user-sync.php' ),
@@ -53,6 +56,15 @@ final class WriteGroupsIntegrationTest extends IntegrationTestCase {
 			return $query;
 		}
 		$this->statements[] = $query;
+		if ( 'COMMIT' === $query && $this->deadlock_before_commit ) {
+			// What a deadlock leaves: the group rolled back, and a COMMIT
+			// that goes through with nothing to commit.
+			$this->deadlock_before_commit = false;
+			remove_filter( 'query', array( $this, 'record' ) );
+			$wpdb->query( 'ROLLBACK' );
+			add_filter( 'query', array( $this, 'record' ) );
+			return $query;
+		}
 		if ( 'COMMIT' === $query && $this->fail_next_commit ) {
 			$this->fail_next_commit = false;
 			remove_filter( 'query', array( $this, 'record' ) );
@@ -79,6 +91,12 @@ final class WriteGroupsIntegrationTest extends IntegrationTestCase {
 		remove_all_filters( 'wpmus_sync_group_writes' );
 		( new JobQueue() )->clear();
 		parent::tearDown();
+	}
+
+	/** Rows of the membership in the database itself, past the cache. */
+	private function stored_rows( int $user_id, int $blog_id ): int {
+		global $wpdb;
+		return (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$wpdb->usermeta} WHERE user_id = %d AND meta_key = %s", $user_id, $wpdb->get_blog_prefix( $blog_id ) . 'capabilities' ) );
 	}
 
 	/** MariaDB, the tests network's database, can say it. */
@@ -146,6 +164,27 @@ final class WriteGroupsIntegrationTest extends IntegrationTestCase {
 
 		$this->assertSame( 1, $count(), 'The group reads what is committed now, not a snapshot: the sync sees it and does not add it twice.' );
 		$this->assertTrue( $groups->end() );
+	}
+
+	public function test_a_group_rolled_back_behind_a_successful_commit_is_caught_and_redone(): void {
+		$user_id = $this->make_user( $this->slug( 'deadlock' ) );
+		$blog_id = $this->make_site( $this->slug( 'deadlock-site' ) );
+		$engine  = $this->engine();
+		$queue   = new JobQueue();
+		$engine->sync_all_users_to_sites( array( $blog_id ) );
+
+		$this->deadlock_before_commit = true;
+		$engine->process_queue();
+
+		$this->assertSame( 0, $this->stored_rows( $user_id, $blog_id ), 'The group is gone from the database.' );
+		$this->assertNotNull( $queue->first(), 'The batch is not counted as stored.' );
+		$this->assertFalse( $this->is_member( $user_id, $blog_id ), 'The cache no longer claims the membership.' );
+
+		// The redo reads the user afresh, so the stale cache does not make it skip.
+		$engine->process_queue();
+
+		$this->assertSame( array(), $queue->all() );
+		$this->assertSame( 1, $this->stored_rows( $user_id, $blog_id ), 'Stored once.' );
 	}
 
 	public function test_a_group_the_database_did_not_commit_is_redone_by_the_next_run(): void {

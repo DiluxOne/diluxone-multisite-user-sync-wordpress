@@ -95,6 +95,14 @@ final class SyncEngine {
 	private bool $in_sync = false;
 
 	/**
+	 * The memberships the open write group added, by site: user ids.
+	 * Null while no group is open.
+	 *
+	 * @var array<int, int[]>|null
+	 */
+	private ?array $written = null;
+
+	/**
 	 * Default role per blog id, resolved once per sync run: reading it
 	 * switches to the site.
 	 *
@@ -366,20 +374,26 @@ final class SyncEngine {
 				if ( null === $job ) {
 					break;
 				}
-				$kept = false;
-				$size = $this->batch_size();
-				$this->groups->begin();
+				$kept          = false;
+				$size          = $this->batch_size();
+				$this->written = $this->groups->begin() ? array() : null;
 				try {
 					$this->run_batch( $job, $size );
 				} finally {
-					$kept = $this->groups->end();
+					$kept = $this->groups->end() && $this->written_is_stored();
 				}
 				if ( ! $kept ) {
-					// A group of the batch did not commit: the stored
-					// cursor stays before it, and a later run redoes it.
-					$lost = true;
+					// Not all the batch's memberships are stored: the
+					// stored cursor stays before them, their users are
+					// read afresh, and a later run redoes the batch.
+					if ( ! empty( $this->written ) ) {
+						$this->users->forget_cached( array_merge( ...array_values( $this->written ) ) );
+					}
+					$this->written = null;
+					$lost          = true;
 					break;
 				}
+				$this->written = null;
 				if ( $job->done ) {
 					$this->queue->remove( $job->id );
 				} else {
@@ -602,9 +616,26 @@ final class SyncEngine {
 		$previously_in_sync = $this->in_sync;
 		$this->in_sync      = true;
 		try {
-			$this->users->add_to_blog( $blog_id, $user_id, $role );
+			$added = $this->users->add_to_blog( $blog_id, $user_id, $role );
 		} finally {
 			$this->in_sync = $previously_in_sync;
 		}
+		if ( null !== $this->written && true === $added ) {
+			$this->written[ $blog_id ][] = $user_id;
+		}
+	}
+
+	/**
+	 * True when every membership the write group added is in the
+	 * database: a COMMIT that succeeded does not prove it (see
+	 * {@see WriteGroups}). Always true when no group was open.
+	 */
+	private function written_is_stored(): bool {
+		foreach ( $this->written ?? array() as $blog_id => $user_ids ) {
+			if ( $this->users->stored_member_count( $blog_id, $user_ids ) < count( array_unique( $user_ids ) ) ) {
+				return false;
+			}
+		}
+		return true;
 	}
 }

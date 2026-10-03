@@ -56,7 +56,8 @@ final class SyncEngineTest extends TestCase {
 		$this->users->shouldReceive( 'super_admin_ids' )->andReturn( array() )->byDefault();
 		$this->queue  = Mockery::mock( JobQueue::class );
 		$this->groups = Mockery::mock( WriteGroups::class );
-		$this->groups->shouldReceive( 'begin', 'checkpoint' )->byDefault();
+		$this->groups->shouldReceive( 'begin' )->andReturn( false )->byDefault();
+		$this->groups->shouldReceive( 'checkpoint' )->byDefault();
 		$this->groups->shouldReceive( 'end' )->andReturn( true )->byDefault();
 	}
 
@@ -490,7 +491,7 @@ final class SyncEngineTest extends TestCase {
 			$this->groups->shouldReceive( $step )->andReturnUsing(
 				static function () use ( &$order, $step ): ?bool {
 					$order[] = $step;
-					return 'end' === $step ? true : null;
+					return 'checkpoint' === $step ? null : 'end' === $step;
 				}
 			);
 		}
@@ -515,6 +516,44 @@ final class SyncEngineTest extends TestCase {
 				}
 			)
 		);
+
+		$this->engine()->process_queue();
+	}
+
+	public function test_a_grouped_batch_is_stored_once_the_database_holds_every_membership_it_wrote(): void {
+		$job = $this->one_queued_job();
+		$this->queue->shouldReceive( 'first' )->andReturn( $job, null );
+		$this->users->shouldReceive( 'add_to_blog' )->twice()->andReturn( true );
+		$this->groups->shouldReceive( 'begin' )->andReturn( true );
+		$this->users->shouldReceive( 'stored_member_count' )->once()->with( 2, array( 5 ) )->andReturn( 1 );
+		$this->users->shouldReceive( 'stored_member_count' )->once()->with( 3, array( 5 ) )->andReturn( 1 );
+		$this->users->shouldNotReceive( 'forget_cached' );
+		$this->queue->shouldReceive( 'remove' )->once();
+
+		$this->engine()->process_queue();
+	}
+
+	public function test_a_grouped_batch_the_database_lost_is_read_afresh_and_left_for_the_next_run(): void {
+		$job = $this->one_queued_job();
+		$this->queue->shouldReceive( 'first' )->andReturn( $job );
+		$this->users->shouldReceive( 'add_to_blog' )->twice()->andReturn( true );
+		$this->groups->shouldReceive( 'begin' )->andReturn( true );
+		// The COMMIT went through, but a deadlock had rolled the group back.
+		$this->users->shouldReceive( 'stored_member_count' )->andReturn( 0 );
+		$this->users->shouldReceive( 'forget_cached' )->once()->with( array( 5, 5 ) );
+		$this->queue->shouldNotReceive( 'update' );
+		$this->queue->shouldNotReceive( 'remove' );
+		$this->queue->shouldReceive( 'schedule_at' )->once();
+
+		$this->engine()->process_queue();
+	}
+
+	public function test_an_ungrouped_batch_is_not_checked(): void {
+		$job = $this->one_queued_job();
+		$this->queue->shouldReceive( 'first' )->andReturn( $job, null );
+		$this->users->shouldReceive( 'add_to_blog' )->twice()->andReturn( true );
+		$this->users->shouldNotReceive( 'stored_member_count' );
+		$this->queue->shouldReceive( 'remove' )->once();
 
 		$this->engine()->process_queue();
 	}

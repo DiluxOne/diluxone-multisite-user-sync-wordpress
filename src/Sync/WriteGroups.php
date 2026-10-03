@@ -8,6 +8,12 @@
  * time; that wait, not the work, is most of what a big sync costs. In a
  * transaction the writes of a whole second are committed together.
  *
+ * A COMMIT that succeeds does not prove a group survived: a deadlock
+ * rolls a transaction back and the statements after it commit on their
+ * own, and a connection WordPress reopens has lost its transaction. So
+ * the engine checks, in the database itself, that every membership a
+ * group wrote is there before it stores the batch's progress.
+ *
  * Only the queue's WP-Cron run groups its writes: that request is the
  * plugin's own, so no transaction of anyone else's can be open in it (a
  * sync that runs inside another request, a new user's or a new site's,
@@ -49,12 +55,13 @@ class WriteGroups {
 	private float $since = 0.0;
 
 	/**
-	 * Opens a group, unless grouping is filtered off.
+	 * Opens a group, unless grouping is filtered off or the database does
+	 * not allow it. True when a group is open.
 	 */
-	public function begin(): void {
+	public function begin(): bool {
 		$this->lost = false;
 		if ( $this->open ) {
-			return;
+			return true;
 		}
 		/**
 		 * Filters whether a background run groups its writes into
@@ -65,10 +72,11 @@ class WriteGroups {
 		 * @param bool $group Default true.
 		 */
 		if ( ! apply_filters( 'wpmus_sync_group_writes', true ) || ! $this->database_allows_it() ) {
-			return;
+			return false;
 		}
 		$this->open  = $this->start();
 		$this->since = microtime( true );
+		return $this->open;
 	}
 
 	/**

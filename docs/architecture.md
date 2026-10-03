@@ -67,10 +67,14 @@ no Composer dependencies at runtime.
    that request is the plugin's own and nobody else's transaction can be
    open in it. Each group reads at READ COMMITTED, so it never misses a
    membership another request just added; a database logging statements for
-   replication, which refuses that, writes one by one. A run that dies drops
-   at most its last group, and a group that does not commit ends the run
-   without storing the batch's progress and retries a minute later: either
-   way those memberships are added again.
+   replication, which refuses that, writes one by one. A COMMIT that goes
+   through does not prove a group survived (a deadlock or a reopened
+   connection rolls it back unseen), so before storing a batch's progress the
+   run counts, in the database itself, the memberships the batch wrote. When
+   any is missing, or a COMMIT is refused, the run stores nothing, drops
+   those users from the object cache and retries a minute later; a run that
+   dies drops at most its last group. Either way those memberships are added
+   again, never skipped.
    Users are read a page of ids at a time; sites are walked in id order, so a
    run that dies loses at most one batch, which the next redoes harmlessly.
    Every change to the queue rereads it from the database first, past the
