@@ -40,7 +40,7 @@ use WPMUS\Repositories\SiteRepository;
 use WPMUS\Repositories\UserRepository;
 
 if ( ! defined( 'ABSPATH' ) ) {
-	exit;
+	exit; // @codeCoverageIgnore
 }
 
 /**

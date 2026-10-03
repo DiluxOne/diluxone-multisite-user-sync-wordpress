@@ -24,6 +24,7 @@ alongside it. Until then, the Make targets below are the gates.
 | Claude review | shared `claude-review` workflow | [`architecture.md`](architecture.md), [`AGENTS.md`](../AGENTS.md) and the WordPress review profile; rates risk and complexity. | after fast | `make review-local` |
 | Integration tests | PHPUnit on the wp-env tests network | Behaviour against real WordPress Multisite and MySQL: hooks, options, memberships, cron, uninstall. | slow | `make test-integration` |
 | End-to-end tests | Playwright on the wp-env dev network | Every screen, every trigger and action as a person uses them, permissions, the queue through WP-Cron, uninstall, layout invariants; plus the single-site check. | slow | `make test-e2e` |
+| Coverage | Xdebug on the wp-env network, `tests/coverage/` | Code no test runs: each layer's share of the lines that ship, and all together. | local | `make coverage` |
 | Visual baselines | Playwright `toHaveScreenshot` | A screen that changed look without a rule breaking. Local only: a baseline is one machine's rendering. | — | `make test-visual`, `make test-visual-update` |
 
 A change carries its tests **at every layer it touches**, in the same pull
@@ -95,6 +96,32 @@ The single-site check needs the Plugin Check environment and runs locally
 (`make test-e2e`); its logic is covered in CI by `RequirementsCheckerTest`
 and `PluginTest`.
 
+## Coverage
+
+`make coverage` measures which lines of what ships (`src/`, the main file,
+`uninstall.php`, `legacy-deprecated.php`) each layer runs, and all layers
+together. It restarts the wp-env network with Xdebug in coverage mode, runs
+the unit, integration and end-to-end suites (the network suite, then the
+single-site check on the Plugin Check environment), and prints a table per
+file with the lines no layer runs. The end-to-end layer is recorded per
+request by [`tests/coverage/mu-plugins/wpmus-coverage.php`](../tests/coverage/mu-plugins/wpmus-coverage.php),
+a must-use plugin that does nothing unless Xdebug is in coverage mode and
+`build/coverage/e2e/` exists. [`tests/coverage/report.php`](../tests/coverage/report.php)
+counts a line the way PHPUnit does: code to the static analysis and runnable
+to PHP.
+
+```bash
+make coverage          # all three layers, then the table; fails below the floors
+make coverage-report   # the table again from what build/coverage/ holds
+make env               # back to the network without Xdebug
+```
+
+The floors are `COVERAGE_MIN` (all layers together, 100) and
+`COVERAGE_LAYER_MIN` (each layer). New code comes with the tests that run it
+at every layer it touches; a floor is never lowered to let a change in. The
+only lines excluded are the `exit` of the direct-access guards
+(`// @codeCoverageIgnore`), which no request through WordPress can reach.
+
 ## PHPCS, PHPStan, Psalm
 
 [`phpcs.xml.dist`](../phpcs.xml.dist), [`phpstan.neon`](../phpstan.neon) with
@@ -128,5 +155,5 @@ the display name no longer carries it.
 
 ```bash
 make check     # lint + stan + psalm + unit tests
-make pre-pr    # check, PHP 8.0 units, i18n, docs, integration, e2e, Plugin Check, local review
+make pre-pr    # check, PHP 8.0 units, i18n, docs, coverage (the three suites and the single-site check, with their floors), Plugin Check, local review
 ```
