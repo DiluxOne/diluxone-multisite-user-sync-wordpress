@@ -507,7 +507,14 @@ final class SyncEngineTest extends TestCase {
 		$this->groups->shouldReceive( 'end' )->once()->andReturn( false );
 		$this->queue->shouldNotReceive( 'update' );
 		$this->queue->shouldNotReceive( 'remove' );
-		$this->queue->shouldReceive( 'schedule' )->once();
+		$this->queue->shouldNotReceive( 'schedule' );
+		$this->queue->shouldReceive( 'schedule_at' )->once()->with(
+			Mockery::on(
+				static function ( int $at ): bool {
+					return abs( $at - ( time() + SyncEngine::LOST_GROUP_RETRY ) ) <= 2;
+				}
+			)
+		);
 
 		$this->engine()->process_queue();
 	}

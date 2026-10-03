@@ -70,6 +70,12 @@ final class SyncEngine {
 	public const TIME_LIMIT = 20;
 
 	/**
+	 * Seconds before a run retries a batch whose writes the database did
+	 * not commit.
+	 */
+	public const LOST_GROUP_RETRY = 60;
+
+	/**
 	 * Most users fetched per query, however large the batch.
 	 */
 	private const USER_PAGE_MAX = 500;
@@ -336,7 +342,7 @@ final class SyncEngine {
 	 * one batch, which the next run redoes harmlessly. A batch's writes
 	 * are committed in groups of about a second ({@see WriteGroups}); a
 	 * batch whose group did not commit ends the run without storing its
-	 * progress, and the next run redoes it.
+	 * progress, and a run a minute later redoes it.
 	 */
 	public function process_queue(): void {
 		if ( ! $this->queue->acquire_lock() ) {
@@ -353,6 +359,7 @@ final class SyncEngine {
 		 * @param int $seconds Default {@see SyncEngine::TIME_LIMIT}.
 		 */
 		$deadline = microtime( true ) + (float) apply_filters( 'wpmus_sync_time_limit', self::TIME_LIMIT );
+		$lost     = false;
 		try {
 			do {
 				$job = $this->queue->first();
@@ -369,7 +376,8 @@ final class SyncEngine {
 				}
 				if ( ! $kept ) {
 					// A group of the batch did not commit: the stored
-					// cursor stays before it, and the next run redoes it.
+					// cursor stays before it, and a later run redoes it.
+					$lost = true;
 					break;
 				}
 				if ( $job->done ) {
@@ -381,7 +389,10 @@ final class SyncEngine {
 		} finally {
 			$this->queue->release_lock();
 		}
-		if ( null !== $this->queue->first() ) {
+		if ( $lost ) {
+			// Not at once: a database refusing commits gets a minute.
+			$this->queue->schedule_at( time() + self::LOST_GROUP_RETRY );
+		} elseif ( null !== $this->queue->first() ) {
 			$this->queue->schedule();
 		}
 	}

@@ -64,7 +64,7 @@ class WriteGroups {
 		 *
 		 * @param bool $group Default true.
 		 */
-		if ( ! apply_filters( 'wpmus_sync_group_writes', true ) ) {
+		if ( ! apply_filters( 'wpmus_sync_group_writes', true ) || ! $this->database_allows_it() ) {
 			return;
 		}
 		$this->open  = $this->start();
@@ -103,6 +103,20 @@ class WriteGroups {
 			}
 		}
 		return ! $this->lost;
+	}
+
+	/**
+	 * False when the database logs statements for replication
+	 * (`binlog_format` STATEMENT): there, a transaction at READ COMMITTED
+	 * refuses InnoDB writes, so grouping would lose them. A database that
+	 * does not answer counts as one that does not allow it.
+	 */
+	private function database_allows_it(): bool {
+		global $wpdb;
+		$suppressed = $wpdb->suppress_errors( true );
+		$format     = $wpdb->get_var( 'SELECT @@SESSION.binlog_format' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$wpdb->suppress_errors( $suppressed );
+		return is_string( $format ) && '' !== $format && 'STATEMENT' !== strtoupper( $format );
 	}
 
 	/**

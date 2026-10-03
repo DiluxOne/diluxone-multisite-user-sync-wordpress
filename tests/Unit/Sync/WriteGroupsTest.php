@@ -32,6 +32,20 @@ final class WriteGroupsTest extends TestCase {
 			public array $statements = array();
 			/** @var string[] Statements to answer with false, once each. */
 			public array $refuse = array();
+			/** @var mixed What `SELECT @@SESSION.binlog_format` answers. */
+			public $binlog = 'ROW';
+			private bool $suppress = false;
+
+			/** @return mixed */
+			public function get_var( string $statement ) {
+				return $this->binlog;
+			}
+
+			public function suppress_errors( bool $suppress ): bool {
+				$was            = $this->suppress;
+				$this->suppress = $suppress;
+				return $was;
+			}
 
 			/** @return int|false */
 			public function query( string $statement ) {
@@ -147,6 +161,36 @@ final class WriteGroupsTest extends TestCase {
 
 		$this->assertTrue( $groups->end() );
 		$this->assertSame( array( self::SET ), $this->db->statements, 'No transaction at the default level, which reads a snapshot.' );
+	}
+
+	public function test_a_database_logging_statements_writes_one_by_one(): void {
+		$this->db->binlog = 'STATEMENT';
+		$groups           = new WriteGroups();
+
+		$groups->begin();
+
+		$this->assertTrue( $groups->end() );
+		$this->assertSame( array(), $this->db->statements, 'At READ COMMITTED it would refuse the writes.' );
+	}
+
+	public function test_a_database_that_does_not_say_how_it_logs_writes_one_by_one(): void {
+		$this->db->binlog = null;
+		$groups           = new WriteGroups();
+
+		$groups->begin();
+		$groups->end();
+
+		$this->assertSame( array(), $this->db->statements );
+	}
+
+	public function test_mixed_logging_groups(): void {
+		$this->db->binlog = 'MIXED';
+		$groups           = new WriteGroups();
+
+		$groups->begin();
+		$groups->end();
+
+		$this->assertSame( array( self::SET, 'START TRANSACTION', 'COMMIT' ), $this->db->statements );
 	}
 
 	public function test_the_filter_turns_grouping_off(): void {

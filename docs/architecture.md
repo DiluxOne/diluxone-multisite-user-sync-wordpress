@@ -65,9 +65,12 @@ no Composer dependencies at runtime.
    A cron run commits its writes in transactions of about a second
    (`WriteGroups`, off with `wpmus_sync_group_writes`); only there, because
    that request is the plugin's own and nobody else's transaction can be
-   open in it. A run that dies drops at most its last group, and a group that
-   does not commit ends the run without storing the batch's progress: either
-   way the next run adds those memberships again.
+   open in it. Each group reads at READ COMMITTED, so it never misses a
+   membership another request just added; a database logging statements for
+   replication, which refuses that, writes one by one. A run that dies drops
+   at most its last group, and a group that does not commit ends the run
+   without storing the batch's progress and retries a minute later: either
+   way those memberships are added again.
    Users are read a page of ids at a time; sites are walked in id order, so a
    run that dies loses at most one batch, which the next redoes harmlessly.
    Every change to the queue rereads it from the database first, past the
