@@ -125,8 +125,8 @@ final class SyncEngine {
 	 * @param UserRepository   $users  Wraps `get_users()` / `add_user_to_blog()`
 	 *                                 / `is_user_member_of_blog()`.
 	 * @param JobQueue|null    $queue  Background jobs; a fresh one when null.
-	 * @param WriteGroups|null $groups Transactions around a batch's writes;
-	 *                                 a fresh one when null.
+	 * @param WriteGroups|null $groups Transactions around a background
+	 *                                 batch's writes; a fresh one when null.
 	 */
 	public function __construct( Config $config, SiteRepository $sites, UserRepository $users, ?JobQueue $queue = null, ?WriteGroups $groups = null ) {
 		$this->config = $config;
@@ -333,7 +333,10 @@ final class SyncEngine {
 	 * queued jobs, one batch at a time, until the queue is empty or the
 	 * run's time is up, and schedules another run while jobs remain.
 	 * Each batch stores its progress, so a run that dies loses at most
-	 * one batch, which the next run redoes harmlessly.
+	 * one batch, which the next run redoes harmlessly. A batch's writes
+	 * are committed in groups of about a second ({@see WriteGroups}); a
+	 * batch whose group did not commit ends the run without storing its
+	 * progress, and the next run redoes it.
 	 */
 	public function process_queue(): void {
 		if ( ! $this->queue->acquire_lock() ) {
@@ -356,7 +359,18 @@ final class SyncEngine {
 				if ( null === $job ) {
 					break;
 				}
-				$this->run_batch( $job, $this->batch_size() );
+				$kept = false;
+				$this->groups->begin();
+				try {
+					$this->run_batch( $job, $this->batch_size() );
+				} finally {
+					$kept = $this->groups->end();
+				}
+				if ( ! $kept ) {
+					// A group of the batch did not commit: the stored
+					// cursor stays before it, and the next run redoes it.
+					break;
+				}
 				if ( $job->done ) {
 					$this->queue->remove( $job->id );
 				} else {
@@ -408,9 +422,10 @@ final class SyncEngine {
 	 * Processes up to `$budget` user-site pairs of a job, moving its
 	 * cursor, and sets `$job->done` once nothing is left. Users are read
 	 * a page at a time (ids only); sites are walked in id order so the
-	 * cursor survives sites created in the meantime. Its writes are
-	 * committed in groups of about a second ({@see WriteGroups}), and
-	 * the last group before the batch returns.
+	 * cursor survives sites created in the meantime. In a background
+	 * run its writes are committed in groups of about a second
+	 * ({@see WriteGroups}); elsewhere no group is open and each write
+	 * commits on its own.
 	 *
 	 * @param SyncJob    $job    The job; its cursor and counters move.
 	 * @param int        $budget Most pairs to process.
@@ -418,23 +433,6 @@ final class SyncEngine {
 	 *                           resolved them in this run.
 	 */
 	private function run_batch( SyncJob $job, int $budget, ?array $sites = null ): void {
-		$this->groups->begin();
-		try {
-			$this->walk_batch( $job, $budget, $sites );
-		} finally {
-			$this->groups->end();
-		}
-	}
-
-	/**
-	 * The pairs of one batch, for {@see SyncEngine::run_batch()}, which
-	 * holds the write group around them.
-	 *
-	 * @param SyncJob    $job    The job; its cursor and counters move.
-	 * @param int        $budget Most pairs to process.
-	 * @param int[]|null $sites  Target sites when already resolved.
-	 */
-	private function walk_batch( SyncJob $job, int $budget, ?array $sites ): void {
 		if ( null === $sites ) {
 			$this->begin_run();
 			$sites = $this->target_blog_ids( $job->blog_ids, $job->context );

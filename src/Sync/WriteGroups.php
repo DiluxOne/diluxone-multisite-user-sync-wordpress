@@ -1,18 +1,23 @@
 <?php
 /**
- * Groups a sync's database writes into transactions of about a second.
+ * Groups a background run's database writes into transactions of about
+ * a second.
  *
  * Core's `add_user_to_blog()` makes several writes per membership, and
  * the database commits each one on its own, waiting for the disk every
  * time; that wait, not the work, is most of what a big sync costs. In a
  * transaction the writes of a whole second are committed together.
  *
- * A group is short, so other requests are never kept waiting long. When
- * a run dies inside one, the database drops that group's memberships and
- * the next run adds them again (the cursor is stored after the batch, so
- * it never moves past them): nothing is lost or doubled, but whatever
- * other plugins did on `add_user_to_blog` for that group happens twice.
- * The `wpmus_sync_group_writes` filter turns grouping off for a network
+ * Only the queue's WP-Cron run groups its writes: that request is the
+ * plugin's own, so no transaction of anyone else's can be open in it (a
+ * sync that runs inside another request, a new user's or a new site's,
+ * writes one by one as before). A group is short, so other requests are
+ * never kept waiting long. When a run dies inside one, the database
+ * drops that group's memberships and the next run adds them again (the
+ * cursor is stored after the batch, so it never moves past them):
+ * nothing is lost or doubled, but whatever other plugins did on
+ * `add_user_to_blog` for that group happens twice. The
+ * `wpmus_sync_group_writes` filter turns grouping off for a network
  * where that matters.
  *
  * @package WPMUS\Sync
@@ -39,74 +44,73 @@ class WriteGroups {
 
 	private bool $open = false;
 
+	private bool $lost = false;
+
 	private float $since = 0.0;
 
 	/**
-	 * Opens a group, unless grouping is filtered off or the request is
-	 * already inside a transaction of someone else's: starting one would
-	 * commit theirs.
+	 * Opens a group, unless grouping is filtered off.
 	 */
 	public function begin(): void {
+		$this->lost = false;
 		if ( $this->open ) {
 			return;
 		}
 		/**
-		 * Filters whether a sync groups its writes into transactions of
-		 * about a second. Off, every write commits on its own, as core
-		 * does by itself: slower, and no group to redo if a run dies.
+		 * Filters whether a background run groups its writes into
+		 * transactions of about a second. Off, every write commits on
+		 * its own, as core does by itself: slower, and no group to redo
+		 * if a run dies.
 		 *
 		 * @param bool $group Default true.
 		 */
-		if ( ! apply_filters( 'wpmus_sync_group_writes', true ) || $this->in_transaction() ) {
+		if ( ! apply_filters( 'wpmus_sync_group_writes', true ) ) {
 			return;
 		}
-		$this->query( 'START TRANSACTION' );
-		$this->open  = true;
+		$this->open  = $this->query( 'START TRANSACTION' );
 		$this->since = microtime( true );
 	}
 
 	/**
 	 * Commits the open group once it holds a second of writes, and opens
-	 * the next.
+	 * the next. A commit that fails ends grouping for the batch: the
+	 * writes that follow commit one by one, and {@see WriteGroups::end()}
+	 * reports the group lost.
 	 */
 	public function checkpoint(): void {
 		if ( ! $this->open || microtime( true ) - $this->since < self::SECONDS ) {
 			return;
 		}
-		$this->query( 'COMMIT' );
-		$this->query( 'START TRANSACTION' );
+		if ( ! $this->query( 'COMMIT' ) ) {
+			$this->lost = true;
+			$this->open = false;
+			return;
+		}
+		$this->open  = $this->query( 'START TRANSACTION' );
 		$this->since = microtime( true );
 	}
 
 	/**
-	 * Commits the open group, if any.
+	 * Commits the open group, if any. False when a group of this batch
+	 * did not commit: its memberships are not stored, and the caller
+	 * must not move the job's cursor past them.
 	 */
-	public function end(): void {
-		if ( ! $this->open ) {
-			return;
+	public function end(): bool {
+		if ( $this->open ) {
+			$this->open = false;
+			if ( ! $this->query( 'COMMIT' ) ) {
+				$this->lost = true;
+			}
 		}
-		$this->query( 'COMMIT' );
-		$this->open = false;
+		return ! $this->lost;
 	}
 
 	/**
-	 * True when the connection is inside a transaction already. A
-	 * database that cannot tell (no `@@in_transaction`, before MySQL 5.7
-	 * or MariaDB 10.3) answers null, read as no.
+	 * Sends one of the fixed transaction statements. True when the
+	 * database took it.
 	 */
-	private function in_transaction(): bool {
+	private function query( string $statement ): bool {
 		global $wpdb;
-		$suppressed = $wpdb->suppress_errors( true );
-		$inside     = $wpdb->get_var( 'SELECT @@in_transaction' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
-		$wpdb->suppress_errors( $suppressed );
-		return '1' === (string) $inside;
-	}
-
-	/**
-	 * Sends one of the fixed transaction statements.
-	 */
-	private function query( string $statement ): void {
-		global $wpdb;
-		$wpdb->query( $statement ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery,WordPress.DB.PreparedSQL.NotPrepared -- a fixed statement, no input.
+		return false !== $wpdb->query( $statement ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery,WordPress.DB.PreparedSQL.NotPrepared -- a fixed statement, no input.
 	}
 }
