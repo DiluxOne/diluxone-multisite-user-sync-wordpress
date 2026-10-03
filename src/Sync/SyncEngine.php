@@ -380,20 +380,22 @@ final class SyncEngine {
 				try {
 					$this->run_batch( $job, $size );
 				} finally {
-					$kept = $this->groups->end() && $this->written_is_stored();
+					$kept    = $this->groups->end() && $this->written_is_stored();
+					$written = $this->written;
+					// Whatever happened, nothing later in the request is
+					// part of this group.
+					$this->written = null;
 				}
 				if ( ! $kept ) {
 					// Not all the batch's memberships are stored: the
 					// stored cursor stays before them, their users are
 					// read afresh, and a later run redoes the batch.
-					if ( ! empty( $this->written ) ) {
-						$this->users->forget_cached( array_merge( ...array_values( $this->written ) ) );
+					if ( ! empty( $written ) ) {
+						$this->users->forget_cached( array_merge( ...array_values( $written ) ) );
 					}
-					$this->written = null;
-					$lost          = true;
+					$lost = true;
 					break;
 				}
-				$this->written = null;
 				if ( $job->done ) {
 					$this->queue->remove( $job->id );
 				} else {
