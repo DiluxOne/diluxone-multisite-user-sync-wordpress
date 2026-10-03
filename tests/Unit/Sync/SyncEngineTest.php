@@ -32,6 +32,7 @@ use WPMUS\Repositories\UserRepository;
 use WPMUS\Sync\JobQueue;
 use WPMUS\Sync\SyncEngine;
 use WPMUS\Sync\SyncJob;
+use WPMUS\Sync\WriteGroups;
 
 final class SyncEngineTest extends TestCase {
 
@@ -43,6 +44,8 @@ final class SyncEngineTest extends TestCase {
 	private $users;
 	/** @var JobQueue&MockInterface */
 	private $queue;
+	/** @var WriteGroups&MockInterface */
+	private $groups;
 
 	protected function setUp(): void {
 		parent::setUp();
@@ -51,7 +54,9 @@ final class SyncEngineTest extends TestCase {
 		$this->users  = Mockery::mock( UserRepository::class );
 		$this->users->shouldReceive( 'removed_blog_ids' )->andReturn( array() )->byDefault();
 		$this->users->shouldReceive( 'super_admin_ids' )->andReturn( array() )->byDefault();
-		$this->queue = Mockery::mock( JobQueue::class );
+		$this->queue  = Mockery::mock( JobQueue::class );
+		$this->groups = Mockery::mock( WriteGroups::class );
+		$this->groups->shouldReceive( 'begin', 'checkpoint', 'end' )->byDefault();
 	}
 
 	protected function tearDown(): void {
@@ -69,7 +74,10 @@ final class SyncEngineTest extends TestCase {
 		/** @var JobQueue $queue */
 		$queue = $this->queue;
 
-		return new SyncEngine( $config, $sites, $users, $queue );
+		/** @var WriteGroups $groups */
+		$groups = $this->groups;
+
+		return new SyncEngine( $config, $sites, $users, $queue, $groups );
 	}
 
 	/**
@@ -381,6 +389,44 @@ final class SyncEngineTest extends TestCase {
 		$this->users->shouldReceive( 'add_to_blog' )->times( 5 )->andReturn( true );
 
 		$this->assertTrue( $this->engine()->sync_all_users_to_sites( array( 1, 2, 3, 4, 5 ) ) );
+	}
+
+	public function test_a_batch_opens_a_write_group_checkpoints_after_each_pair_and_ends_it(): void {
+		$this->sites->shouldReceive( 'all_blog_ids' )->andReturn( array( 2, 3 ) );
+		$this->network_users( array( 5 ) );
+		$this->users->shouldReceive( 'is_member_of' )->andReturn( false );
+		$this->sites->shouldReceive( 'default_role_for_blog' )->andReturn( 'subscriber' );
+		$order = array();
+		$this->users->shouldReceive( 'add_to_blog' )->twice()->andReturnUsing(
+			static function () use ( &$order ): bool {
+				$order[] = 'add';
+				return true;
+			}
+		);
+		foreach ( array( 'begin', 'checkpoint', 'end' ) as $step ) {
+			$this->groups->shouldReceive( $step )->andReturnUsing(
+				static function () use ( &$order, $step ): void {
+					$order[] = $step;
+				}
+			);
+		}
+
+		$this->engine()->sync_all_users_to_sites( array( 2, 3 ) );
+
+		$this->assertSame( array( 'begin', 'add', 'checkpoint', 'add', 'checkpoint', 'end' ), $order );
+	}
+
+	public function test_the_write_group_ends_even_when_a_write_fails(): void {
+		$this->sites->shouldReceive( 'all_blog_ids' )->andReturn( array( 2 ) );
+		$this->network_users( array( 5 ) );
+		$this->users->shouldReceive( 'is_member_of' )->andReturn( false );
+		$this->sites->shouldReceive( 'default_role_for_blog' )->andReturn( 'subscriber' );
+		$this->users->shouldReceive( 'add_to_blog' )->andThrow( new \RuntimeException( 'database gone' ) );
+		$this->groups->shouldReceive( 'begin' )->once();
+		$this->groups->shouldReceive( 'end' )->once();
+
+		$this->expectException( \RuntimeException::class );
+		$this->engine()->sync_all_users_to_sites( array( 2 ) );
 	}
 
 	public function test_a_job_over_the_inline_limit_is_queued_not_run(): void {

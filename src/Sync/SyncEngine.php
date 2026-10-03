@@ -78,6 +78,7 @@ final class SyncEngine {
 	private SiteRepository $sites;
 	private UserRepository $users;
 	private JobQueue $queue;
+	private WriteGroups $groups;
 
 	/**
 	 * Re-entrancy guard. Set to `true` while any sync method is in the
@@ -119,17 +120,20 @@ final class SyncEngine {
 	private array $synced_new_users = array();
 
 	/**
-	 * @param Config         $config Toggle accessors + plugin metadata.
-	 * @param SiteRepository $sites  Wraps `get_sites()` / `get_blog_option()`.
-	 * @param UserRepository $users  Wraps `get_users()` / `add_user_to_blog()`
-	 *                               / `is_user_member_of_blog()`.
-	 * @param JobQueue|null  $queue  Background jobs; a fresh one when null.
+	 * @param Config           $config Toggle accessors + plugin metadata.
+	 * @param SiteRepository   $sites  Wraps `get_sites()` / `get_blog_option()`.
+	 * @param UserRepository   $users  Wraps `get_users()` / `add_user_to_blog()`
+	 *                                 / `is_user_member_of_blog()`.
+	 * @param JobQueue|null    $queue  Background jobs; a fresh one when null.
+	 * @param WriteGroups|null $groups Transactions around a batch's writes;
+	 *                                 a fresh one when null.
 	 */
-	public function __construct( Config $config, SiteRepository $sites, UserRepository $users, ?JobQueue $queue = null ) {
+	public function __construct( Config $config, SiteRepository $sites, UserRepository $users, ?JobQueue $queue = null, ?WriteGroups $groups = null ) {
 		$this->config = $config;
 		$this->sites  = $sites;
 		$this->users  = $users;
 		$this->queue  = $queue ?? new JobQueue();
+		$this->groups = $groups ?? new WriteGroups();
 	}
 
 	/**
@@ -404,7 +408,9 @@ final class SyncEngine {
 	 * Processes up to `$budget` user-site pairs of a job, moving its
 	 * cursor, and sets `$job->done` once nothing is left. Users are read
 	 * a page at a time (ids only); sites are walked in id order so the
-	 * cursor survives sites created in the meantime.
+	 * cursor survives sites created in the meantime. Its writes are
+	 * committed in groups of about a second ({@see WriteGroups}), and
+	 * the last group before the batch returns.
 	 *
 	 * @param SyncJob    $job    The job; its cursor and counters move.
 	 * @param int        $budget Most pairs to process.
@@ -412,6 +418,23 @@ final class SyncEngine {
 	 *                           resolved them in this run.
 	 */
 	private function run_batch( SyncJob $job, int $budget, ?array $sites = null ): void {
+		$this->groups->begin();
+		try {
+			$this->walk_batch( $job, $budget, $sites );
+		} finally {
+			$this->groups->end();
+		}
+	}
+
+	/**
+	 * The pairs of one batch, for {@see SyncEngine::run_batch()}, which
+	 * holds the write group around them.
+	 *
+	 * @param SyncJob    $job    The job; its cursor and counters move.
+	 * @param int        $budget Most pairs to process.
+	 * @param int[]|null $sites  Target sites when already resolved.
+	 */
+	private function walk_batch( SyncJob $job, int $budget, ?array $sites ): void {
 		if ( null === $sites ) {
 			$this->begin_run();
 			$sites = $this->target_blog_ids( $job->blog_ids, $job->context );
@@ -436,6 +459,7 @@ final class SyncEngine {
 						return;
 					}
 					$this->add_if_missing( $user_id, $blog_id, $job->force, $job->context );
+					$this->groups->checkpoint();
 					$job->last_blog_id = $blog_id;
 					++$job->processed;
 					--$budget;

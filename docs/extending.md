@@ -113,6 +113,20 @@ means one batch per run.
 apply_filters( 'wpmus_sync_time_limit', int $seconds ): int
 ```
 
+### `wpmus_sync_group_writes`
+
+Whether a sync commits its database writes in transactions of about a second
+instead of one by one. Default `true`, about three times faster on a big
+network. Grouping is skipped when the request is already inside a
+transaction. When a run dies inside a group, the database drops that
+group's memberships and the next run adds them again: nothing is lost or
+doubled, but whatever your code does on `add_user_to_blog` for that group
+runs twice. Return `false` if that matters more than the speed.
+
+```php
+apply_filters( 'wpmus_sync_group_writes', bool $group ): bool
+```
+
 ## Actions
 
 ### `wpmus_network_home_tabs` / `wpmus_network_home_contents`

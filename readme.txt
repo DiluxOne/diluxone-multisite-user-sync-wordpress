@@ -129,8 +129,8 @@ Unreleased.
 * Super admins are no longer added as members of every site, and archived, spam and deleted sites, and the sites of other networks on the same install, are left alone.
 * The new-site trigger now listens on `wp_initialize_site` instead of the deprecated `wpmu_new_blog`, and the new-user trigger also covers accounts created with `wp_insert_user()` alone (some registration plugins), once per account.
 * Turning a trigger on or off takes effect immediately instead of from the next page load.
-* Big networks: syncs no longer load every user into memory, and a large one (a new site or a manual sync on a big network, a new user on a network with many sites) runs in the background through WP-Cron in batches, with its progress on the Network Sync Actions screen. Small syncs still finish at once.
-* New filters for developers: `wpmus_excluded_site_ids`, `wpmus_should_sync_user`, `wpmus_replicate_role`, `wpmus_sync_inline_limit`, `wpmus_sync_batch_size` and `wpmus_sync_time_limit`.
+* Big networks: syncs no longer load every user into memory, and a large one (a new site or a manual sync on a big network, a new user on a network with many sites) runs in the background through WP-Cron in batches, with its progress on the Network Sync Actions screen, committing its writes together about once a second instead of one at a time. Small syncs still finish at once.
+* New filters for developers: `wpmus_excluded_site_ids`, `wpmus_should_sync_user`, `wpmus_replicate_role`, `wpmus_sync_inline_limit`, `wpmus_sync_batch_size`, `wpmus_sync_time_limit` and `wpmus_sync_group_writes`.
 * On a site that is not a network, the plugin now only explains that it needs WordPress Multisite and deactivates itself; nothing else of it runs in the meantime.
 * Uninstalling now also removes the background sync queue, its scheduled event and the record of removals.
 * The plugin's stylesheet loads only on its own screens instead of on every admin screen.

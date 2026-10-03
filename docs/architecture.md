@@ -32,6 +32,7 @@ one on or off takes effect at once. The three toggles are the only settings.
 | `src/RequirementsChecker.php` | On `admin_init`: not a network, or WordPress older than *Requires at least* → deactivate and explain (`wp_die`). |
 | `src/Config.php` | The three toggles (`wpmus_newSiteSync`, `wpmus_newUserSync`, `wpmus_setUserRoleSync`, stored `'yes'` or `''`) and plugin metadata. |
 | `src/Sync/SyncEngine.php` | Every membership write. Triggers and actions become a `SyncJob`; small ones run at once, big ones are queued. |
+| `src/Sync/WriteGroups.php` | Commits a batch's writes in transactions of about a second. |
 | `src/Sync/SyncJob.php`, `src/Sync/JobQueue.php` | A job's scope, cursor and progress; the queue in the network option `wpmus_sync_jobs`, its lock `wpmus_sync_lock`, and its cron event on the main site. |
 | `src/Repositories/SiteRepository.php` | The live sites of this network (not archived, spam or deleted), a site's default role (subscriber when the role does not exist there), whether a role exists on a site. |
 | `src/Repositories/UserRepository.php` | Network users a page of ids at a time, super admins, memberships, the removal record (user meta `wpmus_removed_from_blogs`). |
@@ -61,6 +62,10 @@ no Composer dependencies at runtime.
    run that finds the lock taken schedules a retry for when that lock goes
    stale (ten minutes), so a run that died never leaves the queue stuck; a
    run that ends first brings the next one forward.
+   A batch commits its writes in transactions of about a second
+   (`WriteGroups`; never inside someone else's transaction; off with
+   `wpmus_sync_group_writes`): a run that dies drops at most its last group,
+   whose memberships the next run adds again.
    Users are read a page of ids at a time; sites are walked in id order, so a
    run that dies loses at most one batch, which the next redoes harmlessly.
    Every change to the queue rereads it from the database first, past the
