@@ -20,6 +20,8 @@ use WPMUS\Sync\WriteGroups;
 
 final class WriteGroupsTest extends TestCase {
 
+	private const SET = 'SET TRANSACTION ISOLATION LEVEL READ COMMITTED';
+
 	/** @var object{statements: string[], refuse: string[]} */
 	private object $db;
 
@@ -68,7 +70,7 @@ final class WriteGroupsTest extends TestCase {
 		$groups->checkpoint();
 
 		$this->assertTrue( $groups->end() );
-		$this->assertSame( array( 'START TRANSACTION', 'COMMIT' ), $this->db->statements, 'Under a second, a checkpoint commits nothing.' );
+		$this->assertSame( array( self::SET, 'START TRANSACTION', 'COMMIT' ), $this->db->statements, 'Under a second, a checkpoint commits nothing.' );
 	}
 
 	public function test_a_checkpoint_commits_a_group_older_than_a_second_and_opens_the_next(): void {
@@ -79,7 +81,7 @@ final class WriteGroupsTest extends TestCase {
 		$groups->checkpoint();
 
 		$this->assertTrue( $groups->end() );
-		$this->assertSame( array( 'START TRANSACTION', 'COMMIT', 'START TRANSACTION', 'COMMIT' ), $this->db->statements );
+		$this->assertSame( array( self::SET, 'START TRANSACTION', 'COMMIT', self::SET, 'START TRANSACTION', 'COMMIT' ), $this->db->statements );
 	}
 
 	public function test_begin_twice_opens_one_group(): void {
@@ -90,7 +92,7 @@ final class WriteGroupsTest extends TestCase {
 		$groups->end();
 		$groups->end();
 
-		$this->assertSame( array( 'START TRANSACTION', 'COMMIT' ), $this->db->statements );
+		$this->assertSame( array( self::SET, 'START TRANSACTION', 'COMMIT' ), $this->db->statements );
 	}
 
 	public function test_a_commit_refused_at_a_checkpoint_is_reported_and_ends_grouping(): void {
@@ -103,7 +105,7 @@ final class WriteGroupsTest extends TestCase {
 		$groups->checkpoint();
 
 		$this->assertFalse( $groups->end(), 'The batch must not be counted as stored.' );
-		$this->assertSame( array( 'START TRANSACTION', 'COMMIT' ), $this->db->statements, 'No group opens after a lost one: the rest commits write by write.' );
+		$this->assertSame( array( self::SET, 'START TRANSACTION', 'COMMIT' ), $this->db->statements, 'No group opens after a lost one: the rest commits write by write.' );
 	}
 
 	public function test_a_commit_refused_at_the_end_is_reported(): void {
@@ -134,7 +136,17 @@ final class WriteGroupsTest extends TestCase {
 		$groups->checkpoint();
 
 		$this->assertTrue( $groups->end(), 'Each write committed on its own.' );
-		$this->assertSame( array( 'START TRANSACTION' ), $this->db->statements );
+		$this->assertSame( array( self::SET, 'START TRANSACTION' ), $this->db->statements );
+	}
+
+	public function test_a_refused_isolation_level_opens_no_group(): void {
+		$this->db->refuse = array( self::SET );
+		$groups           = new WriteGroups();
+
+		$groups->begin();
+
+		$this->assertTrue( $groups->end() );
+		$this->assertSame( array( self::SET ), $this->db->statements, 'No transaction at the default level, which reads a snapshot.' );
 	}
 
 	public function test_the_filter_turns_grouping_off(): void {

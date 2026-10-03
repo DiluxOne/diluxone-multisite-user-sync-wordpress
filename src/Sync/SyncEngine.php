@@ -360,9 +360,10 @@ final class SyncEngine {
 					break;
 				}
 				$kept = false;
+				$size = $this->batch_size();
 				$this->groups->begin();
 				try {
-					$this->run_batch( $job, $this->batch_size() );
+					$this->run_batch( $job, $size );
 				} finally {
 					$kept = $this->groups->end();
 				}

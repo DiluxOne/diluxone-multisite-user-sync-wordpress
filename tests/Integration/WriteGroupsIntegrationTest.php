@@ -18,6 +18,7 @@ use WPMUS\Repositories\SiteRepository;
 use WPMUS\Repositories\UserRepository;
 use WPMUS\Sync\JobQueue;
 use WPMUS\Sync\SyncEngine;
+use WPMUS\Sync\WriteGroups;
 
 final class WriteGroupsIntegrationTest extends IntegrationTestCase {
 
@@ -124,6 +125,27 @@ final class WriteGroupsIntegrationTest extends IntegrationTestCase {
 
 		$this->assertSame( array(), $this->statements );
 		$this->assertTrue( $this->is_member( $user_id, $blog_id ) );
+	}
+
+	public function test_inside_a_group_a_membership_another_request_just_added_is_seen(): void {
+		global $wpdb;
+		$user_id = $this->make_user( $this->slug( 'seen' ) );
+		$blog_id = $this->make_site( $this->slug( 'seen-site' ) );
+		$key     = $wpdb->get_blog_prefix( $blog_id ) . 'capabilities';
+		$count   = static function () use ( $wpdb, $user_id, $key ): int {
+			return (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$wpdb->usermeta} WHERE user_id = %d AND meta_key = %s", $user_id, $key ) );
+		};
+		$groups = new WriteGroups();
+		$groups->begin();
+		$this->assertSame( 0, $count(), 'Not a member yet, read inside the group.' );
+
+		// Another request, on its own connection, adds the membership.
+		$other = new \wpdb( DB_USER, DB_PASSWORD, DB_NAME, DB_HOST );
+		$other->insert( $wpdb->usermeta, array( 'user_id' => $user_id, 'meta_key' => $key, 'meta_value' => serialize( array( 'subscriber' => true ) ) ) ); // phpcs:ignore WordPress.DB.SlowDBQuery
+		$other->close();
+
+		$this->assertSame( 1, $count(), 'The group reads what is committed now, not a snapshot: the sync sees it and does not add it twice.' );
+		$this->assertTrue( $groups->end() );
 	}
 
 	public function test_a_group_the_database_did_not_commit_is_redone_by_the_next_run(): void {

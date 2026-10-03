@@ -67,7 +67,7 @@ class WriteGroups {
 		if ( ! apply_filters( 'wpmus_sync_group_writes', true ) ) {
 			return;
 		}
-		$this->open  = $this->query( 'START TRANSACTION' );
+		$this->open  = $this->start();
 		$this->since = microtime( true );
 	}
 
@@ -86,7 +86,7 @@ class WriteGroups {
 			$this->open = false;
 			return;
 		}
-		$this->open  = $this->query( 'START TRANSACTION' );
+		$this->open  = $this->start();
 		$this->since = microtime( true );
 	}
 
@@ -103,6 +103,16 @@ class WriteGroups {
 			}
 		}
 		return ! $this->lost;
+	}
+
+	/**
+	 * Starts a transaction that reads what is committed now, as a write
+	 * outside any transaction would: the default level reads a snapshot
+	 * taken at its first read, and for up to a second the sync would not
+	 * see a membership another request had just added, and add it twice.
+	 */
+	private function start(): bool {
+		return $this->query( 'SET TRANSACTION ISOLATION LEVEL READ COMMITTED' ) && $this->query( 'START TRANSACTION' );
 	}
 
 	/**
