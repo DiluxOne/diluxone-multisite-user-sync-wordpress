@@ -62,7 +62,8 @@ no Composer dependencies at runtime.
    run that dies loses at most one batch, which the next redoes harmlessly.
    Every change to the queue rereads it from the database first, past the
    request's cache, so a job queued or a queue emptied by another request
-   while a batch runs is never overwritten.
+   while a batch runs is not written over. Only the moment between that read
+   and the write is left open: option updates are not atomic.
 
 The role trigger does not queue: it touches only the sites the user already
 belongs to. It returns at once when the role did not change, for super
