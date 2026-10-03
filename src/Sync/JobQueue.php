@@ -131,10 +131,11 @@ class JobQueue {
 
 	/**
 	 * When the lock another run holds counts as abandoned: the moment a
-	 * run may take it over.
+	 * run may take it over. Now, when it was released in the meantime.
 	 */
 	public function lock_stale_at(): int {
-		return (int) get_site_option( self::OPTION_LOCK, 0 ) + self::LOCK_TTL;
+		$held_since = get_site_option( self::OPTION_LOCK, false );
+		return false === $held_since ? time() : (int) $held_since + self::LOCK_TTL;
 	}
 
 	/**

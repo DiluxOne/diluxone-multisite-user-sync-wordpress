@@ -11,6 +11,7 @@ import {
 	membersOf,
 	memberships,
 	queue,
+	releaseBatch,
 	setKnobs,
 	setToggles,
 	unique,
@@ -181,7 +182,7 @@ test.describe('New Site Automatic Sync', () => {
 		test.setTimeout(180_000);
 		const first = createSite('ns-busy-first');
 		const person = createUser('ns-busy');
-		setKnobs({ inline_limit: 1, batch_size: 1, time_limit: 0, pause_first_batch: 10 });
+		setKnobs({ inline_limit: 1, batch_size: 1, time_limit: 0, pause_first_batch: 90 });
 		php(`switch_to_blog( get_main_site_id() ); delete_transient( 'doing_cron' ); restore_current_blog(); return true;`);
 
 		await page.goto(networkScreen('wpmus-networksyncactions'));
@@ -203,6 +204,7 @@ test.describe('New Site Automatic Sync', () => {
 		setToggles({ newSite: true });
 		const site = await addSiteInNetworkAdmin(page, 'ns-busy');
 		expect(queue().map((job) => job.context)).toContain('new_site');
+		releaseBatch();
 
 		// The paused run stores its batch and lets go of the lock; the new
 		// site's job has to be in the queue it leaves.

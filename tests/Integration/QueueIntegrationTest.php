@@ -160,6 +160,12 @@ final class QueueIntegrationTest extends IntegrationTestCase {
 		$this->assertFalse( get_site_option( JobQueue::OPTION_LOCK ), 'The run releases the lock it took over.' );
 	}
 
+	public function test_a_lock_released_meanwhile_is_stale_now(): void {
+		$before = time();
+		$this->assertGreaterThanOrEqual( $before, ( new JobQueue() )->lock_stale_at() );
+		$this->assertLessThanOrEqual( time(), ( new JobQueue() )->lock_stale_at() );
+	}
+
 	public function test_a_small_sync_finishes_in_the_request(): void {
 		$user_id = $this->make_user( $this->slug( 'small' ) );
 		$blog_id = $this->make_site( $this->slug( 'small-site' ) );
