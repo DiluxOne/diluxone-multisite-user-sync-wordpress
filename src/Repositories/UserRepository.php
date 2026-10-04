@@ -136,6 +136,36 @@ class UserRepository {
 	}
 
 	/**
+	 * How many of `$user_ids` are members of `$blog_id` in the database
+	 * itself, past any object cache: what survived a write group.
+	 *
+	 * @param int   $blog_id  The site.
+	 * @param int[] $user_ids Users, each counted once.
+	 */
+	public function stored_member_count( int $blog_id, array $user_ids ): int {
+		global $wpdb;
+		$key   = $wpdb->get_blog_prefix( $blog_id ) . 'capabilities';
+		$count = 0;
+		foreach ( array_chunk( array_values( array_unique( array_map( 'intval', $user_ids ) ) ), 500 ) as $chunk ) {
+			$in     = implode( ',', array_fill( 0, count( $chunk ), '%d' ) );
+			$count += (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(DISTINCT user_id) FROM {$wpdb->usermeta} WHERE meta_key = %s AND user_id IN ($in)", array_merge( array( $key ), $chunk ) ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- the placeholders are built above.
+		}
+		return $count;
+	}
+
+	/**
+	 * Drops what the object cache holds of these users, so their next
+	 * read comes from the database.
+	 *
+	 * @param int[] $user_ids Users.
+	 */
+	public function forget_cached( array $user_ids ): void {
+		foreach ( array_unique( $user_ids ) as $user_id ) {
+			clean_user_cache( (int) $user_id );
+		}
+	}
+
+	/**
 	 * Forgets a removal, once the user is a member of `$blog_id` again.
 	 */
 	public function forget_removal( int $user_id, int $blog_id ): void {

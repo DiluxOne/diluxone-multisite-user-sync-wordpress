@@ -70,6 +70,12 @@ final class SyncEngine {
 	public const TIME_LIMIT = 20;
 
 	/**
+	 * Seconds before a run retries a batch whose writes the database did
+	 * not commit.
+	 */
+	public const LOST_GROUP_RETRY = 60;
+
+	/**
 	 * Most users fetched per query, however large the batch.
 	 */
 	private const USER_PAGE_MAX = 500;
@@ -78,6 +84,7 @@ final class SyncEngine {
 	private SiteRepository $sites;
 	private UserRepository $users;
 	private JobQueue $queue;
+	private WriteGroups $groups;
 
 	/**
 	 * Re-entrancy guard. Set to `true` while any sync method is in the
@@ -86,6 +93,24 @@ final class SyncEngine {
 	 * into {@see on_role_changed()}.
 	 */
 	private bool $in_sync = false;
+
+	/**
+	 * The memberships the open write group added, by site: user ids.
+	 * Null while no group is open.
+	 *
+	 * @var array<int, int[]>|null
+	 */
+	private ?array $written = null;
+
+	/**
+	 * Users whose memberships the open write group added since its last
+	 * commit: core cleans their cache before the commit, and a request
+	 * reading them meanwhile can cache what was there before, so they are
+	 * cleaned again once the group is committed.
+	 *
+	 * @var int[]
+	 */
+	private array $uncommitted = array();
 
 	/**
 	 * Default role per blog id, resolved once per sync run: reading it
@@ -119,17 +144,20 @@ final class SyncEngine {
 	private array $synced_new_users = array();
 
 	/**
-	 * @param Config         $config Toggle accessors + plugin metadata.
-	 * @param SiteRepository $sites  Wraps `get_sites()` / `get_blog_option()`.
-	 * @param UserRepository $users  Wraps `get_users()` / `add_user_to_blog()`
-	 *                               / `is_user_member_of_blog()`.
-	 * @param JobQueue|null  $queue  Background jobs; a fresh one when null.
+	 * @param Config           $config Toggle accessors + plugin metadata.
+	 * @param SiteRepository   $sites  Wraps `get_sites()` / `get_blog_option()`.
+	 * @param UserRepository   $users  Wraps `get_users()` / `add_user_to_blog()`
+	 *                                 / `is_user_member_of_blog()`.
+	 * @param JobQueue|null    $queue  Background jobs; a fresh one when null.
+	 * @param WriteGroups|null $groups Transactions around a background
+	 *                                 batch's writes; a fresh one when null.
 	 */
-	public function __construct( Config $config, SiteRepository $sites, UserRepository $users, ?JobQueue $queue = null ) {
+	public function __construct( Config $config, SiteRepository $sites, UserRepository $users, ?JobQueue $queue = null, ?WriteGroups $groups = null ) {
 		$this->config = $config;
 		$this->sites  = $sites;
 		$this->users  = $users;
 		$this->queue  = $queue ?? new JobQueue();
+		$this->groups = $groups ?? new WriteGroups();
 	}
 
 	/**
@@ -329,7 +357,10 @@ final class SyncEngine {
 	 * queued jobs, one batch at a time, until the queue is empty or the
 	 * run's time is up, and schedules another run while jobs remain.
 	 * Each batch stores its progress, so a run that dies loses at most
-	 * one batch, which the next run redoes harmlessly.
+	 * one batch, which the next run redoes harmlessly. A batch's writes
+	 * are committed in groups of about a second ({@see WriteGroups}); a
+	 * batch whose group did not commit ends the run without storing its
+	 * progress, and a run a minute later redoes it.
 	 */
 	public function process_queue(): void {
 		if ( ! $this->queue->acquire_lock() ) {
@@ -346,13 +377,37 @@ final class SyncEngine {
 		 * @param int $seconds Default {@see SyncEngine::TIME_LIMIT}.
 		 */
 		$deadline = microtime( true ) + (float) apply_filters( 'wpmus_sync_time_limit', self::TIME_LIMIT );
+		$lost     = false;
 		try {
 			do {
 				$job = $this->queue->first();
 				if ( null === $job ) {
 					break;
 				}
-				$this->run_batch( $job, $this->batch_size() );
+				$kept          = false;
+				$size          = $this->batch_size();
+				$this->written = $this->groups->begin() ? array() : null;
+				try {
+					$this->run_batch( $job, $size );
+				} finally {
+					$kept = $this->groups->end();
+					$this->forget_uncommitted();
+					$kept    = $kept && $this->written_is_stored();
+					$written = $this->written;
+					// Whatever happened, nothing later in the request is
+					// part of this group.
+					$this->written = null;
+				}
+				if ( ! $kept ) {
+					// Not all the batch's memberships are stored: the
+					// stored cursor stays before them, their users are
+					// read afresh, and a later run redoes the batch.
+					if ( ! empty( $written ) ) {
+						$this->users->forget_cached( array_merge( ...array_values( $written ) ) );
+					}
+					$lost = true;
+					break;
+				}
 				if ( $job->done ) {
 					$this->queue->remove( $job->id );
 				} else {
@@ -362,8 +417,17 @@ final class SyncEngine {
 		} finally {
 			$this->queue->release_lock();
 		}
-		if ( null !== $this->queue->first() ) {
+		if ( $lost ) {
+			// Not at once: a database refusing commits gets a minute.
+			$this->queue->schedule_at( time() + self::LOST_GROUP_RETRY );
+		} elseif ( null !== $this->queue->first() ) {
 			$this->queue->schedule();
+		} else {
+			$this->queue->unschedule();
+			if ( null !== $this->queue->first() ) {
+				// A job queued in the meantime keeps its run.
+				$this->queue->schedule();
+			}
 		}
 	}
 
@@ -404,7 +468,10 @@ final class SyncEngine {
 	 * Processes up to `$budget` user-site pairs of a job, moving its
 	 * cursor, and sets `$job->done` once nothing is left. Users are read
 	 * a page at a time (ids only); sites are walked in id order so the
-	 * cursor survives sites created in the meantime.
+	 * cursor survives sites created in the meantime. In a background
+	 * run its writes are committed in groups of about a second
+	 * ({@see WriteGroups}); elsewhere no group is open and each write
+	 * commits on its own.
 	 *
 	 * @param SyncJob    $job    The job; its cursor and counters move.
 	 * @param int        $budget Most pairs to process.
@@ -436,6 +503,9 @@ final class SyncEngine {
 						return;
 					}
 					$this->add_if_missing( $user_id, $blog_id, $job->force, $job->context );
+					if ( $this->groups->checkpoint() ) {
+						$this->forget_uncommitted();
+					}
 					$job->last_blog_id = $blog_id;
 					++$job->processed;
 					--$budget;
@@ -568,9 +638,38 @@ final class SyncEngine {
 		$previously_in_sync = $this->in_sync;
 		$this->in_sync      = true;
 		try {
-			$this->users->add_to_blog( $blog_id, $user_id, $role );
+			$added = $this->users->add_to_blog( $blog_id, $user_id, $role );
 		} finally {
 			$this->in_sync = $previously_in_sync;
 		}
+		if ( null !== $this->written && true === $added ) {
+			$this->written[ $blog_id ][] = $user_id;
+			$this->uncommitted[]         = $user_id;
+		}
+	}
+
+	/**
+	 * Cleans the cache of the users the write group added since its last
+	 * commit (see {@see SyncEngine::$uncommitted}).
+	 */
+	private function forget_uncommitted(): void {
+		if ( array() !== $this->uncommitted ) {
+			$this->users->forget_cached( $this->uncommitted );
+			$this->uncommitted = array();
+		}
+	}
+
+	/**
+	 * True when every membership the write group added is in the
+	 * database: a COMMIT that succeeded does not prove it (see
+	 * {@see WriteGroups}). Always true when no group was open.
+	 */
+	private function written_is_stored(): bool {
+		foreach ( $this->written ?? array() as $blog_id => $user_ids ) {
+			if ( $this->users->stored_member_count( $blog_id, $user_ids ) < count( array_unique( $user_ids ) ) ) {
+				return false;
+			}
+		}
+		return true;
 	}
 }

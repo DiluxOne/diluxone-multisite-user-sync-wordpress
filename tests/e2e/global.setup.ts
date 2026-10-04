@@ -3,6 +3,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { php } from './support/cli';
 import { ADMIN_PASS, ADMIN_STATE, ADMIN_USER, STATE_FILE } from './support/env';
 import { clearKnobs, sweep } from './support/network';
+import { signIn } from './support/ui';
 
 /**
  * Puts the network into the state every spec assumes, and remembers what it
@@ -48,8 +49,6 @@ setup('remember the network, turn the toggles off, sweep old runs', async () => 
 
 setup('keep a super admin session for the specs', async ({ page, context }) => {
 	await page.goto('/wp-login.php');
-	await page.locator('#user_login').fill(ADMIN_USER);
-	await page.locator('#user_pass').fill(ADMIN_PASS);
-	await Promise.all([page.waitForURL(/wp-admin/), page.locator('#wp-submit').click()]);
+	await signIn(page, ADMIN_USER, ADMIN_PASS, /wp-admin/);
 	await context.storageState({ path: ADMIN_STATE });
 });

@@ -62,6 +62,7 @@ the same pull request.
 | New-site trigger on a big network runs through the queue | `triggers` › …filled in the background… | `QueueIntegrationTest` | `SyncEngineTest` |
 | A run that finds the queue locked leaves a retry for when the lock goes stale; a stale lock is taken over | `network-admin` › a run that died holding the lock… | `QueueIntegrationTest` | `SyncEngineTest` |
 | A job queued while a batch runs is kept; a queue emptied meanwhile stays empty | `triggers` › a site added while a background sync is running… | `QueueIntegrationTest` | — |
+| A cron run commits its writes in groups of about a second (only there), reading at READ COMMITTED; a group refused, or rolled back behind a successful COMMIT (checked in the database), leaves the batch to a run a minute later with its users read afresh; one by one where the database logs statements; `wpmus_sync_group_writes` turns it off | every background-sync test (grouping is on by default) | `WriteGroupsIntegrationTest` | `WriteGroupsTest`, `SyncEngineTest`, `UserRepositoryTest` |
 | `wpmus_sync_inline_limit`, `wpmus_sync_batch_size`, `wpmus_sync_time_limit` | the queued tests above (through the e2e knobs) | `QueueIntegrationTest` | `SyncEngineTest` |
 
 ## A site's dashboard and permissions

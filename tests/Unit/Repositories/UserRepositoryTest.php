@@ -108,4 +108,42 @@ final class UserRepositoryTest extends TestCase {
 
 		( new UserRepository() )->forget_removal( 5, 3 );
 	}
+	public function test_stored_member_count_reads_the_database_a_chunk_at_a_time(): void {
+		$queries         = array();
+		$GLOBALS['wpdb'] = new class( $queries ) {
+			public string $usermeta = 'wp_usermeta';
+			/** @var string[] */
+			private array $queries;
+
+			public function __construct( array &$queries ) {
+				$this->queries = &$queries;
+			}
+
+			public function get_blog_prefix( int $blog_id ): string {
+				return 'wp_' . $blog_id . '_';
+			}
+
+			public function prepare( string $query, array $args ): string {
+				return $query . ' ' . implode( ',', $args );
+			}
+
+			public function get_var( string $query ): string {
+				$this->queries[] = $query;
+				return '3';
+			}
+		};
+
+		$count = ( new UserRepository() )->stored_member_count( 7, array_merge( range( 1, 600 ), array( 1, 2 ) ) );
+		unset( $GLOBALS['wpdb'] );
+
+		$this->assertSame( 6, $count, 'Two chunks of distinct ids, 3 found in each.' );
+		$this->assertCount( 2, $queries );
+		$this->assertStringContainsString( 'wp_7_capabilities', $queries[0] );
+	}
+
+	public function test_forget_cached_cleans_each_user_once(): void {
+		Functions\expect( 'clean_user_cache' )->twice();
+
+		( new UserRepository() )->forget_cached( array( 5, 6, 5 ) );
+	}
 }

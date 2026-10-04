@@ -32,6 +32,7 @@ one on or off takes effect at once. The three toggles are the only settings.
 | `src/RequirementsChecker.php` | On `admin_init`: not a network, or WordPress older than *Requires at least* → deactivate and explain (`wp_die`). |
 | `src/Config.php` | The three toggles (`wpmus_newSiteSync`, `wpmus_newUserSync`, `wpmus_setUserRoleSync`, stored `'yes'` or `''`) and plugin metadata. |
 | `src/Sync/SyncEngine.php` | Every membership write. Triggers and actions become a `SyncJob`; small ones run at once, big ones are queued. |
+| `src/Sync/WriteGroups.php` | Commits a cron run's writes in transactions of about a second. |
 | `src/Sync/SyncJob.php`, `src/Sync/JobQueue.php` | A job's scope, cursor and progress; the queue in the network option `wpmus_sync_jobs`, its lock `wpmus_sync_lock`, and its cron event on the main site. |
 | `src/Repositories/SiteRepository.php` | The live sites of this network (not archived, spam or deleted), a site's default role (subscriber when the role does not exist there), whether a role exists on a site. |
 | `src/Repositories/UserRepository.php` | Network users a page of ids at a time, super admins, memberships, the removal record (user meta `wpmus_removed_from_blogs`). |
@@ -60,7 +61,24 @@ no Composer dependencies at runtime.
    cursor after each batch, and schedules the next run while jobs remain. A
    run that finds the lock taken schedules a retry for when that lock goes
    stale (ten minutes), so a run that died never leaves the queue stuck; a
-   run that ends first brings the next one forward.
+   run that ends first brings the next one forward, and a run that empties
+   the queue removes it.
+   A cron run commits its writes in transactions of about a second
+   (`WriteGroups`, off with `wpmus_sync_group_writes`); only there, because
+   that request is the plugin's own and nobody else's transaction can be
+   open in it. Each group reads at READ COMMITTED, so it never misses a
+   membership another request just added; a database logging statements for
+   replication, which refuses that, writes one by one. A COMMIT that goes
+   through does not prove a group survived (a deadlock or a reopened
+   connection rolls it back unseen), so before storing a batch's progress the
+   run counts, in the database itself, the memberships the batch wrote. When
+   any is missing, or a COMMIT is refused (and then rolled back on purpose),
+   the run stores nothing, drops those users from the object cache and
+   retries a minute later. After every commit the group's users are dropped
+   from the object cache again: core cleans it before the commit, and a
+   request reading them meanwhile may have cached what was there before; a run that
+   dies drops at most its last group. Either way those memberships are added
+   again, never skipped.
    Users are read a page of ids at a time; sites are walked in id order, so a
    run that dies loses at most one batch, which the next redoes harmlessly.
    Every change to the queue rereads it from the database first, past the

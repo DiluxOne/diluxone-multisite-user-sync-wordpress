@@ -32,6 +32,7 @@ use WPMUS\Repositories\UserRepository;
 use WPMUS\Sync\JobQueue;
 use WPMUS\Sync\SyncEngine;
 use WPMUS\Sync\SyncJob;
+use WPMUS\Sync\WriteGroups;
 
 final class SyncEngineTest extends TestCase {
 
@@ -43,6 +44,8 @@ final class SyncEngineTest extends TestCase {
 	private $users;
 	/** @var JobQueue&MockInterface */
 	private $queue;
+	/** @var WriteGroups&MockInterface */
+	private $groups;
 
 	protected function setUp(): void {
 		parent::setUp();
@@ -51,7 +54,12 @@ final class SyncEngineTest extends TestCase {
 		$this->users  = Mockery::mock( UserRepository::class );
 		$this->users->shouldReceive( 'removed_blog_ids' )->andReturn( array() )->byDefault();
 		$this->users->shouldReceive( 'super_admin_ids' )->andReturn( array() )->byDefault();
-		$this->queue = Mockery::mock( JobQueue::class );
+		$this->queue  = Mockery::mock( JobQueue::class );
+		$this->queue->shouldReceive( 'unschedule' )->byDefault();
+		$this->groups = Mockery::mock( WriteGroups::class );
+		$this->groups->shouldReceive( 'begin' )->andReturn( false )->byDefault();
+		$this->groups->shouldReceive( 'checkpoint' )->andReturn( false )->byDefault();
+		$this->groups->shouldReceive( 'end' )->andReturn( true )->byDefault();
 	}
 
 	protected function tearDown(): void {
@@ -69,7 +77,10 @@ final class SyncEngineTest extends TestCase {
 		/** @var JobQueue $queue */
 		$queue = $this->queue;
 
-		return new SyncEngine( $config, $sites, $users, $queue );
+		/** @var WriteGroups $groups */
+		$groups = $this->groups;
+
+		return new SyncEngine( $config, $sites, $users, $queue, $groups );
 	}
 
 	/**
@@ -419,7 +430,7 @@ final class SyncEngineTest extends TestCase {
 		);
 		$this->queue->shouldReceive( 'acquire_lock' )->andReturn( true );
 		$this->queue->shouldReceive( 'release_lock' );
-		$this->queue->shouldReceive( 'first' )->andReturn( $job, null, $job, null );
+		$this->queue->shouldReceive( 'first' )->andReturn( $job, null, null, $job, null, null );
 		$this->queue->shouldReceive( 'update' )->once()->with( $job );
 		$this->queue->shouldReceive( 'schedule' )->never();
 		$this->queue->shouldReceive( 'remove' )->once()->with( $job->id );
@@ -433,6 +444,43 @@ final class SyncEngineTest extends TestCase {
 		$engine->process_queue();
 		$this->assertSame( array( '5@1', '5@2', '6@1', '6@2' ), $added );
 		$this->assertTrue( $job->done );
+	}
+
+	public function test_a_run_that_empties_the_queue_removes_any_pending_retry(): void {
+		$job = $this->one_queued_job();
+		$this->queue->shouldReceive( 'first' )->andReturn( $job, null );
+		$this->users->shouldReceive( 'add_to_blog' )->twice()->andReturn( true );
+		$this->queue->shouldReceive( 'remove' )->once();
+		$this->queue->shouldNotReceive( 'schedule' );
+		$this->queue->shouldReceive( 'unschedule' )->once();
+
+		$this->engine()->process_queue();
+	}
+
+	public function test_a_committed_group_cleans_its_users_cache_right_away(): void {
+		$job = $this->one_queued_job();
+		$this->queue->shouldReceive( 'first' )->andReturn( $job, null );
+		$this->queue->shouldReceive( 'remove' )->once();
+		$this->users->shouldReceive( 'add_to_blog' )->twice()->andReturn( true );
+		$this->users->shouldReceive( 'stored_member_count' )->andReturn( 1 );
+		$this->groups->shouldReceive( 'begin' )->andReturn( true );
+		$this->groups->shouldReceive( 'checkpoint' )->andReturn( true, false );
+		$this->users->shouldReceive( 'forget_cached' )->once()->with( array( 5 ) )->ordered();
+		$this->users->shouldReceive( 'forget_cached' )->once()->with( array( 5 ) )->ordered();
+
+		$this->engine()->process_queue();
+	}
+
+	public function test_a_job_queued_while_the_run_emptied_the_queue_keeps_its_run(): void {
+		$job = $this->one_queued_job();
+		$new = new SyncJob( 'new_site', null, array( 9 ), false );
+		$this->queue->shouldReceive( 'first' )->andReturn( $job, null, $new );
+		$this->users->shouldReceive( 'add_to_blog' )->twice()->andReturn( true );
+		$this->queue->shouldReceive( 'remove' )->once();
+		$this->queue->shouldReceive( 'unschedule' )->once()->ordered();
+		$this->queue->shouldReceive( 'schedule' )->once()->ordered();
+
+		$this->engine()->process_queue();
 	}
 
 	public function test_a_run_that_leaves_work_schedules_the_next_one(): void {
@@ -450,6 +498,126 @@ final class SyncEngineTest extends TestCase {
 		$this->queue->shouldReceive( 'schedule' )->once();
 
 		$this->engine()->process_queue();
+	}
+
+	/**
+	 * A queued job of user 5 on sites 2 and 3, one batch per run.
+	 */
+	private function one_queued_job(): SyncJob {
+		\Brain\Monkey\Filters\expectApplied( 'wpmus_sync_time_limit' )->andReturn( 0 );
+		$job = new SyncJob( 'new_user', array( 5 ), null, false );
+		$this->sites->shouldReceive( 'all_blog_ids' )->andReturn( array( 2, 3 ) );
+		$this->users->shouldReceive( 'is_member_of' )->andReturn( false );
+		$this->sites->shouldReceive( 'default_role_for_blog' )->andReturn( 'subscriber' );
+		$this->queue->shouldReceive( 'acquire_lock' )->andReturn( true );
+		$this->queue->shouldReceive( 'release_lock' );
+		return $job;
+	}
+
+	public function test_a_background_batch_opens_a_write_group_checkpoints_after_each_pair_and_ends_it(): void {
+		$job = $this->one_queued_job();
+		$this->queue->shouldReceive( 'first' )->andReturn( $job, null );
+		$this->queue->shouldReceive( 'remove' )->once();
+		$order = array();
+		$this->users->shouldReceive( 'add_to_blog' )->twice()->andReturnUsing(
+			static function () use ( &$order ): bool {
+				$order[] = 'add';
+				return true;
+			}
+		);
+		foreach ( array( 'begin', 'checkpoint', 'end' ) as $step ) {
+			$this->groups->shouldReceive( $step )->andReturnUsing(
+				static function () use ( &$order, $step ): bool {
+					$order[] = $step;
+					return 'end' === $step;
+				}
+			);
+		}
+
+		$this->engine()->process_queue();
+
+		$this->assertSame( array( 'begin', 'add', 'checkpoint', 'add', 'checkpoint', 'end' ), $order );
+	}
+
+	public function test_a_batch_whose_group_did_not_commit_is_left_for_the_next_run(): void {
+		$job = $this->one_queued_job();
+		$this->queue->shouldReceive( 'first' )->andReturn( $job );
+		$this->users->shouldReceive( 'add_to_blog' )->twice()->andReturn( true );
+		$this->groups->shouldReceive( 'end' )->once()->andReturn( false );
+		$this->queue->shouldNotReceive( 'update' );
+		$this->queue->shouldNotReceive( 'remove' );
+		$this->queue->shouldNotReceive( 'schedule' );
+		$this->queue->shouldReceive( 'schedule_at' )->once()->with(
+			Mockery::on(
+				static function ( int $at ): bool {
+					return abs( $at - ( time() + SyncEngine::LOST_GROUP_RETRY ) ) <= 2;
+				}
+			)
+		);
+
+		$this->engine()->process_queue();
+	}
+
+	public function test_a_grouped_batch_is_stored_once_the_database_holds_every_membership_it_wrote(): void {
+		$job = $this->one_queued_job();
+		$this->queue->shouldReceive( 'first' )->andReturn( $job, null );
+		$this->users->shouldReceive( 'add_to_blog' )->twice()->andReturn( true );
+		$this->groups->shouldReceive( 'begin' )->andReturn( true );
+		$this->users->shouldReceive( 'stored_member_count' )->once()->with( 2, array( 5 ) )->andReturn( 1 );
+		$this->users->shouldReceive( 'stored_member_count' )->once()->with( 3, array( 5 ) )->andReturn( 1 );
+		// Core cleaned their cache before the commit; it is cleaned again after.
+		$this->users->shouldReceive( 'forget_cached' )->once()->with( array( 5, 5 ) );
+		$this->queue->shouldReceive( 'remove' )->once();
+
+		$this->engine()->process_queue();
+	}
+
+	public function test_a_grouped_batch_the_database_lost_is_read_afresh_and_left_for_the_next_run(): void {
+		$job = $this->one_queued_job();
+		$this->queue->shouldReceive( 'first' )->andReturn( $job );
+		$this->users->shouldReceive( 'add_to_blog' )->twice()->andReturn( true );
+		$this->groups->shouldReceive( 'begin' )->andReturn( true );
+		// The COMMIT went through, but a deadlock had rolled the group back.
+		$this->users->shouldReceive( 'stored_member_count' )->andReturn( 0 );
+		// Once after the commit, once more for the redo.
+		$this->users->shouldReceive( 'forget_cached' )->twice()->with( array( 5, 5 ) );
+		$this->queue->shouldNotReceive( 'update' );
+		$this->queue->shouldNotReceive( 'remove' );
+		$this->queue->shouldReceive( 'schedule_at' )->once();
+
+		$this->engine()->process_queue();
+	}
+
+	public function test_an_ungrouped_batch_is_not_checked(): void {
+		$job = $this->one_queued_job();
+		$this->queue->shouldReceive( 'first' )->andReturn( $job, null );
+		$this->users->shouldReceive( 'add_to_blog' )->twice()->andReturn( true );
+		$this->users->shouldNotReceive( 'stored_member_count' );
+		$this->queue->shouldReceive( 'remove' )->once();
+
+		$this->engine()->process_queue();
+	}
+
+	public function test_the_write_group_ends_even_when_a_write_fails(): void {
+		$job = $this->one_queued_job();
+		$this->queue->shouldReceive( 'first' )->andReturn( $job );
+		$this->users->shouldReceive( 'add_to_blog' )->andThrow( new \RuntimeException( 'database gone' ) );
+		$this->groups->shouldReceive( 'begin' )->once();
+		$this->groups->shouldReceive( 'end' )->once()->andReturn( true );
+
+		$this->expectException( \RuntimeException::class );
+		$this->engine()->process_queue();
+	}
+
+	public function test_a_sync_in_the_request_that_starts_it_opens_no_write_group(): void {
+		$this->sites->shouldReceive( 'all_blog_ids' )->andReturn( array( 2 ) );
+		$this->network_users( array( 5 ) );
+		$this->users->shouldReceive( 'is_member_of' )->andReturn( false );
+		$this->sites->shouldReceive( 'default_role_for_blog' )->andReturn( 'subscriber' );
+		$this->users->shouldReceive( 'add_to_blog' )->once()->andReturn( true );
+		$this->groups->shouldNotReceive( 'begin' );
+
+		$this->assertTrue( $this->engine()->sync_all_users_to_sites( array( 2 ) ) );
 	}
 
 	public function test_a_run_does_nothing_while_another_holds_the_lock_but_leaves_a_retry_for_when_it_goes_stale(): void {

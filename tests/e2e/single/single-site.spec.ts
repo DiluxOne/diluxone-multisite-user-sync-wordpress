@@ -1,6 +1,7 @@
 import { test, expect, Page } from '@playwright/test';
 import { wp } from '../support/cli';
 import { ADMIN_PASS, ADMIN_USER, SINGLE_ENV } from '../support/env';
+import { signIn } from '../support/ui';
 
 /**
  * On a WordPress that is not a network the plugin has nothing to do. Activated
@@ -16,11 +17,9 @@ const SLUG = 'wpm-user-sync';
 
 const cli = (args: string[]): string => wp(args, { cwd: SINGLE_ENV, container: 'tests-cli' });
 
-async function signIn(page: Page): Promise<void> {
+async function signInAsAdmin(page: Page): Promise<void> {
 	await page.goto('/wp-login.php');
-	await page.locator('#user_login').fill(ADMIN_USER);
-	await page.locator('#user_pass').fill(ADMIN_PASS);
-	await Promise.all([page.waitForURL(/wp-admin/), page.locator('#wp-submit').click()]);
+	await signIn(page, ADMIN_USER, ADMIN_PASS, /wp-admin/);
 }
 
 test.beforeAll(() => {
@@ -31,7 +30,7 @@ test.beforeAll(() => {
 });
 
 test('activating it explains that it needs a network, and deactivates it', async ({ page }) => {
-	await signIn(page);
+	await signInAsAdmin(page);
 	await page.goto('/wp-admin/plugins.php');
 
 	const row = page.locator(`tr[data-slug="${SLUG}"]`);
@@ -73,7 +72,7 @@ test('while it was active it hooked nothing: no menu, no option, and a new user 
 	expect(cli(['option', 'list', '--search=wpmus*', '--format=count'])).toBe('0');
 	cli(['user', 'delete', login, '--yes']);
 
-	await signIn(page);
+	await signInAsAdmin(page);
 	await expect(page.locator('#toplevel_page_wpmus-sitehome')).toHaveCount(0);
 	await expect(page.locator('.wp-die-message')).toContainText('requires WordPress Multisite');
 	expect(cli(['plugin', 'status', SLUG])).toContain('Inactive');

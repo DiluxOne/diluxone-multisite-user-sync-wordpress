@@ -182,6 +182,18 @@ class JobQueue {
 	}
 
 	/**
+	 * Removes a pending run from the main site: once the queue is empty,
+	 * a retry left for a lock that was held has nothing to do.
+	 */
+	public function unschedule(): void {
+		$this->on_main_site(
+			static function (): void {
+				wp_clear_scheduled_hook( self::CRON_HOOK );
+			}
+		);
+	}
+
+	/**
 	 * True when a run is scheduled on the main site.
 	 */
 	public function is_scheduled(): bool {
