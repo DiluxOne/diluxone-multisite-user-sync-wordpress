@@ -83,19 +83,19 @@ class WriteGroups {
 	 * Commits the open group once it holds a second of writes, and opens
 	 * the next. A commit that fails ends grouping for the batch: the
 	 * writes that follow commit one by one, and {@see WriteGroups::end()}
-	 * reports the group lost.
+	 * reports the group lost. True when a group was committed just now.
 	 */
-	public function checkpoint(): void {
+	public function checkpoint(): bool {
 		if ( ! $this->open || microtime( true ) - $this->since < self::SECONDS ) {
-			return;
+			return false;
 		}
-		if ( ! $this->query( 'COMMIT' ) ) {
-			$this->lost = true;
+		if ( ! $this->commit() ) {
 			$this->open = false;
-			return;
+			return false;
 		}
 		$this->open  = $this->start();
 		$this->since = microtime( true );
+		return true;
 	}
 
 	/**
@@ -106,11 +106,24 @@ class WriteGroups {
 	public function end(): bool {
 		if ( $this->open ) {
 			$this->open = false;
-			if ( ! $this->query( 'COMMIT' ) ) {
-				$this->lost = true;
-			}
+			$this->commit();
 		}
 		return ! $this->lost;
+	}
+
+	/**
+	 * Commits the open group. When the database refuses, the group is
+	 * rolled back on purpose, so no transaction is left open to swallow
+	 * the writes that follow (the queue's lock, its next run), and the
+	 * group is recorded lost.
+	 */
+	private function commit(): bool {
+		if ( $this->query( 'COMMIT' ) ) {
+			return true;
+		}
+		$this->query( 'ROLLBACK' );
+		$this->lost = true;
+		return false;
 	}
 
 	/**

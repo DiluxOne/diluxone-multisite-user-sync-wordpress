@@ -119,7 +119,7 @@ final class WriteGroupsTest extends TestCase {
 		$groups->checkpoint();
 
 		$this->assertFalse( $groups->end(), 'The batch must not be counted as stored.' );
-		$this->assertSame( array( self::SET, 'START TRANSACTION', 'COMMIT' ), $this->db->statements, 'No group opens after a lost one: the rest commits write by write.' );
+		$this->assertSame( array( self::SET, 'START TRANSACTION', 'COMMIT', 'ROLLBACK' ), $this->db->statements, 'Rolled back on purpose, and no group opens after a lost one: the rest commits write by write.' );
 	}
 
 	public function test_a_commit_refused_at_the_end_is_reported(): void {
@@ -128,6 +128,7 @@ final class WriteGroupsTest extends TestCase {
 		$groups->begin();
 
 		$this->assertFalse( $groups->end() );
+		$this->assertSame( array( self::SET, 'START TRANSACTION', 'COMMIT', 'ROLLBACK' ), $this->db->statements, 'No transaction is left open to swallow what follows.' );
 	}
 
 	public function test_the_next_batch_starts_with_a_clean_record(): void {

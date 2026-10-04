@@ -58,7 +58,7 @@ final class SyncEngineTest extends TestCase {
 		$this->queue->shouldReceive( 'unschedule' )->byDefault();
 		$this->groups = Mockery::mock( WriteGroups::class );
 		$this->groups->shouldReceive( 'begin' )->andReturn( false )->byDefault();
-		$this->groups->shouldReceive( 'checkpoint' )->byDefault();
+		$this->groups->shouldReceive( 'checkpoint' )->andReturn( false )->byDefault();
 		$this->groups->shouldReceive( 'end' )->andReturn( true )->byDefault();
 	}
 
@@ -430,7 +430,7 @@ final class SyncEngineTest extends TestCase {
 		);
 		$this->queue->shouldReceive( 'acquire_lock' )->andReturn( true );
 		$this->queue->shouldReceive( 'release_lock' );
-		$this->queue->shouldReceive( 'first' )->andReturn( $job, null, $job, null );
+		$this->queue->shouldReceive( 'first' )->andReturn( $job, null, null, $job, null, null );
 		$this->queue->shouldReceive( 'update' )->once()->with( $job );
 		$this->queue->shouldReceive( 'schedule' )->never();
 		$this->queue->shouldReceive( 'remove' )->once()->with( $job->id );
@@ -453,6 +453,32 @@ final class SyncEngineTest extends TestCase {
 		$this->queue->shouldReceive( 'remove' )->once();
 		$this->queue->shouldNotReceive( 'schedule' );
 		$this->queue->shouldReceive( 'unschedule' )->once();
+
+		$this->engine()->process_queue();
+	}
+
+	public function test_a_committed_group_cleans_its_users_cache_right_away(): void {
+		$job = $this->one_queued_job();
+		$this->queue->shouldReceive( 'first' )->andReturn( $job, null );
+		$this->queue->shouldReceive( 'remove' )->once();
+		$this->users->shouldReceive( 'add_to_blog' )->twice()->andReturn( true );
+		$this->users->shouldReceive( 'stored_member_count' )->andReturn( 1 );
+		$this->groups->shouldReceive( 'begin' )->andReturn( true );
+		$this->groups->shouldReceive( 'checkpoint' )->andReturn( true, false );
+		$this->users->shouldReceive( 'forget_cached' )->once()->with( array( 5 ) )->ordered();
+		$this->users->shouldReceive( 'forget_cached' )->once()->with( array( 5 ) )->ordered();
+
+		$this->engine()->process_queue();
+	}
+
+	public function test_a_job_queued_while_the_run_emptied_the_queue_keeps_its_run(): void {
+		$job = $this->one_queued_job();
+		$new = new SyncJob( 'new_site', null, array( 9 ), false );
+		$this->queue->shouldReceive( 'first' )->andReturn( $job, null, $new );
+		$this->users->shouldReceive( 'add_to_blog' )->twice()->andReturn( true );
+		$this->queue->shouldReceive( 'remove' )->once();
+		$this->queue->shouldReceive( 'unschedule' )->once()->ordered();
+		$this->queue->shouldReceive( 'schedule' )->once()->ordered();
 
 		$this->engine()->process_queue();
 	}
@@ -501,9 +527,9 @@ final class SyncEngineTest extends TestCase {
 		);
 		foreach ( array( 'begin', 'checkpoint', 'end' ) as $step ) {
 			$this->groups->shouldReceive( $step )->andReturnUsing(
-				static function () use ( &$order, $step ): ?bool {
+				static function () use ( &$order, $step ): bool {
 					$order[] = $step;
-					return 'checkpoint' === $step ? null : 'end' === $step;
+					return 'end' === $step;
 				}
 			);
 		}
@@ -539,7 +565,8 @@ final class SyncEngineTest extends TestCase {
 		$this->groups->shouldReceive( 'begin' )->andReturn( true );
 		$this->users->shouldReceive( 'stored_member_count' )->once()->with( 2, array( 5 ) )->andReturn( 1 );
 		$this->users->shouldReceive( 'stored_member_count' )->once()->with( 3, array( 5 ) )->andReturn( 1 );
-		$this->users->shouldNotReceive( 'forget_cached' );
+		// Core cleaned their cache before the commit; it is cleaned again after.
+		$this->users->shouldReceive( 'forget_cached' )->once()->with( array( 5, 5 ) );
 		$this->queue->shouldReceive( 'remove' )->once();
 
 		$this->engine()->process_queue();
@@ -552,7 +579,8 @@ final class SyncEngineTest extends TestCase {
 		$this->groups->shouldReceive( 'begin' )->andReturn( true );
 		// The COMMIT went through, but a deadlock had rolled the group back.
 		$this->users->shouldReceive( 'stored_member_count' )->andReturn( 0 );
-		$this->users->shouldReceive( 'forget_cached' )->once()->with( array( 5, 5 ) );
+		// Once after the commit, once more for the redo.
+		$this->users->shouldReceive( 'forget_cached' )->twice()->with( array( 5, 5 ) );
 		$this->queue->shouldNotReceive( 'update' );
 		$this->queue->shouldNotReceive( 'remove' );
 		$this->queue->shouldReceive( 'schedule_at' )->once();

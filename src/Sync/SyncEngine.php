@@ -103,6 +103,16 @@ final class SyncEngine {
 	private ?array $written = null;
 
 	/**
+	 * Users whose memberships the open write group added since its last
+	 * commit: core cleans their cache before the commit, and a request
+	 * reading them meanwhile can cache what was there before, so they are
+	 * cleaned again once the group is committed.
+	 *
+	 * @var int[]
+	 */
+	private array $uncommitted = array();
+
+	/**
 	 * Default role per blog id, resolved once per sync run: reading it
 	 * switches to the site.
 	 *
@@ -380,7 +390,9 @@ final class SyncEngine {
 				try {
 					$this->run_batch( $job, $size );
 				} finally {
-					$kept    = $this->groups->end() && $this->written_is_stored();
+					$kept = $this->groups->end();
+					$this->forget_uncommitted();
+					$kept    = $kept && $this->written_is_stored();
 					$written = $this->written;
 					// Whatever happened, nothing later in the request is
 					// part of this group.
@@ -412,6 +424,10 @@ final class SyncEngine {
 			$this->queue->schedule();
 		} else {
 			$this->queue->unschedule();
+			if ( null !== $this->queue->first() ) {
+				// A job queued in the meantime keeps its run.
+				$this->queue->schedule();
+			}
 		}
 	}
 
@@ -487,7 +503,9 @@ final class SyncEngine {
 						return;
 					}
 					$this->add_if_missing( $user_id, $blog_id, $job->force, $job->context );
-					$this->groups->checkpoint();
+					if ( $this->groups->checkpoint() ) {
+						$this->forget_uncommitted();
+					}
 					$job->last_blog_id = $blog_id;
 					++$job->processed;
 					--$budget;
@@ -626,6 +644,18 @@ final class SyncEngine {
 		}
 		if ( null !== $this->written && true === $added ) {
 			$this->written[ $blog_id ][] = $user_id;
+			$this->uncommitted[]         = $user_id;
+		}
+	}
+
+	/**
+	 * Cleans the cache of the users the write group added since its last
+	 * commit (see {@see SyncEngine::$uncommitted}).
+	 */
+	private function forget_uncommitted(): void {
+		if ( array() !== $this->uncommitted ) {
+			$this->users->forget_cached( $this->uncommitted );
+			$this->uncommitted = array();
 		}
 	}
 
