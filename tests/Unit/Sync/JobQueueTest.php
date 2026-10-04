@@ -224,6 +224,25 @@ final class JobQueueTest extends TestCase {
 		$this->assertSame( array( 'to:1', 'clear', 'restore' ), $this->switches );
 	}
 
+	public function test_unschedule_removes_the_pending_run_on_the_main_site_and_keeps_the_jobs(): void {
+		$this->options[ JobQueue::OPTION_JOBS ] = array( $this->job()->to_array() );
+		$switches                               = &$this->switches;
+		Functions\expect( 'wp_clear_scheduled_hook' )
+			->once()
+			->with( JobQueue::CRON_HOOK )
+			->andReturnUsing(
+				static function () use ( &$switches ): int {
+					$switches[] = 'clear';
+					return 1;
+				}
+			);
+
+		( new JobQueue() )->unschedule();
+
+		$this->assertArrayHasKey( JobQueue::OPTION_JOBS, $this->options );
+		$this->assertSame( array( 'to:1', 'clear', 'restore' ), $this->switches );
+	}
+
 	// ---------------------------------------------------------------------
 	// The lock
 	// ---------------------------------------------------------------------
