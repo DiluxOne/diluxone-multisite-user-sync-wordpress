@@ -29,6 +29,8 @@ export interface Knobs {
 	replicate_administrator?: boolean;
 	/** Web requests leave WP-Cron alone; only WP-CLI runs the queue. */
 	hold_cron?: boolean;
+	/** The first background batch waits, marked by batchPaused(), until releaseBatch() or this many seconds. */
+	pause_first_batch?: number;
 }
 
 let counter = 0;
@@ -166,7 +168,17 @@ export function setKnobs(knobs: Knobs): void {
 }
 
 export function clearKnobs(): void {
-	php(`delete_site_option( 'wpmus_e2e_knobs' ); return true;`);
+	php(`delete_site_option( 'wpmus_e2e_knobs' ); delete_site_option( 'wpmus_e2e_batch_paused' ); delete_site_option( 'wpmus_e2e_batch_release' ); return true;`);
+}
+
+/** Lets the batch paused by pause_first_batch go on. */
+export function releaseBatch(): void {
+	php(`update_site_option( 'wpmus_e2e_batch_release', time() ); return true;`);
+}
+
+/** Whether a background batch has started its pause_first_batch wait. */
+export function batchPaused(): boolean {
+	return php<boolean>(`return false !== get_site_option( 'wpmus_e2e_batch_paused' );`);
 }
 
 export interface QueuedJob {

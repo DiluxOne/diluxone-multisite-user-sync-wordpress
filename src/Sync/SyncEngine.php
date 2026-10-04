@@ -333,6 +333,10 @@ final class SyncEngine {
 	 */
 	public function process_queue(): void {
 		if ( ! $this->queue->acquire_lock() ) {
+			// Another run holds the queue. Should it die, no run would be
+			// left to take the lock over: come back when the lock goes
+			// stale. A run that ends first brings the next one forward.
+			$this->queue->schedule_at( $this->queue->lock_stale_at() );
 			return;
 		}
 		/**

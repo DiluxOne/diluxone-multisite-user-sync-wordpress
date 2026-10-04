@@ -57,9 +57,16 @@ no Composer dependencies at runtime.
    refuses; otherwise add with the site's default role.
 5. A cron run takes the lock, processes batches of `wpmus_sync_batch_size`
    (500) pairs for up to `wpmus_sync_time_limit` (20) seconds, stores the
-   cursor after each batch, and schedules the next run while jobs remain.
+   cursor after each batch, and schedules the next run while jobs remain. A
+   run that finds the lock taken schedules a retry for when that lock goes
+   stale (ten minutes), so a run that died never leaves the queue stuck; a
+   run that ends first brings the next one forward.
    Users are read a page of ids at a time; sites are walked in id order, so a
    run that dies loses at most one batch, which the next redoes harmlessly.
+   Every change to the queue rereads it from the database first, past the
+   request's cache, so a job queued or a queue emptied by another request
+   while a batch runs is not written over. Only the moment between that read
+   and the write is left open: option updates are not atomic.
 
 The role trigger does not queue: it touches only the sites the user already
 belongs to. It returns at once when the role did not change, for super

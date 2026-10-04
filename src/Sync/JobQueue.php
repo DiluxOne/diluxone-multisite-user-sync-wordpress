@@ -41,6 +41,7 @@ class JobQueue {
 	 * @return SyncJob[]
 	 */
 	public function all(): array {
+		$this->forget_cached_jobs();
 		$stored = get_site_option( self::OPTION_JOBS, array() );
 		if ( ! is_array( $stored ) ) {
 			return array();
@@ -129,6 +130,15 @@ class JobQueue {
 	}
 
 	/**
+	 * When the lock another run holds counts as abandoned: the moment a
+	 * run may take it over. Now, when it was released in the meantime.
+	 */
+	public function lock_stale_at(): int {
+		$held_since = get_site_option( self::OPTION_LOCK, false );
+		return false === $held_since ? time() : (int) $held_since + self::LOCK_TTL;
+	}
+
+	/**
 	 * Releases the lock.
 	 */
 	public function release_lock(): void {
@@ -136,13 +146,36 @@ class JobQueue {
 	}
 
 	/**
-	 * Schedules the next run on the main site, unless one is pending.
+	 * Schedules the next run on the main site now. A run pending for
+	 * later (a retry) is brought forward.
 	 */
 	public function schedule(): void {
 		$this->on_main_site(
 			static function (): void {
+				$now  = time();
+				$next = wp_next_scheduled( self::CRON_HOOK );
+				if ( false !== $next && $next <= $now ) {
+					return;
+				}
+				if ( false !== $next ) {
+					wp_unschedule_event( $next, self::CRON_HOOK );
+				}
+				wp_schedule_single_event( $now, self::CRON_HOOK );
+			}
+		);
+	}
+
+	/**
+	 * Schedules a run on the main site at a given time, unless one is
+	 * already pending.
+	 *
+	 * @param int $timestamp When to run (Unix time).
+	 */
+	public function schedule_at( int $timestamp ): void {
+		$this->on_main_site(
+			static function () use ( $timestamp ): void {
 				if ( false === wp_next_scheduled( self::CRON_HOOK ) ) {
-					wp_schedule_single_event( time(), self::CRON_HOOK );
+					wp_schedule_single_event( $timestamp, self::CRON_HOOK );
 				}
 			}
 		);
@@ -159,6 +192,30 @@ class JobQueue {
 			}
 		);
 		return $scheduled;
+	}
+
+	/**
+	 * Drops this request's cached copy of the job list, so the next read
+	 * comes from the database. Every request shares the queue: a cron run
+	 * working a batch, a new site or user queueing its sync, Network Admin
+	 * emptying it. A request that kept its first read would write that old
+	 * copy back over whatever the others changed meanwhile, losing a job
+	 * queued during a batch or bringing back an emptied one.
+	 *
+	 * The keys are core's own for a network option (`get_network_option()`:
+	 * `{network}:{option}` and `{network}:notoptions` in `site-options`);
+	 * the integration tests fail if core ever changes them. The price is one
+	 * small query per read: a cron run reads the queue a few times per batch,
+	 * the progress table once per page load.
+	 */
+	private function forget_cached_jobs(): void {
+		$network_id = get_current_network_id();
+		wp_cache_delete( $network_id . ':' . self::OPTION_JOBS, 'site-options' );
+		$missing = wp_cache_get( $network_id . ':notoptions', 'site-options' );
+		if ( is_array( $missing ) && isset( $missing[ self::OPTION_JOBS ] ) ) {
+			unset( $missing[ self::OPTION_JOBS ] );
+			wp_cache_set( $network_id . ':notoptions', $missing, 'site-options' );
+		}
 	}
 
 	/**

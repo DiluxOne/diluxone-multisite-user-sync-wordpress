@@ -452,9 +452,12 @@ final class SyncEngineTest extends TestCase {
 		$this->engine()->process_queue();
 	}
 
-	public function test_a_run_does_nothing_while_another_holds_the_lock(): void {
+	public function test_a_run_does_nothing_while_another_holds_the_lock_but_leaves_a_retry_for_when_it_goes_stale(): void {
 		$this->queue->shouldReceive( 'acquire_lock' )->andReturn( false );
+		$this->queue->shouldReceive( 'lock_stale_at' )->andReturn( 1700000600 );
+		$this->queue->shouldReceive( 'schedule_at' )->once()->with( 1700000600 );
 		$this->queue->shouldNotReceive( 'first' );
+		$this->queue->shouldNotReceive( 'release_lock' );
 
 		$this->engine()->process_queue();
 	}

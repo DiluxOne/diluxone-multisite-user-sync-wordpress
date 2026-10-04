@@ -60,6 +60,8 @@ the same pull request.
 | One cron run of one batch moves the progress; the queue drains; nothing left scheduled | `network-admin` › a sync too big… | `QueueIntegrationTest` | `SyncEngineTest` |
 | Real WP-Cron, spawned by visits, finishes a queued sync | `network-admin` › a visit to the site is enough… | — | — |
 | New-site trigger on a big network runs through the queue | `triggers` › …filled in the background… | `QueueIntegrationTest` | `SyncEngineTest` |
+| A run that finds the queue locked leaves a retry for when the lock goes stale; a stale lock is taken over | `network-admin` › a run that died holding the lock… | `QueueIntegrationTest` | `SyncEngineTest` |
+| A job queued while a batch runs is kept; a queue emptied meanwhile stays empty | `triggers` › a site added while a background sync is running… | `QueueIntegrationTest` | — |
 | `wpmus_sync_inline_limit`, `wpmus_sync_batch_size`, `wpmus_sync_time_limit` | the queued tests above (through the e2e knobs) | `QueueIntegrationTest` | `SyncEngineTest` |
 
 ## A site's dashboard and permissions

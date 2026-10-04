@@ -15,6 +15,7 @@ use WPMUS\Repositories\SiteRepository;
 use WPMUS\Repositories\UserRepository;
 use WPMUS\Sync\JobQueue;
 use WPMUS\Sync\SyncEngine;
+use WPMUS\Sync\SyncJob;
 
 final class QueueIntegrationTest extends IntegrationTestCase {
 
@@ -41,6 +42,128 @@ final class QueueIntegrationTest extends IntegrationTestCase {
 		remove_all_filters( 'wpmus_sync_time_limit' );
 		( new JobQueue() )->clear();
 		parent::tearDown();
+	}
+
+	/**
+	 * Writes the queue the way another request would: straight to the
+	 * database, behind this request's cached copy of the option. Null
+	 * empties it.
+	 *
+	 * @param SyncJob[]|null $jobs The queue the other request leaves.
+	 */
+	private function another_request_writes( ?array $jobs ): void {
+		global $wpdb;
+		$where = array(
+			'site_id'  => get_current_network_id(),
+			'meta_key' => JobQueue::OPTION_JOBS, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
+		);
+		$wpdb->delete( $wpdb->sitemeta, $where ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		if ( null !== $jobs ) {
+			$value = array_map(
+				static function ( SyncJob $job ): array {
+					return $job->to_array();
+				},
+				$jobs
+			);
+			$wpdb->insert( $wpdb->sitemeta, $where + array( 'meta_value' => maybe_serialize( $value ) ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery,WordPress.DB.SlowDBQuery.slow_db_query_meta_value
+		}
+	}
+
+	/**
+	 * @return string[]
+	 */
+	private function queued_ids(): array {
+		return array_map(
+			static function ( SyncJob $job ): string {
+				return $job->id;
+			},
+			( new JobQueue() )->all()
+		);
+	}
+
+	public function test_a_job_another_request_queues_during_a_batch_is_kept(): void {
+		$queue   = new JobQueue();
+		$running = new SyncJob( 'manual', null, array( 1 ), false );
+		$queue->add( $running );
+		$queue->all();
+
+		$arrived = new SyncJob( 'new_site', null, array( 2 ), false );
+		$this->another_request_writes( array( $running, $arrived ) );
+		$running->processed = 1;
+		$queue->update( $running );
+
+		$this->assertSame( array( $running->id, $arrived->id ), $this->queued_ids(), 'Storing a batch\'s progress keeps the job queued meanwhile.' );
+
+		$running->done = true;
+		$queue->remove( $running->id );
+		$this->assertSame( array( $arrived->id ), $this->queued_ids(), 'Dropping the finished job keeps the one queued meanwhile.' );
+	}
+
+	public function test_a_job_queued_by_another_request_on_an_empty_queue_is_kept(): void {
+		$queue = new JobQueue();
+		$this->assertSame( array(), $queue->all() );
+
+		$first = new SyncJob( 'new_site', null, array( 2 ), false );
+		$this->another_request_writes( array( $first ) );
+		$second = new SyncJob( 'new_user', array( 1 ), null, false );
+		$queue->add( $second );
+
+		$this->assertSame( array( $first->id, $second->id ), $this->queued_ids() );
+	}
+
+	public function test_a_queue_another_request_emptied_stays_empty(): void {
+		$queue   = new JobQueue();
+		$running = new SyncJob( 'manual', null, array( 1 ), false );
+		$queue->add( $running );
+		$queue->all();
+
+		$this->another_request_writes( null );
+		$running->processed = 1;
+		$queue->update( $running );
+
+		$this->assertSame( array(), $this->queued_ids(), 'A batch that ends after Network Admin emptied the queue does not bring its job back.' );
+	}
+
+	/**
+	 * When the queue's cron event is due on the main site, or false.
+	 *
+	 * @return int|false
+	 */
+	private function next_run() {
+		switch_to_blog( get_main_site_id() );
+		$next = wp_next_scheduled( JobQueue::CRON_HOOK );
+		restore_current_blog();
+		return $next;
+	}
+
+	public function test_a_run_that_finds_the_queue_locked_leaves_a_retry_for_when_the_lock_goes_stale(): void {
+		$user_id = $this->make_user( $this->slug( 'locked' ) );
+		$blog_id = $this->make_site( $this->slug( 'locked-site' ) );
+		$engine  = $this->engine();
+		$queue   = new JobQueue();
+		$queue->add( new SyncJob( 'manual', null, array( $blog_id ), false ) );
+
+		$held_since = time() - 60;
+		update_site_option( JobQueue::OPTION_LOCK, $held_since );
+		$engine->process_queue();
+
+		$this->assertSame( 0, $queue->first()->processed, 'The run leaves the job alone.' );
+		$this->assertSame( $held_since + JobQueue::LOCK_TTL, $this->next_run(), 'A retry waits for the lock to go stale.' );
+
+		$queue->schedule();
+		$this->assertLessThanOrEqual( time(), $this->next_run(), 'A run that ends first brings the retry forward.' );
+
+		update_site_option( JobQueue::OPTION_LOCK, time() - JobQueue::LOCK_TTL - 1 );
+		$engine->process_queue();
+		$this->assertSame( array(), $queue->all(), 'A stale lock is taken over and the job finishes.' );
+		$this->assertTrue( $this->is_member( $user_id, $blog_id ) );
+		$this->assertFalse( get_site_option( JobQueue::OPTION_LOCK ), 'The run releases the lock it took over.' );
+	}
+
+	public function test_a_lock_released_meanwhile_is_stale_now(): void {
+		$before = time();
+		$this->assertGreaterThanOrEqual( $before, ( new JobQueue() )->lock_stale_at() );
+		$this->assertLessThanOrEqual( time(), ( new JobQueue() )->lock_stale_at() );
 	}
 
 	public function test_a_small_sync_finishes_in_the_request(): void {

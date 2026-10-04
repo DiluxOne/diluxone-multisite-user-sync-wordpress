@@ -68,6 +68,31 @@ add_filter(
 );
 
 /*
+ * Pauses the first background batch after the knob is set, and marks it in
+ * the network option `wpmus_e2e_batch_paused`, so a test can change the queue
+ * from another request while a run works on it. The batch goes on when the
+ * test sets `wpmus_e2e_batch_release`, or after the knob's seconds at most.
+ * The release is read from the database: this request's option cache would
+ * never see another request set it.
+ */
+add_filter(
+	'wpmus_sync_batch_size',
+	static function ( $size ) {
+		$knobs = wpmus_e2e_knobs();
+		if ( ! empty( $knobs['pause_first_batch'] ) && add_site_option( 'wpmus_e2e_batch_paused', time() ) ) {
+			global $wpdb;
+			$until = time() + (int) $knobs['pause_first_batch'];
+			while ( time() < $until && null === $wpdb->get_var( $wpdb->prepare( "SELECT meta_id FROM {$wpdb->sitemeta} WHERE meta_key = %s", 'wpmus_e2e_batch_release' ) ) ) { // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+				usleep( 200000 );
+			}
+		}
+
+		return $size;
+	},
+	20
+);
+
+/*
  * Holds WP-Cron for web requests, so a test can look at a queued sync before
  * anything works on it; WP-CLI's `wp cron event run` still runs the event,
  * which is how the test moves it on, one run at a time.
