@@ -108,6 +108,7 @@ final class UserRepositoryTest extends TestCase {
 
 		( new UserRepository() )->forget_removal( 5, 3 );
 	}
+
 	public function test_stored_member_count_reads_the_database_a_chunk_at_a_time(): void {
 		$queries         = array();
 		$GLOBALS['wpdb'] = new class( $queries ) {
