@@ -55,6 +55,7 @@ final class SyncEngineTest extends TestCase {
 		$this->users->shouldReceive( 'removed_blog_ids' )->andReturn( array() )->byDefault();
 		$this->users->shouldReceive( 'super_admin_ids' )->andReturn( array() )->byDefault();
 		$this->queue  = Mockery::mock( JobQueue::class );
+		$this->queue->shouldReceive( 'unschedule' )->byDefault();
 		$this->groups = Mockery::mock( WriteGroups::class );
 		$this->groups->shouldReceive( 'begin' )->andReturn( false )->byDefault();
 		$this->groups->shouldReceive( 'checkpoint' )->byDefault();
@@ -443,6 +444,17 @@ final class SyncEngineTest extends TestCase {
 		$engine->process_queue();
 		$this->assertSame( array( '5@1', '5@2', '6@1', '6@2' ), $added );
 		$this->assertTrue( $job->done );
+	}
+
+	public function test_a_run_that_empties_the_queue_removes_any_pending_retry(): void {
+		$job = $this->one_queued_job();
+		$this->queue->shouldReceive( 'first' )->andReturn( $job, null );
+		$this->users->shouldReceive( 'add_to_blog' )->twice()->andReturn( true );
+		$this->queue->shouldReceive( 'remove' )->once();
+		$this->queue->shouldNotReceive( 'schedule' );
+		$this->queue->shouldReceive( 'unschedule' )->once();
+
+		$this->engine()->process_queue();
 	}
 
 	public function test_a_run_that_leaves_work_schedules_the_next_one(): void {

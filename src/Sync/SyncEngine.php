@@ -410,6 +410,8 @@ final class SyncEngine {
 			$this->queue->schedule_at( time() + self::LOST_GROUP_RETRY );
 		} elseif ( null !== $this->queue->first() ) {
 			$this->queue->schedule();
+		} else {
+			$this->queue->unschedule();
 		}
 	}
 

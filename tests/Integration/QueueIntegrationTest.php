@@ -156,6 +156,7 @@ final class QueueIntegrationTest extends IntegrationTestCase {
 		update_site_option( JobQueue::OPTION_LOCK, time() - JobQueue::LOCK_TTL - 1 );
 		$engine->process_queue();
 		$this->assertSame( array(), $queue->all(), 'A stale lock is taken over and the job finishes.' );
+		$this->assertFalse( $this->next_run(), 'The retry left while the lock was held is gone with the work.' );
 		$this->assertTrue( $this->is_member( $user_id, $blog_id ) );
 		$this->assertFalse( get_site_option( JobQueue::OPTION_LOCK ), 'The run releases the lock it took over.' );
 	}

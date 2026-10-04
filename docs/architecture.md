@@ -61,7 +61,8 @@ no Composer dependencies at runtime.
    cursor after each batch, and schedules the next run while jobs remain. A
    run that finds the lock taken schedules a retry for when that lock goes
    stale (ten minutes), so a run that died never leaves the queue stuck; a
-   run that ends first brings the next one forward.
+   run that ends first brings the next one forward, and a run that empties
+   the queue removes it.
    A cron run commits its writes in transactions of about a second
    (`WriteGroups`, off with `wpmus_sync_group_writes`); only there, because
    that request is the plugin's own and nobody else's transaction can be
