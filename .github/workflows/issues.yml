@@ -20,7 +20,7 @@ jobs:
     permissions:
       contents: read
       issues: write
-    uses: DiluxOne/.github/.github/workflows/issue-triage.yml@v2
+    uses: DiluxOne/.github/.github/workflows/issue-triage.yml@v3
     with:
       support-url: https://wordpress.org/support/plugin/wpm-user-sync/
     secrets:
@@ -33,7 +33,7 @@ jobs:
       contents: write
       issues: write
       pull-requests: write
-    uses: DiluxOne/.github/.github/workflows/issue-repro.yml@v2
+    uses: DiluxOne/.github/.github/workflows/issue-repro.yml@v3
     secrets:
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
       DILUX_BOT_PRIVATE_KEY: ${{ secrets.DILUX_BOT_PRIVATE_KEY }}

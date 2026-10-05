@@ -33,7 +33,7 @@ jobs:
     permissions:
       contents: read
       pull-requests: read # the pull request's timeline, for the base-branch check on `edited`
-    uses: DiluxOne/.github/.github/workflows/conventions.yml@v2
+    uses: DiluxOne/.github/.github/workflows/conventions.yml@v3
     with:
       # The old display name, WPM User Sync, still appears on purpose (the
       # readme's history, "formerly"), so nothing is retired yet.
@@ -44,7 +44,7 @@ jobs:
       contents: read
       pull-requests: read # the push to main looks up the pull request it came from
       checks: read # and the checks of its head
-    uses: DiluxOne/.github/.github/workflows/plugin-checks-wp.yml@v2
+    uses: DiluxOne/.github/.github/workflows/plugin-checks-wp.yml@v3
     with:
       slug: wpm-user-sync
       main-file: wpm-user-sync.php
@@ -57,7 +57,7 @@ jobs:
       contents: read
       pull-requests: read
       checks: read
-    uses: DiluxOne/.github/.github/workflows/plugin-tests-wp.yml@v2
+    uses: DiluxOne/.github/.github/workflows/plugin-tests-wp.yml@v3
     with:
       # Both wp-env sites are networks already (.wp-env.json, "multisite":
       # true); converting the tests site again would fail.
@@ -69,7 +69,7 @@ jobs:
       contents: read
       pull-requests: write
       issues: write
-    uses: DiluxOne/.github/.github/workflows/claude-review.yml@v2
+    uses: DiluxOne/.github/.github/workflows/claude-review.yml@v3
     with:
       profile: plugin-wp
     secrets:
@@ -79,7 +79,7 @@ jobs:
   auto-merge:
     needs: review
     if: always() && needs.review.result != 'skipped'
-    uses: DiluxOne/.github/.github/workflows/auto-merge.yml@v2
+    uses: DiluxOne/.github/.github/workflows/auto-merge.yml@v3
     with:
       risk: ${{ needs.review.outputs.risk }}
       complexity: ${{ needs.review.outputs.complexity }}
@@ -97,4 +97,4 @@ jobs:
     permissions:
       contents: read
       issues: write
-    uses: DiluxOne/.github/.github/workflows/weekly-failure.yml@v2
+    uses: DiluxOne/.github/.github/workflows/weekly-failure.yml@v3

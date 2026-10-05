@@ -19,7 +19,7 @@ jobs:
       contents: read
       pull-requests: write
       issues: write
-    uses: DiluxOne/.github/.github/workflows/review-reply.yml@v2
+    uses: DiluxOne/.github/.github/workflows/review-reply.yml@v3
     with:
       profile: plugin-wp
     secrets:
