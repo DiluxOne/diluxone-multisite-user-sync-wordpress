@@ -4,7 +4,7 @@ Tags: multisite, users, user sync, network, roles
 Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 8.0
-Stable tag: 1.5.0
+Stable tag: 2.0.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -117,7 +117,6 @@ First release. Check help for all features.
 == Changelog ==
 
 = 2.0.0 =
-Unreleased.
 
 * The plugin is now called DiluxOne Multisite User Sync, in the DiluxOne family. Nothing else changes for your network: same settings, same screens, same slug.
 * Requires PHP 8.0 or newer (it was 7.4). Tested with WordPress 7.1.
