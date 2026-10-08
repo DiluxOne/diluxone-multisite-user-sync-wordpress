@@ -103,6 +103,14 @@ final class RequirementsChecker {
 			);
 		}
 
-		wp_die( $message ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- message is built from esc_html_e/esc_url calls above.
+		wp_die(
+			wp_kses(
+				$message,
+				array(
+					'strong' => array(),
+					'a'      => array( 'href' => true ),
+				)
+			)
+		);
 	}
 }

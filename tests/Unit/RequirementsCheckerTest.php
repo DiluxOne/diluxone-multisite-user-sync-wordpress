@@ -27,6 +27,12 @@ final class RequirementsCheckerTest extends TestCase {
 		Functions\when( 'esc_url' )->returnArg();
 		Functions\when( 'esc_html' )->returnArg();
 		Functions\when( 'esc_html__' )->returnArg();
+		// Like core's, it keeps only the tags the allow-list names.
+		Functions\when( 'wp_kses' )->alias(
+			static function ( string $html, array $allowed ): string {
+				return strip_tags( $html, array_keys( $allowed ) );
+			}
+		);
 		Functions\when( 'get_admin_url' )->justReturn( 'https://example.test/wp-admin/plugins.php' );
 		// wp_die() ends the request; here it ends the test with what it was told.
 		Functions\when( 'wp_die' )->alias(

@@ -141,10 +141,13 @@ final class NetworkHomePage {
 		<p>
 			<?php
 			$site_link = '<a href="https://wordpress.org/support/plugin/wpm-user-sync/">' . esc_html__( 'support forum', 'wpm-user-sync' ) . '</a>';
-			printf(
-				/* translators: %s: link to the plugin's support forum on wordpress.org */
-				esc_html__( 'Do you want online help? Check our %s.', 'wpm-user-sync' ),
-				$site_link // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- pre-built from esc_html__ above.
+			echo wp_kses(
+				sprintf(
+					/* translators: %s: link to the plugin's support forum on wordpress.org */
+					esc_html__( 'Do you want online help? Check our %s.', 'wpm-user-sync' ),
+					$site_link
+				),
+				array( 'a' => array( 'href' => true ) )
 			);
 			?>
 		</p>

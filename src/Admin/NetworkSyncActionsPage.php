@@ -145,10 +145,13 @@ final class NetworkSyncActionsPage {
 
 	/**
 	 * True when the administrator ticked "also add back people who
-	 * were removed". Only called after the nonce check.
+	 * were removed", on a form whose nonce is valid.
 	 */
 	private function force_requested(): bool {
-		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- verified by check_admin_referer() in the calling handler.
+		$nonce = isset( $_REQUEST['_wpnonce'] ) ? sanitize_key( wp_unslash( (string) $_REQUEST['_wpnonce'] ) ) : '';
+		if ( ! wp_verify_nonce( $nonce, Config::NONCE_ACTION ) ) {
+			return false;
+		}
 		return isset( $_POST['wpmus_force'] ) && 'yes' === sanitize_key( wp_unslash( (string) $_POST['wpmus_force'] ) );
 	}
 

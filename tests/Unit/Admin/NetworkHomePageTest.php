@@ -12,6 +12,7 @@ declare(strict_types=1);
 namespace Tests\Unit\Admin;
 
 use Brain\Monkey\Actions;
+use Brain\Monkey\Functions;
 use Tests\Stubs\AdminScreen;
 use Tests\TestCase;
 use WPMUS\Admin\NetworkHomePage;
@@ -23,6 +24,12 @@ final class NetworkHomePageTest extends TestCase {
 	protected function setUp(): void {
 		parent::setUp();
 		$this->stub_admin_screen();
+		// Like core's, it keeps only the tags the allow-list names.
+		Functions\when( 'wp_kses' )->alias(
+			static function ( string $html, array $allowed ): string {
+				return strip_tags( $html, array_keys( $allowed ) );
+			}
+		);
 	}
 
 	protected function tearDown(): void {
