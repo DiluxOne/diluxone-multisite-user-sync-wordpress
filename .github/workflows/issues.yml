@@ -16,6 +16,10 @@ on:
 permissions:
   contents: read
 
+# The triage and the reproduction take the organisation's secrets with
+# `inherit` at the moving @v5, as the organisation's template does: unlike
+# the release and the SVN check, no environment secret reaches them.
+
 jobs:
   triage:
     permissions:

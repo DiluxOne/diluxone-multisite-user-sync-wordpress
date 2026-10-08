@@ -1,7 +1,9 @@
-# Every nonce, sanitising, SQL and filesystem check this plugin suppresses,
-# with the reason it is safe at that line. The review rules of the
-# wordpress-plugin kind (DiluxOne/.github, kinds/wordpress-plugin/) fail a
-# suppression missing from this list, and an entry whose code changed.
+# Every nonce, sanitising, prepared-SQL and filesystem check this plugin
+# suppresses, with the reason it is safe at that line: the checks the review
+# rules of the wordpress-plugin kind (DiluxOne/.github,
+# kinds/wordpress-plugin/suppressions.md) track. They fail a suppression
+# missing from this list, and an entry whose code changed. Others, such as
+# WordPress.DB.DirectDatabaseQuery, are not listed.
 suppressions:
   - file: src/Admin/NetworkHomePage.php
     sniff: WordPress.Security.NonceVerification.Recommended
