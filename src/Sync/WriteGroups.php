@@ -118,10 +118,11 @@ class WriteGroups {
 	 * group is recorded lost.
 	 */
 	private function commit(): bool {
-		if ( $this->query( 'COMMIT' ) ) {
+		global $wpdb;
+		if ( false !== $wpdb->query( 'COMMIT' ) ) { // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			return true;
 		}
-		$this->query( 'ROLLBACK' );
+		$wpdb->query( 'ROLLBACK' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 		$this->lost = true;
 		return false;
 	}
@@ -147,15 +148,8 @@ class WriteGroups {
 	 * see a membership another request had just added, and add it twice.
 	 */
 	private function start(): bool {
-		return $this->query( 'SET TRANSACTION ISOLATION LEVEL READ COMMITTED' ) && $this->query( 'START TRANSACTION' );
-	}
-
-	/**
-	 * Sends one of the fixed transaction statements. True when the
-	 * database took it.
-	 */
-	private function query( string $statement ): bool {
 		global $wpdb;
-		return false !== $wpdb->query( $statement ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery,WordPress.DB.PreparedSQL.NotPrepared -- a fixed statement, no input.
+		return false !== $wpdb->query( 'SET TRANSACTION ISOLATION LEVEL READ COMMITTED' ) // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			&& false !== $wpdb->query( 'START TRANSACTION' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 	}
 }

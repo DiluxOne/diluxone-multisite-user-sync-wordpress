@@ -75,6 +75,7 @@ final class NetworkSyncActionsPageTest extends TestCase {
 	 */
 	private function allowed(): void {
 		Functions\when( 'check_admin_referer' )->justReturn( 1 );
+		Functions\when( 'wp_verify_nonce' )->justReturn( 1 );
 		Functions\when( 'current_user_can' )->justReturn( true );
 	}
 
@@ -252,6 +253,22 @@ final class NetworkSyncActionsPageTest extends TestCase {
 		$this->expect_queued(
 			static function ( SyncJob $job ): bool {
 				return true === $job->force;
+			}
+		);
+
+		$this->redirect_of( array( $this->page(), 'handle_sync_all' ) );
+	}
+
+	public function test_the_box_counts_only_on_a_form_whose_nonce_verifies(): void {
+		$this->allowed();
+		Functions\when( 'wp_verify_nonce' )->justReturn( false );
+		$_POST = array(
+			'_wpnonce'    => 'stale',
+			'wpmus_force' => 'yes',
+		);
+		$this->expect_queued(
+			static function ( SyncJob $job ): bool {
+				return false === $job->force;
 			}
 		);
 

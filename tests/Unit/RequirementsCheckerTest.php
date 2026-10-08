@@ -21,12 +21,23 @@ use WPMUS\RequirementsChecker;
 
 final class RequirementsCheckerTest extends TestCase {
 
+	/** @var array<int, array<string, array<string, bool>>> The allow-lists `wp_kses()` was given. */
+	private array $kses_allowed = array();
+
 	protected function setUp(): void {
 		parent::setUp();
 		$GLOBALS['wp_version'] = '7.1';
 		Functions\when( 'esc_url' )->returnArg();
 		Functions\when( 'esc_html' )->returnArg();
 		Functions\when( 'esc_html__' )->returnArg();
+		// Like core's, it keeps only the tags the allow-list names, and it
+		// records the allow-list it was given.
+		Functions\when( 'wp_kses' )->alias(
+			function ( string $html, array $allowed ): string {
+				$this->kses_allowed[] = $allowed;
+				return strip_tags( $html, array_keys( $allowed ) );
+			}
+		);
 		Functions\when( 'get_admin_url' )->justReturn( 'https://example.test/wp-admin/plugins.php' );
 		// wp_die() ends the request; here it ends the test with what it was told.
 		Functions\when( 'wp_die' )->alias(
@@ -121,6 +132,27 @@ final class RequirementsCheckerTest extends TestCase {
 		$this->expectExceptionMessage( '<strong>DiluxOne Multisite User Sync</strong> requires WordPress Multisite' );
 
 		( new RequirementsChecker( $config ) )->check();
+	}
+
+	public function test_the_message_lets_only_bold_text_and_links_through(): void {
+		Functions\when( 'is_plugin_active' )->justReturn( true );
+		Functions\when( 'is_multisite' )->justReturn( false );
+		Functions\when( 'deactivate_plugins' )->justReturn( null );
+
+		try {
+			$this->checker()->check();
+			$this->fail( 'The plugin should have died.' );
+		} catch ( RuntimeException $died ) {
+			$this->assertSame(
+				array(
+					array(
+						'strong' => array(),
+						'a'      => array( 'href' => true ),
+					),
+				),
+				$this->kses_allowed
+			);
+		}
 	}
 
 	public function test_the_message_links_back_to_the_plugins_page(): void {
