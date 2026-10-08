@@ -175,7 +175,9 @@ finds, so the target reads the table and fails on any ERROR row.
 
 One warning stays by design: `trademarked_term` on the slug `wpm-user-sync`
 ("wp"). The slug is permanent since the plugin is published, which is why
-the display name no longer carries it.
+the display name no longer carries it. CI's Plugin Check ignores that code
+(`kind-settings:` in [`.github/review-policy.yml`](../.github/review-policy.yml)),
+so a strict check, where every warning fails, still passes.
 
 ## Running everything at once
 
