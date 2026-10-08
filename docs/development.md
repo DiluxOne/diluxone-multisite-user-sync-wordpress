@@ -110,7 +110,7 @@ the folder's name. So every tool is told which one it needs:
 
 | Needs the **slug** | How |
 | --- | --- |
-| `.github/workflows/pull-request.yml`, `release.yml` | `slug: wpm-user-sync`, `main-file: wpm-user-sync.php`. |
+| `.github/workflows/plugin-checks.yml`, `release.yml` | `slug: wpm-user-sync`, `main-file: wpm-user-sync.php`. |
 | `Makefile` (`dist`, `zip`, `plugin-check`, `i18n`, `deploy-test`) | `SLUG := wpm-user-sync`. |
 
 | Needs the **checkout's folder name** | How |

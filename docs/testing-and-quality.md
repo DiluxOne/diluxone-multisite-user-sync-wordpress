@@ -4,24 +4,27 @@ What every quality gate enforces, why, and how to run each one locally.
 
 ## Quality stack at a glance
 
-Once the repository lives in the DiluxOne organisation, the pull request
-checks run from [`.github/workflows/pull-request.yml`](../.github/workflows/pull-request.yml),
-which calls the shared workflows in [`DiluxOne/.github`](https://github.com/DiluxOne/.github):
-the **fast** suite first, then the Claude review, with the **slow** suite
-alongside it. Until then, the Make targets below are the gates.
+On a pull request, the organisation's required pipeline
+(`org-pull-request.yml` in [`DiluxOne/.github`](https://github.com/DiluxOne/.github))
+runs the conventions, the accepted-issue gate and the Claude review, and
+[`.github/workflows/plugin-checks.yml`](../.github/workflows/plugin-checks.yml)
+runs the plugin's own checks from the shared workflows: the **fast** suite
+and, alongside the review, the **slow** one. The Make targets below run each
+gate locally.
 
 | Layer | Tool | Catches | Suite | Make target |
 | --- | --- | --- | --- | --- |
-| Conventions | shared `conventions` workflow, lychee | Branch name, PR title and commit headers; the description's What changes and Why; no "Generated with …" footer; broken relative doc links; retired product names. | conventions | `make docs-check` (links, names) |
+| Conventions | the organisation's pipeline, lychee | Branch name, PR title and commit headers; an accepted issue the pull request closes, of a Type that fits; the description's What changes and Why; no "Generated with …" footer; broken relative doc links; retired product names. | conventions | `make docs-check` (links, names) |
 | Syntax | `php -l` on PHP 8.0 to 8.5, the shipped files | Syntax the minimum PHP cannot parse. | fast | — |
 | Unit tests | PHPUnit 9 + Brain Monkey + Mockery, same PHP matrix | Logic regressions without WordPress. | fast | `make test`, `make test-unit-min` |
 | Coding style | PHPCS + WordPress Coding Standards + PHPCompatibilityWP (8.0+) | Style, naming, escaping, sanitising, nonces, prefixes, deprecated APIs, syntax newer than 8.0. | fast | `make lint` |
 | Static analysis | PHPStan level 8 + phpstan-wordpress, **no baseline** | Types, dead code, undefined methods. | fast | `make stan` |
 | Taint analysis | Psalm + psalm-plugin-wordpress (taint only) | Request data reaching `echo`, SQL, `header()`, files without an escaper. | fast | `make psalm` |
 | i18n | `wp i18n make-pot` on the shipped tree; `msgfmt`/`msgcmp` | Missing translator comments, dynamic domains, concatenated strings; an incomplete, fuzzy or stale locale. | fast | `make i18n`, `make i18n-check` |
-| Plugin Check | wordpress/plugin-check on the shipped tree | What the wordpress.org review team runs. | fast | `make plugin-check` |
+| Review rules | the `wordpress-plugin` kind's rules (DiluxOne/.github) | What the wordpress.org reviewers send back: escaping suppressed, a nonce checked elsewhere, a suppression not listed with its reason in [`.github/review-suppressions.yml`](../.github/review-suppressions.yml). | fast | — |
+| Plugin Check | wordpress/plugin-check on the shipped tree, strict | What the wordpress.org review team runs; a warning fails, as it does for the reviewer. | fast | `make plugin-check` |
 | Readme and versions | shared `release-markers.sh` | Readme headers; `Version:`, `WPMUS_VERSION` and `Stable tag:` in line and naming the last release (or the one being released, in its release pull request). | fast | — |
-| Claude review | shared `claude-review` workflow | [`architecture.md`](architecture.md), [`AGENTS.md`](../AGENTS.md) and the WordPress review profile; rates risk and complexity. | after fast | `make review-local` |
+| Claude review | the organisation's pipeline | [`architecture.md`](architecture.md), [`AGENTS.md`](../AGENTS.md) and the WordPress review profile; rates risk and complexity. | after fast | `make review-local` |
 | Integration tests | PHPUnit on the wp-env tests network | Behaviour against real WordPress Multisite and MySQL: hooks, options, memberships, cron, uninstall. | slow | `make test-integration` |
 | End-to-end tests | Playwright on the wp-env dev network | Every screen, every trigger and action as a person uses them, permissions, the queue through WP-Cron, uninstall, layout invariants; plus the single-site check. | slow | `make test-e2e` |
 | Coverage | Xdebug on the wp-env network, `tests/coverage/` | Code no test runs: each layer's share of the lines that ship, and all together. | local | `make coverage` |

@@ -1,9 +1,36 @@
 # AGENTS.md
 
-Instructions for any coding agent working in this repository (Claude Code,
-Codex, Cursor, …), and for the person it works with. Humans: the same rules
-live in [`CONTRIBUTING.md`](CONTRIBUTING.md) and [`docs/ai.md`](docs/ai.md);
-this file is the short version an agent must follow without exception.
+<!-- dx:org:start (kept in step by DiluxOne/.github, scripts/sync-repos.py; edit it there) -->
+## The organisation's rules (the same in every DiluxOne repository)
+
+You are working in a DiluxOne repository. Whoever you work for (the
+maintainer, or someone contributing from a fork), these hold here, and the
+step-by-step flow with its commands is in
+[DiluxOne/.github, `docs/agents.md`](https://github.com/DiluxOne/.github/blob/main/docs/agents.md):
+
+1. **Nothing starts without an accepted issue.** Find the issue, or open one
+   with the form that fits (it sets the issue's Type: Bug, Feature, Docs or
+   Task), and wait until a maintainer adds the `accepted` label. Never add it
+   yourself. The pull request says `Closes #<number>`; CI fails it otherwise.
+2. **The pull request's type fits the issue's Type**: `feat` (or any `!`)
+   closes a Feature, `fix` a Bug; other types close any accepted issue.
+3. **Branch** `<type>/<number>-<short-kebab>`; **commit and title** as a
+   Conventional Commit of 72 characters or fewer (CI rejects more than 100);
+   bodies are plain paragraphs, never hard-wrapped; no `Claude-Session:`.
+4. **Check before the pull request** (`dx check`, or the repository's
+   `make pre-pr`) and open it (`dx pr`) only when the person you work for
+   says so.
+5. **Never** push to `main`, create or move a tag, or approve a release.
+6. **Say AI took part** with one line at the end of what you write on GitHub:
+   `🤖 AI-generated · <model> (<maker>)` when you wrote it,
+   `🤖 AI-assisted · <model> (<maker>)` when a person did with your help.
+   Never "Generated with …".
+<!-- dx:org:end -->
+
+What follows is this repository's own: what an agent working here (Claude
+Code, Codex, Cursor, …) and the person it works with must follow on top of
+the organisation's rules above. Humans: the same rules live in
+[`CONTRIBUTING.md`](CONTRIBUTING.md) and [`docs/ai.md`](docs/ai.md).
 
 ## What this is
 
@@ -24,14 +51,15 @@ otherwise ([`docs/development.md`](docs/development.md#the-repository-name-is-no
 ## Your workflow
 
 Everything a pull request is checked on runs on this machine first, so a
-pull request is opened only when the branch is already clean.
+pull request is opened only when the branch is already clean. The steps
+around it (the accepted issue, `dx start`, `dx pr`) are the organisation's
+flow above.
 
 1. **Set up once.** Docker, Node.js (for `npx`), GNU make and git; no PHP on
    the host. `make install` (dev tools, npm packages, Playwright's Chromium),
    then `make env`: a subdirectory network at http://localhost:8898
    (admin / password) and a second one at :8899 for the integration suite.
-2. **Branch from `main`:** `<type>/<kebab-case>`.
-3. **Make the change** with its tests at every layer it touches (unit,
+2. **Make the change** with its tests at every layer it touches (unit,
    integration on the tests network, end-to-end on the dev network, the
    single-site check when activation changes), the docs that describe it, the
    layout and snapshot baselines when a screen changes, and, when a user
@@ -39,41 +67,26 @@ pull request is opened only when the branch is already clean.
    below its `Unreleased.` line. A new screen or tab goes into
    `tests/e2e/support/screens.ts`; a new feature or state into
    [`tests/e2e/COVERAGE.md`](tests/e2e/COVERAGE.md).
-4. **Commit** with Conventional Commit headers of at most 100 characters.
-5. **Write the pull request description** in `build/pr.md` (git-ignored) with
-   the template's sections ([`.github/pull_request_template.md`](.github/pull_request_template.md)).
-6. **Run everything:** `make pre-pr REVIEW_ARGS="--title '…' --body-file build/pr.md"`:
+3. **Write the pull request description** in `.git/dx/pr.md` (`dx start`
+   writes it, already closing the issue): fill in "📝 What changes" and
+   "💡 Why"; it becomes the commit body on `main`.
+4. **Run everything:** `make pre-pr REVIEW_ARGS="--title '…' --body-file .git/dx/pr.md"`:
    `make check`, `make test-unit-min` (PHP 8.0), `make i18n-check`,
    `make docs-check`, `make coverage` (the unit, integration and end-to-end
    suites with Xdebug, the single-site check included, failing below the
    coverage floors), Plugin Check and the organisation's local review.
-7. **Fix what the review found** (`.git/dx-review/findings.md`) and run step 6
+5. **Fix what the review found** (`.git/dx-review/findings.md`) and run step 4
    again until it says **Ready for a pull request**.
-8. **Only then push and open the pull request**, and only when the person you
-   work for says so.
 
 ## How work reaches `main`
 
-Only through a pull request, squash-merged. Nobody pushes to `main`, admins
-included. Once the repository lives in the DiluxOne organisation, CI enforces
-every rule in this section (the shared `conventions` workflow from
-`DiluxOne/.github`); follow them from now on.
-
-- **Branch:** `<type>/<kebab-case>`, e.g. `fix/role-sync-super-admins`.
-- **PR title:** a Conventional Commit header, `type(scope): subject`, at most
-  100 characters, no trailing period. It becomes the commit on `main`.
-- **Every commit on the branch:** the same header format.
-- **Types:** `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`,
-  `build`, `ci`, `chore`, `revert`.
-- **Trailers:** `Co-Authored-By:` is fine. `Claude-Session:` and other
-  session links are rejected.
-- **Messages** say what the change does and why, not who or what wrote it.
-  The body is plain paragraphs, one line each, never hard-wrapped.
-- **PR description:** fill the template's "📝 What changes" and "💡 Why"
-  sections; CI fails when either is empty. It becomes the commit body.
-- **AI line:** end every PR, issue or comment you write with
-  `🤖 AI-generated · <model> (Anthropic)` (`AI-assisted` when a person wrote
-  it with your help). Never "Generated with …": CI rejects it.
+Only through a pull request, squash-merged: its title becomes the commit on
+`main` and its description the body. Nobody pushes to `main`, admins
+included. The organisation's required pipeline (`org-pull-request.yml` in
+DiluxOne/.github) holds every pull request to the rules above; the plugin's
+own checks are in [`.github/workflows/plugin-checks.yml`](.github/workflows/plugin-checks.yml).
+Types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`,
+`ci`, `chore`, `revert`.
 
 ## How a change becomes a release
 
@@ -92,9 +105,8 @@ never do, in a change:
 
 ## Rules you must not break
 
-- **Never** push to `main`, create or push a tag, create a GitHub release,
-  approve a deployment or touch the wordpress.org SVN. A tag `X.Y.Z` publishes
-  the plugin to every network that has it and is permanent.
+- **Never** create a GitHub release or touch the wordpress.org SVN. A tag
+  `X.Y.Z` publishes the plugin to every network that has it and is permanent.
 - **Never** bump the version markers.
 - **Never** commit secrets: no `.env*`, no SVN password, no real person's data.
 - **PHP 8.0 and WordPress 6.6** are the minimums; the runtime has no Composer
@@ -129,8 +141,9 @@ never do, in a change:
 | Every quality gate, what runs when, how to run each | [`docs/testing-and-quality.md`](docs/testing-and-quality.md) |
 | The end-to-end suite: what has to be up, how it is built | [`tests/e2e/README.md`](tests/e2e/README.md) |
 | Which test covers which feature | [`tests/e2e/COVERAGE.md`](tests/e2e/COVERAGE.md) |
-| Branches, titles, pull requests, forks, the review | [`CONTRIBUTING.md`](CONTRIBUTING.md) |
-| Versions, the changelog switch, development builds, the move into DiluxOne | [`docs/release.md`](docs/release.md) |
+| The flow step by step: issue, branch, check, pull request | [DiluxOne/.github, `docs/agents.md`](https://github.com/DiluxOne/.github/blob/main/docs/agents.md) |
+| What this plugin adds for contributors | [`CONTRIBUTING.md`](CONTRIBUTING.md) |
+| Versions, the changelog switch, development builds, the organisation's setup | [`docs/release.md`](docs/release.md) |
 | What is planned and what is not | [`docs/roadmap.md`](docs/roadmap.md) |
 | How AI is used here and the rules for AI-assisted work | [`docs/ai.md`](docs/ai.md) |
 | The shared workflows, policy and review profiles | [DiluxOne/.github](https://github.com/DiluxOne/.github) |

@@ -9,13 +9,11 @@ in [`AGENTS.md`](../AGENTS.md).
 ## Where things stand
 
 The plugin is published on wordpress.org as `wpm-user-sync`; the last release
-is **1.5.0**, and `main`'s three version markers say so. It is moving into
-the DiluxOne organisation on GitHub, and from that move on it is released by
-the organisation's pipeline, as every DiluxOne plugin is. Until then **nothing
-is released**: the workflows in [`.github/workflows/`](../.github/workflows/)
-call reusable workflows, secrets and GitHub Apps that exist only inside the
-organisation, and they do not run here. What the move takes is in
-[Moving into DiluxOne](#moving-into-diluxone) below.
+is **1.5.0**, and `main`'s three version markers say so. The repository lives
+in the DiluxOne organisation and is released by the organisation's pipeline,
+as every DiluxOne plugin is ([The organisation's setup](#the-organisations-setup)
+below). The release workflow still rehearses (`dry-run: true`): nothing
+reaches wordpress.org until a pull request of its own turns that off.
 
 The next version is being written under `= 2.0.0 =` in `readme.txt`, with its
 `Unreleased.` line in place.
@@ -103,55 +101,38 @@ Unreleased.
 - **After a release**, the next change that deserves a bullet opens the next
   entry, `= X.Y.Z =` with `Unreleased.`, above the released one.
 
-## Moving into DiluxOne
+## The organisation's setup
 
-The repository already carries everything the organisation's adoption guide
-asks for ([DiluxOne/.github, "Adopt it in a new repository"](https://github.com/DiluxOne/.github#adopt-it-in-a-new-repository)):
-the callers in `.github/workflows/` (`pull-request.yml`,
-`pull-request-edited.yml`, `pull-request-comments.yml`, `issues.yml`,
-`release.yml`, `svn-auth-check.yml`) with `slug: wpm-user-sync`,
-`main-file: wpm-user-sync.php` and `version-constant: WPMUS_VERSION`;
-`.github/review-policy.yml`; `AGENTS.md`, `docs/architecture.md` and
-`docs/roadmap.md`; the pull request template, CODEOWNERS and Dependabot. What
-the move itself takes, in order:
+What every DiluxOne repository shares is configured once, in
+[DiluxOne/.github](https://github.com/DiluxOne/.github): the pull request
+pipeline (`org-pull-request.yml`: conventions, the accepted-issue gate, the
+Claude review, the auto-merge decision), the rulesets on `main` and on the
+`X.Y.Z` tags, the issue forms, the pull request template, the community files,
+the labels and the merge settings. What this repository keeps is its own:
 
-1. **Transfer the repository** into DiluxOne (GitHub keeps redirects from the
-   old URL). Choose its name then; nothing here depends on it
-   ([`development.md`](development.md#the-repository-name-is-not-the-plugin-slug)).
-2. **Settings:** squash merge only, auto-merge allowed, delete the branch on
-   merge, squash title from the PR title and body from the PR body;
-   Dependabot alerts and updates; private vulnerability reporting (SECURITY.md
-   points to it).
-3. **Ruleset on `main`:** changes only through a pull request, linear history,
-   conversations resolved, required checks green and up to date:
-   `conventions / Conventions (branch, title, commits)`,
-   `conventions / Docs (links and names)`, `review / Claude review`, and every
-   `checks / …` and `tests / …` job.
-4. **Two rulesets on tags `X.Y.Z`:** creation for administrators and the
-   `dilux-release` App only; nobody deletes or moves them.
-5. **Apps:** install `dilux-bot` and `dilux-release` on the repository; add
-   `dilux-release` to the tag-creation ruleset's bypass list.
-6. **Environment `wordpress-org`:** deployment policy tag `*.*.*` plus branch
-   `main`; required reviewers (the maintainers who may publish); environment
-   secrets `SVN_USERNAME`, `SVN_PASSWORD` (the SVN password of the account that
-   owns `wpm-user-sync`, not its login password) and
-   `DILUX_RELEASE_PRIVATE_KEY`; environment variable
-   `DILUX_RELEASE_CLIENT_ID`. Organisation secrets (`ANTHROPIC_API_KEY`,
-   `DILUX_BOT_PRIVATE_KEY`, `DILUX_BOT_CLIENT_ID`) are inherited.
-7. **Prove the credentials:** run **SVN credentials check** from the Actions
-   tab.
-8. **Rehearse:** `release.yml` starts with `dry-run: true`. The first push to
-   `main` rehearses everything but the SVN commit, the tag and the release;
-   when a rehearsal approved in the environment looks right, a pull request of
-   its own sets `dry-run: false`.
-9. **Fill in what could not be known before the move:** the repository's
-   links in [`README.md`](../README.md) and `readme.txt` ("The source… on
-   GitHub"), and, if the old display name should stop coming back, the
-   `retired-names` of both pull-request workflows.
+- **The callers in `.github/workflows/`:** `plugin-checks.yml` (the fast
+  checks, the wp-env suites and the weekly run), `issues.yml` (the triage,
+  the reproduction on `repro:run`, and the job that puts an accepted issue on
+  the Multisite User Sync Project), `pull-request-comments.yml` (answers to
+  `@dilux-bot`), `release.yml` and `svn-auth-check.yml`, with
+  `slug: wpm-user-sync`, `main-file: wpm-user-sync.php` and
+  `version-constant: WPMUS_VERSION`. The release and the SVN check are pinned
+  to a commit of the shared workflows, which Dependabot bumps.
+- **`.github/review-policy.yml`** (the `wordpress-plugin` kind, the high-risk
+  paths and, if the old display name should stop coming back,
+  `retired-names`) and **`.github/review-suppressions.yml`**.
+- **The environment `wordpress-org`:** deployment policy tag `*.*.*` plus
+  branch `main`; required reviewers (the maintainers who may publish);
+  environment secrets `SVN_USERNAME`, `SVN_PASSWORD` (the SVN password of the
+  account that owns `wpm-user-sync`, not its login password) and
+  `DILUX_RELEASE_PRIVATE_KEY`; environment variable `DILUX_RELEASE_CLIENT_ID`.
+  After rotating the SVN password, run **SVN credentials check** from the
+  Actions tab.
 
-The previous release workflow (`deploy.yml`, a tag pushed by hand) is gone;
-there is no way to publish from this repository until the steps above are
-done.
+What is left before the first release from here: **rehearse.** Every push to
+`main` rehearses everything but the SVN commit, the tag and the release; when
+a rehearsal approved in the environment looks right, a pull request of its
+own sets `dry-run: false` in `release.yml`.
 
 ## Release tags are permanent
 
