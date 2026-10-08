@@ -52,11 +52,11 @@ make check       # lint, PHPStan, Psalm, unit tests
 | `uninstall.php` | Removes the plugin's data; never users or memberships. |
 | `readme.txt`, `.wordpress-org/` | The wordpress.org page and its banner, icon and screenshots. |
 | `tests/` | Unit (`Unit/`), integration on a network (`Integration/`), end-to-end with Playwright (`e2e/`). |
-| `.github/` | The DiluxOne organisation's workflow callers, review policy, templates. |
+| `.github/` | The plugin's workflow callers, its review policy and suppressions; the rest comes from the DiluxOne organisation. |
 
 ## Security
 
-Do not open a public issue for a vulnerability: see [SECURITY.md](SECURITY.md).
+Do not open a public issue for a vulnerability: report it privately from this repository's **Security** tab › **Report a vulnerability**, as the organisation's [security policy](https://github.com/DiluxOne/.github/blob/main/SECURITY.md) says.
 
 ## Licence
 

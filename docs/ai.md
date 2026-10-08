@@ -8,8 +8,7 @@ contributes with AI. Coding agents read the short, enforceable version in
 
 The maintainer writes most changes with Claude Code, reads every diff, runs
 the tests and signs the commit. The rules an agent could break by mistake are
-enforced by the tests, the linters and, once the repository is in the DiluxOne
-organisation, by CI and the rulesets: `AGENTS.md` is guidance, the checks are
+enforced by the tests, the linters, CI and the organisation's rulesets: `AGENTS.md` is guidance, the checks are
 the guarantee. Every pull request carries one sober line saying how it was
 made, for example `🤖 AI-assisted · Claude Opus 5.5 (Anthropic)`; that line
 lands in the commit on `main`.
@@ -21,10 +20,10 @@ whoever wrote the change.
 
 ## The review on every pull request
 
-In the organisation, every pull request from a branch of the repository is
-reviewed by Claude through the shared
-[`claude-review`](https://github.com/DiluxOne/.github/blob/main/.github/workflows/claude-review.yml)
-workflow, after the conventions and the fast gates pass.
+Every pull request from a branch of the repository is reviewed by Claude
+through the organisation's required pipeline (`org-pull-request.yml` in
+[DiluxOne/.github](https://github.com/DiluxOne/.github)), after the
+conventions and the accepted-issue gate pass.
 
 - **What it reads:** the organisation's review profiles (general and
   WordPress plugin), this repository's [`architecture.md`](architecture.md)
@@ -51,8 +50,10 @@ When an issue opens, Claude classifies it from [`roadmap.md`](roadmap.md), the
 README and `readme.txt` (a bug to reproduce, missing information, works as
 documented, feature request, usage question, duplicate, vulnerability posted
 in public), applies one label and replies once. It never closes an issue,
-promises a fix or gives a date. A reproducible bug gets a unit test written
-to fail if the bug exists, run on a runner without secrets.
+accepts one, promises a fix or gives a date: a person accepts an issue with
+the `accepted` label, and only then can a pull request close it. When a
+maintainer labels a bug `repro:run`, Claude writes a unit test meant to fail
+if the bug exists and runs it in a container without network or secrets.
 
 ## What is never automated
 

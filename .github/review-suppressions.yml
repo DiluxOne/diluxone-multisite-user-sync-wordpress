@@ -1,0 +1,43 @@
+# Every nonce, sanitising, prepared-SQL and filesystem check this plugin
+# suppresses, with the reason it is safe at that line: the checks the review
+# rules of the wordpress-plugin kind (DiluxOne/.github,
+# kinds/wordpress-plugin/suppressions.md) track. They fail a suppression
+# missing from this list, and an entry whose code changed. Others, such as
+# WordPress.DB.DirectDatabaseQuery, are not listed.
+suppressions:
+  - file: src/Admin/NetworkHomePage.php
+    sniff: WordPress.Security.NonceVerification.Recommended
+    fingerprint: 970296c6519e
+    reason: "Which tab of the home screen to draw; the key is compared with the fixed list welcome/concepts/about and nothing is saved or printed from it."
+  - file: src/Admin/SiteHomePage.php
+    sniff: WordPress.Security.NonceVerification.Recommended
+    fingerprint: 970296c6519e
+    reason: "Which tab of the home screen to draw; the key is compared with the fixed list welcome/concepts/about and nothing is saved or printed from it."
+  - file: src/Notices.php
+    sniff: WordPress.Security.NonceVerification.Recommended
+    fingerprint: abca1e78cf07
+    reason: "Only decides whether this is one of the plugin's screens (the wpmus- prefix); nothing is saved or printed from it."
+  - file: src/Notices.php
+    sniff: WordPress.Security.NonceVerification.Recommended
+    fingerprint: 11bea2339a00
+    reason: "Only its presence is read, to show a fixed translated notice after a redirect; the value is never used."
+  - file: src/Notices.php
+    sniff: WordPress.Security.NonceVerification.Recommended
+    fingerprint: 4a019a4702a1
+    reason: "Only its presence is read, to show a fixed translated notice after a redirect; the value is never used."
+  - file: src/Notices.php
+    sniff: WordPress.Security.NonceVerification.Recommended
+    fingerprint: 926194144f71
+    reason: "Only its presence is read, to show a fixed translated notice after a redirect; the value is never used."
+  - file: src/Notices.php
+    sniff: WordPress.Security.NonceVerification.Recommended
+    fingerprint: 925fb2ae9510
+    reason: "Only its presence is read, to show a fixed translated notice after a redirect; the value is never used."
+  - file: src/Repositories/UserRepository.php
+    sniff: WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+    fingerprint: 131ef56d43e7
+    reason: "Interpolated are $wpdb->usermeta and a list of %d placeholders, one per id; the meta key and every id go through prepare()."
+  - file: src/Repositories/UserRepository.php
+    sniff: WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
+    fingerprint: 131ef56d43e7
+    reason: "The IN list is a run of %d placeholders built from the chunk's size, so prepare() gets one value per placeholder."

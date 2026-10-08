@@ -360,10 +360,10 @@ check: lint stan psalm test ## Run the fast quality gates (lint, stan, psalm, un
 # The organisation's local review (DiluxOne/.github, scripts/local-review.sh):
 # the pull request's conventions, risk floor and Claude review, run before the
 # pull request exists. The script is cloned into build/.dx-central at the
-# moving tag REVIEW_CENTRAL_REF (v2, what CI calls too) and refreshed on every
+# moving tag REVIEW_CENTRAL_REF (v5, what CI calls too) and refreshed on every
 # run. REVIEW_CENTRAL=<path> uses a checkout of your own instead.
 REVIEW_CENTRAL     ?= build/.dx-central
-REVIEW_CENTRAL_REF ?= v2
+REVIEW_CENTRAL_REF ?= v5
 
 .PHONY: review-local
 review-local: ## The pull request's review before it exists: conventions, risk floor, Claude review (REVIEW_ARGS="--body-file pr.md", "--title …", "--no-claude").
@@ -386,14 +386,14 @@ pre-pr: ## Everything a pull request is checked on, one after the other, then th
 
 # The docs job of the conventions workflow, the same checks locally: relative
 # links in every Markdown file resolve (lychee, the version CI runs), and no
-# retired product name is back (the regex pull-request.yml passes, when it
-# names any).
+# retired product name is back (the `retired-names:` regex of
+# .github/review-policy.yml, when it names any).
 LYCHEE_IMAGE ?= lycheeverse/lychee:0.24.2
 
 .PHONY: docs-check
 docs-check: ## Relative links in every Markdown file resolve, and no retired product name is back (what CI's docs job checks).
 	docker run --rm -v "$(CURDIR)":/input -w /input $(LYCHEE_IMAGE) --offline --no-progress --exclude-path node_modules --exclude-path vendor --exclude-path build './**/*.md' './.github/**/*.md'
-	@retired=$$(sed -n "s/.*retired-names: '\(.*\)'.*/\1/p" .github/workflows/pull-request.yml | head -1); \
+	@retired=$$(sed -n "s/^retired-names: '\(.*\)'.*/\1/p" .github/review-policy.yml | head -1); \
 	if [ -z "$$retired" ]; then echo "No retired product names configured."; exit 0; fi; \
 	if git grep -nIiE "$$retired" -- . | grep -vE '^[^:]+:[0-9]+:\s*retired-names:'; then echo "A retired product name is back (see above)."; exit 1; fi; \
 	echo "No retired product names."

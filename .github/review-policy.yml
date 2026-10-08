@@ -3,6 +3,11 @@
 # the Claude review; the review can raise the risk these rules set, never
 # lower it.
 
+# The kind of project: adds the wordpress-plugin review profile, its rules
+# (the suppressions in .github/review-suppressions.yml among them) and strict
+# Plugin Check.
+kind: wordpress-plugin
+
 # Code where a mistake gives the wrong person a role on every site, pulls the
 # whole network into a site, or loses the settings: always high risk, always
 # a human merge.
