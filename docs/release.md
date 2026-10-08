@@ -8,15 +8,15 @@ in [`AGENTS.md`](../AGENTS.md).
 
 ## Where things stand
 
-The plugin is published on wordpress.org as `wpm-user-sync`; the last release
-is **1.5.0**, and `main`'s three version markers say so. The repository lives
-in the DiluxOne organisation and is released by the organisation's pipeline,
-as every DiluxOne plugin is ([The organisation's setup](#the-organisations-setup)
-below). The release workflow still rehearses (`dry-run: true`): nothing
-reaches wordpress.org until a pull request of its own turns that off.
+The plugin is published on wordpress.org as `wpm-user-sync`; `main`'s three
+version markers say the last version released. The repository lives in the
+DiluxOne organisation and is released by the organisation's pipeline, as
+every DiluxOne plugin is ([The organisation's setup](#the-organisations-setup)
+below): `release.yml` publishes (`dry-run: false`) once the maintainer
+approves the deployment.
 
-The next version is being written under `= 2.0.0 =` in `readme.txt`, with its
-`Unreleased.` line in place.
+The next version opens its entry, `= X.Y.Z =` with `Unreleased.`, above the
+released one, with the first change worth a bullet.
 
 ## Who does what
 
@@ -79,7 +79,7 @@ renamed hook, filter or stored key. `docs`, `test`, `ci`, `chore`, `build`,
 
 The three version markers are the `Version:` header and the `WPMUS_VERSION`
 constant in `wpm-user-sync.php`, and `Stable tag:` in `readme.txt`. They
-always name a real version: the last one released (1.5.0 today), or, in the
+always name a real version: the last one released, or, in the
 release pull request and on `main` after it, the one being released.
 
 **2.0.0.** The entry is headed `= 2.0.0 =`, a major version: besides the fixes and the new filters it raises Requires PHP from 7.4 to 8.0, so a site still on 7.4 stops receiving updates, and the automatic triggers behave differently (no sync on every sign-in, removals respected, roles never copied from the main site). The Upgrade Notice says so.
@@ -129,10 +129,11 @@ the labels and the merge settings. What this repository keeps is its own:
   After rotating the SVN password, run **SVN credentials check** from the
   Actions tab.
 
-What is left before the first release from here: **rehearse.** Every push to
-`main` rehearses everything but the SVN commit, the tag and the release; when
-a rehearsal approved in the environment looks right, a pull request of its
-own sets `dry-run: false` in `release.yml`.
+**Rehearsing.** With `dry-run: true` in `release.yml`, a run approved in the
+environment does everything but the SVN commit, the tag and the release, and
+its summary shows what would have gone out. 2.0.0 was rehearsed this way
+before the first release from here; to rehearse again, a pull request of its
+own sets it, and another sets it back.
 
 ## Release tags are permanent
 

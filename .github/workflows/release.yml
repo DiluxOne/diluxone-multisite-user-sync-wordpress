@@ -20,9 +20,8 @@ name: Release
 # and calls the shared workflow at a fixed commit (Dependabot keeps the pin
 # current; a bump of it is reviewed as the secret-bearing change it is).
 #
-# It starts as a rehearsal (dry-run: true): everything but the SVN commit, the
-# tag and the release. The maintainer turns it to false after a rehearsal
-# approved in the environment, in a pull request of its own.
+# It publishes (dry-run: false). To rehearse instead (everything but the SVN
+# commit, the tag and the release), a pull request of its own sets it to true.
 
 on:
   push:
@@ -41,5 +40,5 @@ jobs:
       slug: wpm-user-sync
       main-file: wpm-user-sync.php
       version-constant: WPMUS_VERSION
-      dry-run: true
+      dry-run: false
     secrets: inherit

@@ -14,7 +14,7 @@ the removal record and the filters for developers.
 | Version | What |
 | --- | --- |
 | 1.5.0 (released) | Object-oriented rewrite, capability checks on every action, no role-sync cascades. |
-| 2.0.0 (being written) | The DiluxOne name; PHP 8.0; the security fixes (new-site roles, administrator replication, site administrators); removals respected; super admins and inactive sites skipped; background syncs; filters; translations. See `readme.txt`. |
+| 2.0.0 (released) | The DiluxOne name; PHP 8.0; the security fixes (new-site roles, administrator replication, site administrators); removals respected; super admins and inactive sites skipped; background syncs; filters; translations. See `readme.txt`. |
 
 ## Planned, not scheduled
 

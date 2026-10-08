@@ -65,7 +65,7 @@ The full list, with the architecture and the review priorities:
 ## Versions and releases
 
 Nobody types a version: it is computed from the `type:*` labels of what
-merged, and `main`'s markers say the last version released (1.5.0). The
+merged, and `main`'s markers say the last version released. The
 changelog is written as the changes merge, under the `Unreleased.` line of
 the newest `readme.txt` entry; the maintainer removes that line when the
 version is ready and approves the deployment. Never bump the version or

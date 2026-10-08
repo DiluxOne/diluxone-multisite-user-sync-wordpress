@@ -38,7 +38,8 @@ DiluxOne Multisite User Sync, a WordPress **network** plugin published on
 wordpress.org as `wpm-user-sync` (formerly "WPM User Sync"). It adds a
 network's users to its sites: automatically when a user or a site is created
 or a role changes, or on demand from Network Admin, with big syncs run in
-the background through WP-Cron. It is at 1.5.0 on wordpress.org.
+the background through WP-Cron. `Stable tag:` in `readme.txt` says which
+version is on wordpress.org.
 Architecture, hard rules and review priorities:
 [`docs/architecture.md`](docs/architecture.md). The public API (filters and
 actions): [`docs/extending.md`](docs/extending.md).
@@ -95,7 +96,7 @@ never do, in a change:
 
 - **The version is never typed.** `main` keeps the last released version in
   its three markers (`Version:` and `WPMUS_VERSION` in `wpm-user-sync.php`,
-  `Stable tag:` in `readme.txt`); today that is `1.5.0`.
+  `Stable tag:` in `readme.txt`).
 - **Write the changelog in the same pull request.** A change a user notices
   adds one bullet under the newest `= X.Y.Z =` entry of `readme.txt`, below
   its first line `Unreleased.`, written for users.
