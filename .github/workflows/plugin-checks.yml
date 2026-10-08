@@ -1,0 +1,55 @@
+name: Plugin checks
+
+# The checks of DiluxOne Multisite User Sync (wordpress.org slug
+# wpm-user-sync), from the shared workflows in DiluxOne/.github: the fast
+# quality gates and the slow wp-env suites, on every pull request, on a push
+# to main, once a week and by hand. A push to main runs the suites only when
+# its tree is not the one the pull request's checks ran on; a scheduled
+# failure opens one ci:weekly issue. The conventions, the accepted-issue
+# gate, the Claude review and the auto-merge decision are the organisation's
+# (org-pull-request.yml, required by its ruleset): nothing of them here.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  push:
+    branches: [main]
+  schedule:
+    - cron: '17 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    permissions:
+      contents: read
+      pull-requests: read # the push to main looks up the pull request it came from
+      checks: read # and the checks of its head
+    uses: DiluxOne/.github/.github/workflows/plugin-checks-wp.yml@v5
+    with:
+      slug: wpm-user-sync
+      main-file: wpm-user-sync.php
+      version-constant: WPMUS_VERSION
+      # From Requires PHP (8.0) to the latest.
+      php-versions: '["8.0","8.1","8.2","8.3","8.4","8.5"]'
+
+  tests:
+    permissions:
+      contents: read
+      pull-requests: read
+      checks: read
+    uses: DiluxOne/.github/.github/workflows/plugin-tests-wp.yml@v5
+    with:
+      # Both wp-env sites are networks already (.wp-env.json, "multisite":
+      # true); converting the tests site again would fail.
+      multisite: false
+
+  weekly-failure:
+    needs: [checks, tests]
+    if: ${{ !cancelled() && github.event_name == 'schedule' && contains(needs.*.result, 'failure') }}
+    permissions:
+      contents: read
+      issues: write
+    uses: DiluxOne/.github/.github/workflows/weekly-failure.yml@v5

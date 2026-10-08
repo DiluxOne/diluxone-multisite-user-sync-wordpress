@@ -360,10 +360,10 @@ check: lint stan psalm test ## Run the fast quality gates (lint, stan, psalm, un
 # The organisation's local review (DiluxOne/.github, scripts/local-review.sh):
 # the pull request's conventions, risk floor and Claude review, run before the
 # pull request exists. The script is cloned into build/.dx-central at the
-# moving tag REVIEW_CENTRAL_REF (v2, what CI calls too) and refreshed on every
+# moving tag REVIEW_CENTRAL_REF (v5, what CI calls too) and refreshed on every
 # run. REVIEW_CENTRAL=<path> uses a checkout of your own instead.
 REVIEW_CENTRAL     ?= build/.dx-central
-REVIEW_CENTRAL_REF ?= v2
+REVIEW_CENTRAL_REF ?= v5
 
 .PHONY: review-local
 review-local: ## The pull request's review before it exists: conventions, risk floor, Claude review (REVIEW_ARGS="--body-file pr.md", "--title …", "--no-claude").
