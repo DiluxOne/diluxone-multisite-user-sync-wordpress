@@ -609,6 +609,20 @@ final class SyncEngineTest extends TestCase {
 		$this->engine()->process_queue();
 	}
 
+	public function test_a_failing_write_is_not_hidden_by_the_groups_check(): void {
+		$job = $this->one_queued_job();
+		$this->queue->shouldReceive( 'first' )->andReturn( $job );
+		// The first membership is written, the second write fails.
+		$this->users->shouldReceive( 'add_to_blog' )->once()->ordered()->andReturn( true );
+		$this->users->shouldReceive( 'add_to_blog' )->once()->ordered()->andThrow( new \RuntimeException( 'write failed' ) );
+		$this->users->shouldReceive( 'forget_cached' );
+		$this->groups->shouldReceive( 'begin' )->andReturn( true );
+		$this->users->shouldNotReceive( 'stored_member_count' );
+
+		$this->expectExceptionMessage( 'write failed' );
+		$this->engine()->process_queue();
+	}
+
 	public function test_a_sync_in_the_request_that_starts_it_opens_no_write_group(): void {
 		$this->sites->shouldReceive( 'all_blog_ids' )->andReturn( array( 2 ) );
 		$this->network_users( array( 5 ) );
