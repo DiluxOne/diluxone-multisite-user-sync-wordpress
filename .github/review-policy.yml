@@ -19,6 +19,14 @@ high-risk:
   - "src/RequirementsChecker.php"
   - "src/Config.php"
 
+# What the wordpress-plugin kind's checks may let through here, on top of the
+# kind's own settings (a list only grows). trademarked_term: the slug
+# wpm-user-sync contains "wp"; it is the slug published since the first
+# release and can never change.
+kind-settings:
+  plugin-check:
+    ignore-codes: [trademarked_term]
+
 # Every review setting can be overridden here, key by key; what is left out
 # keeps the organisation's default. Uncomment to change it for this
 # repository only.
