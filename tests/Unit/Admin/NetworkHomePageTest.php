@@ -19,14 +19,19 @@ use WPMUS\Admin\NetworkHomePage;
 
 final class NetworkHomePageTest extends TestCase {
 
+	/** @var array<int, array<string, array<string, bool>>> The allow-lists `wp_kses()` was given. */
+	private array $kses_allowed = array();
+
 	use AdminScreen;
 
 	protected function setUp(): void {
 		parent::setUp();
 		$this->stub_admin_screen();
-		// Like core's, it keeps only the tags the allow-list names.
+		// Like core's, it keeps only the tags the allow-list names, and it
+		// records the allow-list it was given.
 		Functions\when( 'wp_kses' )->alias(
-			static function ( string $html, array $allowed ): string {
+			function ( string $html, array $allowed ): string {
+				$this->kses_allowed[] = $allowed;
 				return strip_tags( $html, array_keys( $allowed ) );
 			}
 		);
@@ -65,6 +70,13 @@ final class NetworkHomePageTest extends TestCase {
 			$this->assertStringContainsString( 'href="https://example.test/wp-admin/network/admin.php?page=' . $target . '" class="cuadrado"', $output );
 		}
 		$this->assertStringContainsString( 'Check our <a href="https://wordpress.org/support/plugin/wpm-user-sync/">support forum</a>.', $output );
+	}
+
+	public function test_the_help_line_lets_only_a_link_through(): void {
+		$_GET = array( 'tab' => 'welcome' );
+
+		$this->assertStringContainsString( 'support forum</a>.', $this->render() );
+		$this->assertSame( array( array( 'a' => array( 'href' => true ) ) ), $this->kses_allowed );
 	}
 
 	public function test_the_concepts_tab_explains_the_triggers(): void {
