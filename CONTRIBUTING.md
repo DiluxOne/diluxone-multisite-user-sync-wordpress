@@ -72,4 +72,6 @@ version is ready and approves the deployment. Never bump the version or
 remove that line in your pull request. The whole flow:
 [`docs/release.md`](docs/release.md).
 
+## Licence
+
 Your contributions are licensed under the [GPL-2.0-or-later](LICENSE).
