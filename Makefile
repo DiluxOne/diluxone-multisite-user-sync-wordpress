@@ -343,8 +343,8 @@ coverage-e2e: ## End-to-end network suite with line coverage, recorded per reque
 .PHONY: coverage-e2e-single
 coverage-e2e-single: pcp-env ## The single-site check with line coverage (restarts the Plugin Check environment with Xdebug).
 	@cd "$(PCP_DIR)" && npx @wordpress/env start --xdebug=coverage >/dev/null
-	@rm -rf "$(DIST_DIR)/build" && mkdir -p "$(DIST_DIR)/build/coverage/e2e" build/coverage/e2e && chmod 777 "$(DIST_DIR)/build/coverage/e2e"
-	WPMUS_SINGLE_URL=http://localhost:$(PCP_TESTS_PORT) WPMUS_SINGLE_ENV=$(PCP_DIR) npx playwright test --project=single; status=$$?; \
+	rm -rf "$(DIST_DIR)/build" && mkdir -p "$(DIST_DIR)/build/coverage/e2e" build/coverage/e2e && chmod 777 "$(DIST_DIR)/build/coverage/e2e" \
+	  && WPMUS_SINGLE_URL=http://localhost:$(PCP_TESTS_PORT) WPMUS_SINGLE_ENV=$(PCP_DIR) npx playwright test --project=single; status=$$?; \
 	  find "$(DIST_DIR)/build/coverage/e2e" -name '*.json' -exec mv {} build/coverage/e2e/ \; ; rm -rf "$(DIST_DIR)/build"; \
 	  cd "$(PCP_DIR)" && npx @wordpress/env start >/dev/null; exit $$status
 
