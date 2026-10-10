@@ -35,7 +35,7 @@ permissions:
 
 jobs:
   release:
-    uses: DiluxOne/.github/.github/workflows/plugin-release-wp.yml@0e570e75faaec3142501aa22a88deb2712592889 # v5.2.0
+    uses: DiluxOne/.github/.github/workflows/plugin-release-wp.yml@44dcc703588f183af8b3932c251706f16860023c # v5.3.3
     with:
       slug: wpm-user-sync
       main-file: wpm-user-sync.php
