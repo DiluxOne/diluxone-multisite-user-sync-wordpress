@@ -1,9 +1,5 @@
-# CODEOWNERS for DiluxOne Multisite User Sync (wpm-user-sync).
-#
-# Who is asked for a review when a pull request touches a path; the first
-# matching line wins per file. The ruleset on `main` does not require a code
-# owner's approval: this makes every pull request land in the maintainer's
-# review queue.
-
-# Default: the maintainer reviews every pull request.
+# Who is asked to review a pull request. The organisation's rulesets do
+# not require code-owner approval; this only puts every pull request in
+# the maintainer's queue. Kept in step by DiluxOne/.github
+# (scripts/sync-repos.py).
 * @soydiloreto
