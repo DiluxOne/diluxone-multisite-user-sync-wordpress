@@ -25,6 +25,14 @@ step-by-step flow with its commands is in
    `🤖 AI-generated · <model> (<maker>)` when you wrote it,
    `🤖 AI-assisted · <model> (<maker>)` when a person did with your help.
    Never "Generated with …".
+7. **Say what waits on whom, with its link.** When a step waits on a
+   person, tell the maintainer the action and the full URL, one per line
+   ("Add `accepted` to https://github.com/DiluxOne/<repo>/issues/<n>",
+   "Approve and merge https://github.com/DiluxOne/<repo>/pull/<n>"), never
+   "the issue needs accepting" alone. Someone working from a fork or a
+   clone cannot accept, approve or merge: never ask them for a
+   maintainer's step; tell them a maintainer will review it and answer
+   soon, with the link to where it waits.
 <!-- dx:org:end -->
 
 What follows is this repository's own: what an agent working here (Claude
