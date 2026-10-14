@@ -18,10 +18,9 @@
 
 version: 2
 updates:
-  # The two shared workflows pinned to a commit of DiluxOne/.github (the
-  # release and the SVN credentials check), which Dependabot bumps as
-  # reusable-workflow references, in a group of their own so a pin bump is
-  # never mixed with anything else; and any action a workflow here uses.
+  # Any action a workflow here uses. The shared workflows of DiluxOne/.github
+  # are called at `v5` (nothing pinned, DiluxOne/.github#136), so there is
+  # nothing of theirs to bump; their group stays in case a pin ever comes back.
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
