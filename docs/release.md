@@ -116,8 +116,8 @@ the labels and the merge settings. What this repository keeps is its own:
   the Multisite User Sync Project), `pull-request-comments.yml` (answers to
   `@dilux-bot`), `release.yml` and `svn-auth-check.yml`, with
   `slug: wpm-user-sync`, `main-file: wpm-user-sync.php` and
-  `version-constant: WPMUS_VERSION`. The release and the SVN check are pinned
-  to a commit of the shared workflows, which Dependabot bumps.
+  `version-constant: WPMUS_VERSION`. The release and the SVN check call the
+  shared workflows at `v5`, a protected ref of DiluxOne/.github that only an administrator moves (nothing is pinned to a commit, DiluxOne/.github#136).
 - **`.github/review-policy.yml`** (the `wordpress-plugin` kind, the high-risk
   paths and, if the old display name should stop coming back,
   `retired-names`) and **`.github/review-suppressions.yml`**.
