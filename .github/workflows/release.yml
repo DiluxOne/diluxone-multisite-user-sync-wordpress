@@ -17,8 +17,9 @@ name: Release
 # `wordpress-org`. An environment's secrets reach a called workflow only
 # through `secrets: inherit`, which passes every repository and organisation
 # secret too; that is why this workflow runs only on main and on X.Y.Z tags
-# and calls the shared workflow at a fixed commit (Dependabot keeps the pin
-# current; a bump of it is reviewed as the secret-bearing change it is).
+# and calls the shared workflow at `v5`, a protected ref of DiluxOne/.github
+# that only an administrator moves: that is what bounds the code that runs
+# with these secrets (nothing is pinned to a commit, DiluxOne/.github#136).
 #
 # It publishes (dry-run: false). To rehearse instead (everything but the SVN
 # commit, the tag and the release), a pull request of its own sets it to true.
@@ -35,7 +36,7 @@ permissions:
 
 jobs:
   release:
-    uses: DiluxOne/.github/.github/workflows/plugin-release-wp.yml@01837f9da2b980374c9c37748a533d0a2d623cd8 # v5.4.0
+    uses: DiluxOne/.github/.github/workflows/plugin-release-wp.yml@v5
     with:
       slug: wpm-user-sync
       main-file: wpm-user-sync.php
