@@ -17,7 +17,7 @@
     "test:e2e:ui": "playwright test --ui"
   },
   "devDependencies": {
-    "@playwright/test": "^1.63.0",
-    "@wordpress/env": "^11.15.0"
+    "@playwright/test": "^1.64.0",
+    "@wordpress/env": "^11.17.0"
   }
 }
