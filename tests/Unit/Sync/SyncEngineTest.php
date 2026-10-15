@@ -680,6 +680,17 @@ final class SyncEngineTest extends TestCase {
 		$this->engine()->sync_all_users_to_all_sites();
 	}
 
+	public function test_the_site_filter_returning_anything_but_a_list_excludes_nothing(): void {
+		\Brain\Monkey\Filters\expectApplied( 'wpmus_excluded_site_ids' )->once()->with( array(), 'manual' )->andReturn( '2' );
+		$this->sites->shouldReceive( 'all_blog_ids' )->andReturn( array( 1, 2 ) );
+		$this->network_users( array( 5 ) );
+		$this->users->shouldReceive( 'is_member_of' )->andReturn( false );
+		$this->sites->shouldReceive( 'default_role_for_blog' )->andReturn( 'subscriber' );
+		$this->users->shouldReceive( 'add_to_blog' )->twice()->andReturn( true );
+
+		$this->engine()->sync_all_users_to_all_sites();
+	}
+
 	public function test_the_user_filter_excludes_a_user_from_a_site(): void {
 		\Brain\Monkey\Filters\expectApplied( 'wpmus_should_sync_user' )->twice()->andReturnUsing(
 			static function ( bool $sync, int $user_id, int $blog_id ): bool {

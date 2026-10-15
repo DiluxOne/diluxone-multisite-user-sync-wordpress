@@ -64,7 +64,6 @@
         <MixedPropertyTypeCoercion errorLevel="suppress" />
         <MixedReturnStatement errorLevel="suppress" />
         <MixedReturnTypeCoercion errorLevel="suppress" />
-        <MixedInferredReturnType errorLevel="suppress" />
         <MixedStringOffsetAssignment errorLevel="suppress" />
         <PossiblyNullArgument errorLevel="suppress" />
         <PossiblyNullArrayAccess errorLevel="suppress" />

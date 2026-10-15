@@ -575,12 +575,23 @@ final class SyncEngine {
 		 * @param int[]  $excluded Blog ids to leave alone. Default empty.
 		 * @param string $context  `new_site`, `new_user`, `manual` or `role_change`.
 		 */
-		$excluded = apply_filters( 'wpmus_excluded_site_ids', array(), $context );
-		if ( is_array( $excluded ) && array() !== $excluded ) {
-			$targets = array_values( array_diff( $targets, array_map( 'intval', $excluded ) ) );
+		$excluded = self::blog_ids( apply_filters( 'wpmus_excluded_site_ids', array(), $context ) );
+		if ( array() !== $excluded ) {
+			$targets = array_values( array_diff( $targets, $excluded ) );
 		}
 		sort( $targets );
 		return $targets;
+	}
+
+	/**
+	 * What a filter returned, as blog ids: a callback may hand back
+	 * anything, and anything but a list is ignored.
+	 *
+	 * @param mixed $value The filter's result.
+	 * @return int[]
+	 */
+	private static function blog_ids( $value ): array {
+		return is_array( $value ) ? array_map( 'intval', $value ) : array();
 	}
 
 	/**

@@ -31,7 +31,7 @@ DOCKER_RUN  := docker run --rm -u $(DOCKER_USER) -v $(CURDIR):/app -w /app
 #   make stan COMPOSER_IMAGE=composer:2.7
 COMPOSER_IMAGE ?= composer:2
 WP_CLI_IMAGE   ?= wordpress:cli
-PHP_IMAGE      ?= php:8.3-cli
+PHP_IMAGE      ?= php:8.5-cli
 
 ifeq ($(DOCKER),1)
 COMPOSER  := $(DOCKER_RUN) $(COMPOSER_IMAGE) composer
@@ -150,10 +150,28 @@ test-unit: ## Run only the unit-test suite (no WordPress runtime).
 
 # The oldest PHP the plugin supports (Requires PHP: 8.0). `make test-unit`
 # runs on the composer image's PHP, which is the newest; CI runs every version
-# in between.
+# in between. vendor/ is resolved for the newest PHP and holds the analysis
+# tools (Psalm 6 needs PHP 8.1), so this lane does what CI's unit jobs do
+# (DiluxOne/.github#85): it takes the analysis-only packages (the pack's
+# `php.analysis-only`) out of a copy of composer.json, resolves the rest for
+# the minimum PHP in build/unit-min/ and mounts that vendor/ over the
+# checkout's.
+MIN_PHP       ?= 8.0
+MIN_PHP_PATCH ?= 8.0.30
+UNIT_MIN_DIR  := build/unit-min
+ANALYSIS_ONLY := vimeo/psalm humanmade/psalm-plugin-wordpress phpstan/phpstan phpstan/extension-installer szepeviktor/phpstan-wordpress
+UNIT_MIN_RUN  := docker run --rm -u $(DOCKER_USER) -v $(CURDIR):/app -w /app/$(UNIT_MIN_DIR)
+
+.PHONY: unit-min-vendor
+unit-min-vendor: ## Resolve the unit suite's packages for the minimum PHP, in build/unit-min/.
+	@mkdir -p "$(UNIT_MIN_DIR)" && cp composer.json "$(UNIT_MIN_DIR)/composer.json"
+	$(UNIT_MIN_RUN) $(COMPOSER_IMAGE) composer remove --dev --no-update --no-interaction $(ANALYSIS_ONLY)
+	$(UNIT_MIN_RUN) $(COMPOSER_IMAGE) composer config platform.php $(MIN_PHP_PATCH)
+	$(UNIT_MIN_RUN) $(COMPOSER_IMAGE) composer update --no-interaction --prefer-dist --no-progress --no-plugins
+
 .PHONY: test-unit-min
-test-unit-min: ## Unit suite on the oldest PHP the plugin supports (8.0).
-	$(DOCKER_RUN) php:8.0-cli ./vendor/bin/phpunit --testsuite unit
+test-unit-min: unit-min-vendor ## Unit suite on the oldest PHP the plugin supports (8.0).
+	$(DOCKER_RUN) -v "$(CURDIR)/$(UNIT_MIN_DIR)/vendor:/app/vendor" php:$(MIN_PHP)-cli ./vendor/bin/phpunit --testsuite unit
 
 # Both wp-env sites are networks (.wp-env.json, "multisite": true): the tests
 # site (8899) is the one the integration suite boots.

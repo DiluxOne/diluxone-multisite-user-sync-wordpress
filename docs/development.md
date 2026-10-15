@@ -83,7 +83,7 @@ npx wp-env run cli wp cron event run wpmus_process_sync_queue       # move a que
 | `make stan` | PHPStan level 8, no baseline. |
 | `make psalm` | Psalm taint analysis. |
 | `make test` / `make test-unit` | The unit suite (no WordPress). |
-| `make test-unit-min` | The unit suite on PHP 8.0, the minimum. |
+| `make test-unit-min` | The unit suite on PHP 8.0, the minimum, from a `vendor/` resolved for it in `build/unit-min/` (the analysis tools left out, as CI's unit jobs do). |
 | `make test-integration` | The integration suite on the tests network. |
 | `make test-e2e` | Playwright on the dev network, then the single-site check. |
 | `make test-e2e-single` | Only the single-site check. |
@@ -138,7 +138,7 @@ mu-plugin, `WP_DEBUG` and `WP_DEBUG_LOG` on (errors go to
 `.wp-env.override.json`.
 
 Docker images: `COMPOSER_IMAGE` (`composer:2`), `WP_CLI_IMAGE`
-(`wordpress:cli`), `PHP_IMAGE` (`php:8.3-cli`, for Psalm 5); pin any of them
+(`wordpress:cli`), `PHP_IMAGE` (`php:8.5-cli`, the PHP the tools run on); pin any of them
 on the command line, e.g. `make stan COMPOSER_IMAGE=composer:2.8`.
 
 ## Manual install
