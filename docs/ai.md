@@ -51,9 +51,10 @@ README and `readme.txt` (a bug to reproduce, missing information, works as
 documented, feature request, usage question, duplicate, vulnerability posted
 in public), applies one label and replies once. It never closes an issue,
 accepts one, promises a fix or gives a date: a person accepts an issue with
-the `accepted` label, and only then can a pull request close it. When a
-maintainer labels a bug `repro:run`, Claude writes a unit test meant to fail
-if the bug exists and runs it in a container without network or secrets.
+the `accepted` label, and only then can a pull request close it. When the
+triage classifies a report as a bug, or a maintainer labels one `repro:run`,
+Claude writes a unit test meant to fail if the bug exists and runs it in a
+container without network or secrets.
 
 ## What is never automated
 

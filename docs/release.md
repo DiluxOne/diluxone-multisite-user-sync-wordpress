@@ -112,8 +112,9 @@ the labels and the merge settings. What this repository keeps is its own:
 
 - **The callers in `.github/workflows/`:** `plugin-checks.yml` (the fast
   checks, the wp-env suites and the weekly run), `issues.yml` (the triage,
-  the reproduction on `repro:run`, and the job that puts an accepted issue on
-  the Multisite User Sync Project), `pull-request-comments.yml` (answers to
+  the reproduction of a report the triage calls a bug or a maintainer labels
+  `repro:run`, and the job that puts an accepted issue on the Multisite User
+  Sync Project), `pull-request-comments.yml` (answers to
   `@dilux-bot`), `release.yml` and `svn-auth-check.yml`, with
   `slug: wpm-user-sync`, `main-file: wpm-user-sync.php` and
   `version-constant: WPMUS_VERSION`. The release and the SVN check call the
