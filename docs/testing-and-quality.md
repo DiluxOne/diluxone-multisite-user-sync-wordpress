@@ -16,10 +16,10 @@ gate locally.
 | --- | --- | --- | --- | --- |
 | Conventions | the organisation's pipeline, lychee | Branch name, PR title and commit headers; an accepted issue the pull request closes, of a Type that fits; the description's What changes and Why; no "Generated with …" footer; broken relative doc links; retired product names. | conventions | `make docs-check` (links, names) |
 | Syntax | `php -l` on PHP 8.0 to 8.5, the shipped files | Syntax the minimum PHP cannot parse. | fast | — |
-| Unit tests | PHPUnit 9 + Brain Monkey + Mockery, same PHP matrix | Logic regressions without WordPress. | fast | `make test`, `make test-unit-min` |
-| Coding style | PHPCS + WordPress Coding Standards + PHPCompatibilityWP (8.0+) | Style, naming, escaping, sanitising, nonces, prefixes, deprecated APIs, syntax newer than 8.0. | fast | `make lint` |
-| Static analysis | PHPStan level 8 + phpstan-wordpress, **no baseline** | Types, dead code, undefined methods. | fast | `make stan` |
-| Taint analysis | Psalm + psalm-plugin-wordpress (taint only) | Request data reaching `echo`, SQL, `header()`, files without an escaper. | fast | `make psalm` |
+| Unit tests | PHPUnit 9 + Brain Monkey + Mockery, same PHP matrix (each lane resolves the packages for its own PHP, the analysis tools left out) | Logic regressions without WordPress. | fast | `make test`, `make test-unit-min` |
+| Coding style | PHPCS + WordPress Coding Standards + PHPCompatibilityWP 3 (PHPCompatibility 10, `testVersion` 8.0-) | Style, naming, escaping, sanitising, nonces, prefixes, deprecated APIs, syntax newer than 8.0. | fast | `make lint` |
+| Static analysis | PHPStan 2 level 8 + phpstan-wordpress 2, `phpVersion` 8.0, **no baseline** | Types, dead code, undefined methods. | fast | `make stan` |
+| Taint analysis | Psalm 6 + psalm-plugin-wordpress (taint only), on PHP 8.5 | Request data reaching `echo`, SQL, `header()`, files without an escaper. | fast | `make psalm` |
 | i18n | `wp i18n make-pot` on the shipped tree; `msgfmt`/`msgcmp` | Missing translator comments, dynamic domains, concatenated strings; an incomplete, fuzzy or stale locale. | fast | `make i18n`, `make i18n-check` |
 | Review rules | the `wordpress-plugin` kind's rules (DiluxOne/.github) | What the wordpress.org reviewers send back: escaping suppressed, a nonce checked elsewhere, a suppression not listed with its reason in [`.github/review-suppressions.yml`](../.github/review-suppressions.yml). | fast | — |
 | Plugin Check | wordpress/plugin-check on the shipped tree, strict | What the wordpress.org review team runs; a warning fails, as it does for the reviewer. | fast | `make plugin-check` |
@@ -57,7 +57,7 @@ defines `ABSPATH` and `WPMUS_VERSION`.
 
 ```bash
 make test            # on the newest PHP
-make test-unit-min   # on PHP 8.0
+make test-unit-min   # on PHP 8.0, from build/unit-min/vendor (PHPUnit, Brain Monkey and Mockery resolved for 8.0; Psalm 6 needs 8.1)
 ```
 
 Name a test after the class it tests; keep `$_GET`, the database and real

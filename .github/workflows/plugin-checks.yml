@@ -32,8 +32,6 @@ jobs:
       slug: wpm-user-sync
       main-file: wpm-user-sync.php
       version-constant: WPMUS_VERSION
-      # From Requires PHP (8.0) to the latest.
-      php-versions: '["8.0","8.1","8.2","8.3","8.4","8.5"]'
 
   tests:
     permissions:
