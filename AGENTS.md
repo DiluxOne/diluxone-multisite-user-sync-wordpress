@@ -32,7 +32,9 @@ step-by-step flow with its commands is in
    "the issue needs accepting" alone. Someone working from a fork or a
    clone cannot accept, approve or merge: never ask them for a
    maintainer's step; tell them a maintainer will review it and answer
-   soon, with the link to where it waits.
+   soon, with the link to where it waits. A repository's part of an
+   accepted issue is opened as a sub-issue of it, and needs no
+   acceptance of its own.
 8. **A finding is not a new issue.** Something you find along the way that
    the task does not need goes in one list, at the end of what you report,
    with what you recommend; the maintainer picks what becomes work. A
