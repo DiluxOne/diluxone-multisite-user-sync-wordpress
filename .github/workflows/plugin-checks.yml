@@ -27,7 +27,7 @@ jobs:
       contents: read
       pull-requests: read # the push to main looks up the pull request it came from
       checks: read # and the checks of its head
-    uses: DiluxOne/.github/.github/workflows/plugin-checks-wp.yml@v5
+    uses: DiluxOne/.github/.github/workflows/plugin-checks-wp.yml@v6
     with:
       slug: wpm-user-sync
       main-file: wpm-user-sync.php
@@ -38,7 +38,7 @@ jobs:
       contents: read
       pull-requests: read
       checks: read
-    uses: DiluxOne/.github/.github/workflows/plugin-tests-wp.yml@v5
+    uses: DiluxOne/.github/.github/workflows/plugin-tests-wp.yml@v6
     with:
       # Both wp-env sites are networks already (.wp-env.json, "multisite":
       # true); converting the tests site again would fail.
@@ -50,4 +50,4 @@ jobs:
     permissions:
       contents: read
       issues: write
-    uses: DiluxOne/.github/.github/workflows/weekly-failure.yml@v5
+    uses: DiluxOne/.github/.github/workflows/weekly-failure.yml@v6
