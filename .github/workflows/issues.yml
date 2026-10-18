@@ -21,7 +21,7 @@ jobs:
     permissions:
       contents: read
       issues: write
-    uses: DiluxOne/.github/.github/workflows/issue-triage.yml@v5
+    uses: DiluxOne/.github/.github/workflows/issue-triage.yml@v6
     with:
       support-url: https://wordpress.org/support/plugin/wpm-user-sync/
     secrets: inherit
@@ -32,7 +32,7 @@ jobs:
       contents: write
       issues: write
       pull-requests: write
-    uses: DiluxOne/.github/.github/workflows/issue-repro.yml@v5
+    uses: DiluxOne/.github/.github/workflows/issue-repro.yml@v6
     secrets: inherit
 
   repro-triaged:
@@ -43,7 +43,7 @@ jobs:
       contents: write
       issues: write
       pull-requests: write
-    uses: DiluxOne/.github/.github/workflows/issue-repro.yml@v5
+    uses: DiluxOne/.github/.github/workflows/issue-repro.yml@v6
     with:
       trigger: triage
       triage-bug: ${{ needs.triage.outputs.bug }}
@@ -57,6 +57,6 @@ jobs:
       actions: write
       issues: read
       pull-requests: read
-    uses: DiluxOne/.github/.github/workflows/issue-accepted.yml@v5
+    uses: DiluxOne/.github/.github/workflows/issue-accepted.yml@v6
     secrets:
       DILUX_BOT_PRIVATE_KEY: ${{ secrets.DILUX_BOT_PRIVATE_KEY }}

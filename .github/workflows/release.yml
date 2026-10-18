@@ -26,20 +26,43 @@ name: Release
 
 on:
   push:
-    branches: [main]
-    # X.Y.Z tags only: an administrator's, or the release App's.
+    # security/X.Y.Z: a security patch on the version in production, pushed
+    # by dilux-security once a maintainer approved it in the private
+    # repository (DiluxOne/.github#247, #287).
+    branches: [main, 'security/[0-9]+.[0-9]+.[0-9]+']
     tags: ['[0-9]+.[0-9]+.[0-9]+']
+  # The release, published: where the plugin goes next (#287).
+  release:
+    types: [published]
+  # Publish a release again by hand (after a failure), by its tag.
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: The release to publish to wordpress.org again (X.Y.Z).
+        required: true
 
 permissions:
   contents: write
   pull-requests: read # the labels of what merged decide the version
+  issues: read # the release issue a person accepted, the approval
+  actions: read # the environment's protection rules, and the runs still waiting
 
 jobs:
   release:
-    uses: DiluxOne/.github/.github/workflows/plugin-release-wp.yml@v5
+    if: github.event_name == 'push'
+    # At `v6`, never a pinned commit: see the header.
+    uses: DiluxOne/.github/.github/workflows/plugin-release-wp.yml@v6
     with:
       slug: wpm-user-sync
-      main-file: wpm-user-sync.php
       version-constant: WPMUS_VERSION
       dry-run: false
+      main-file: wpm-user-sync.php
+    secrets: inherit
+
+  publish:
+    if: github.event_name == 'release' || github.event_name == 'workflow_dispatch'
+    uses: DiluxOne/.github/.github/workflows/plugin-publish-wp.yml@v6
+    with:
+      slug: wpm-user-sync
+      tag: ${{ inputs.tag || '' }}
     secrets: inherit
