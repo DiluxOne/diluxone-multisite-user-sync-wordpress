@@ -44,6 +44,8 @@ on:
 permissions:
   contents: write
   pull-requests: read # the labels of what merged decide the version
+  issues: read # the release issue a person accepted, the approval
+  actions: read # the environment's protection rules, and the runs still waiting
 
 jobs:
   release:
