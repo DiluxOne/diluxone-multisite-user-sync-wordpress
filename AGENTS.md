@@ -34,7 +34,10 @@ step-by-step flow with its commands is in
    maintainer's step; tell them a maintainer will review it and answer
    soon, with the link to where it waits. A repository's part of an
    accepted issue is opened as a sub-issue of it, and needs no
-   acceptance of its own.
+   acceptance of its own. Ask for `accepted` only on an issue that
+   passes the schema check: it carries `awaiting-acceptance`, not
+   `incomplete` (`python3 scripts/issue-schema.py check < issue.md` in
+   DiluxOne/.github says the same before you open or edit it).
 8. **A finding is not a new issue.** Something you find along the way that
    the task does not need goes in one list, at the end of what you report,
    with what you recommend; the maintainer picks what becomes work. A
