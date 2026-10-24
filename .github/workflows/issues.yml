@@ -9,7 +9,7 @@ name: Issues
 
 on:
   issues:
-    types: [opened, labeled, closed]
+    types: [opened, edited, labeled, closed]
   schedule:
     - cron: '0 13 * * *'
 
