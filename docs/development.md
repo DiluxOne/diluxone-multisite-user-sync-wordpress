@@ -10,7 +10,7 @@ How a change becomes a version: [`release.md`](release.md).
 | Tool | Why |
 | --- | --- |
 | **Docker** | Runs `wp-env` (the local networks) and the PHP toolchain (PHPCS, PHPStan, Psalm, PHPUnit, WP-CLI) without PHP on the host. |
-| **Node.js 18+** and **npm** | `wp-env` and Playwright. |
+| **Node.js 22.13+** and **npm** | `wp-env` and Playwright. |
 | **GNU make** | Every task is a target; `make help` lists them. |
 | **gettext** (`msgfmt`, `msgcmp`) | `make i18n-check`. |
 | **`gh`** (optional) | Issues, pull requests and CI logs. |
