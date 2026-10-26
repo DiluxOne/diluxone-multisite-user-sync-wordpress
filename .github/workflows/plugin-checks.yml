@@ -12,8 +12,15 @@ name: Plugin checks
 on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
+  # A merge queue's group (#451): the checks it requires run on it too, and
+  # where the repository has a queue the slow suites run here, not on the
+  # pull request.
+  merge_group:
+    types: [checks_requested]
   push:
     branches: [main]
+  # Once a week, and by hand, everything runs whatever changed: the suites
+  # against today's WordPress and tools. A failure opens (or updates) one issue.
   schedule:
     - cron: '17 6 * * 1'
   workflow_dispatch:
@@ -51,3 +58,5 @@ jobs:
       contents: read
       issues: write
     uses: DiluxOne/.github/.github/workflows/weekly-failure.yml@v6
+    secrets:
+      DILUX_BOT_PRIVATE_KEY: ${{ secrets.DILUX_BOT_PRIVATE_KEY }}
