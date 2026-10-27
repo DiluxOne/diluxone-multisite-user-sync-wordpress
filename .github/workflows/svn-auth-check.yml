@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   check:
-    uses: DiluxOne/.github/.github/workflows/svn-auth-check.yml@v6
+    uses: DiluxOne/.github/.github/workflows/svn-auth-check.yml@v7
     # An environment's secrets reach a called job only through `inherit`,
     # which also passes every repository and organisation secret; hence the
     # by-hand trigger, and the call at `v5`, a protected ref only an administrator moves.
