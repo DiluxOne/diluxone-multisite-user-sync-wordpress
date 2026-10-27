@@ -37,3 +37,4 @@ test-results/
 
 # wp-env local override (machine-specific dev config)
 .wp-env.override.json
+languages/*.mo
