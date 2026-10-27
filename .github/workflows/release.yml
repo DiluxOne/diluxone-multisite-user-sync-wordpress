@@ -51,7 +51,7 @@ jobs:
   release:
     if: github.event_name == 'push'
     # At `v6`, never a pinned commit: see the header.
-    uses: DiluxOne/.github/.github/workflows/plugin-release-wp.yml@v6
+    uses: DiluxOne/.github/.github/workflows/plugin-release-wp.yml@v7
     with:
       slug: wpm-user-sync
       version-constant: WPMUS_VERSION
@@ -61,7 +61,7 @@ jobs:
 
   publish:
     if: github.event_name == 'release' || github.event_name == 'workflow_dispatch'
-    uses: DiluxOne/.github/.github/workflows/plugin-publish-wp.yml@v6
+    uses: DiluxOne/.github/.github/workflows/plugin-publish-wp.yml@v7
     with:
       slug: wpm-user-sync
       tag: ${{ inputs.tag || '' }}
