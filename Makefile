@@ -9,7 +9,8 @@
 #
 # Usage:
 #   make            # = make help
-#   make install    # composer install + npm install
+#   make install    # composer install, npm ci, Chromium, the gettext image
+#   make pre-pr     # every check of the pull request, on its own
 #   make check      # the fast gates: lint, stan, psalm, unit tests
 #   make env        # the local network (http://localhost:8898)
 #
