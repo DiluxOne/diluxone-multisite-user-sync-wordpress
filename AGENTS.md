@@ -12,14 +12,23 @@ step-by-step flow with its commands is in
    with the form that fits (it sets the issue's Type: Bug, Feature, Docs or
    Task), and wait until a maintainer adds the `accepted` label. Never add it
    yourself. The pull request says `Closes #<number>`; CI fails it otherwise.
+   **The code is written in GitHub Actions, by the autopilot.** Nobody
+   writes it on their own machine (not the maintainer, not their agents,
+   not someone from a fork) unless they first claim the issue: until `/claim`
+   ships (DiluxOne/.github#488), ask on the issue to take it and wait
+   until a maintainer assigns it to you. Without a claim, never edit code locally: open
+   or improve the issue, answer the autopilot's questions on its pull
+   request, and let it work; when it stops, give it a hint and add
+   `autopilot:continue`, never finish its pull request by hand.
 2. **The pull request's type fits the issue's Type**: `feat` (or any `!`)
    closes a Feature, `fix` a Bug; other types close any accepted issue.
 3. **Branch** `<type>/<number>-<short-kebab>`; **commit and title** as a
    Conventional Commit of 72 characters or fewer (CI rejects more than 100);
    bodies are plain paragraphs, never hard-wrapped; no `Claude-Session:`.
-4. **Check before the pull request** (`dx check`, or the repository's
-   `make pre-pr`) and open it (`dx pr`) only when the person you work for
-   says so.
+4. **Only after a claim, check before the pull request** with `make pre-pr`, every check the
+   pull request and the merge queue run, in every repository (`dx check`
+   runs it, then the local review), and open it (`dx pr`) only when the
+   person you work for says so.
 5. **Never** push to `main`, create or move a tag, or approve a release.
 6. **Say AI took part** with one line at the end of what you write on GitHub:
    `🤖 AI-generated · <model> (<maker>)` when you wrote it,
