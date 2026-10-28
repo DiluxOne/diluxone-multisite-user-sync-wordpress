@@ -33,16 +33,23 @@ COMPOSER_IMAGE ?= composer:2
 WP_CLI_IMAGE   ?= wordpress:cli
 PHP_IMAGE      ?= php:8.5-cli
 
+# The gettext tools (msgfmt, msgcmp, msgcat), in an image built here once
+# from GETTEXT_BASE (`make gettext-image`), so the host needs none.
+GETTEXT_BASE  ?= alpine:3.22
+GETTEXT_IMAGE ?= wpmus-gettext:1
+
 ifeq ($(DOCKER),1)
 COMPOSER  := $(DOCKER_RUN) $(COMPOSER_IMAGE) composer
 VENDOR    := $(DOCKER_RUN) $(COMPOSER_IMAGE)
 PSALM_CMD := $(DOCKER_RUN) $(PHP_IMAGE) ./vendor/bin/psalm
 WP_CLI    := $(DOCKER_RUN) $(WP_CLI_IMAGE)
+GETTEXT   := $(DOCKER_RUN) $(GETTEXT_IMAGE)
 else
 COMPOSER  := composer
 VENDOR    :=
 PSALM_CMD := ./vendor/bin/psalm
 WP_CLI    := wp
+GETTEXT   :=
 endif
 
 # The plugin's slug, text domain and folder on wordpress.org. The repository
@@ -52,12 +59,40 @@ endif
 SLUG     := wpm-user-sync
 REPO_DIR := $(notdir $(CURDIR))
 
+# The organisation's scripts (DiluxOne/.github), cloned into build/.dx-central
+# at the ref this repository's workflow callers name (`uses: …@v7` in
+# .github/workflows/plugin-checks.yml), so what runs here is what CI runs and
+# the ref is never typed twice; refreshed on every run. REVIEW_CENTRAL=<path>
+# uses a checkout of your own instead.
+REVIEW_CENTRAL     ?= build/.dx-central
+REVIEW_CENTRAL_REF ?= $(shell sed -n 's|^[[:space:]]*uses: DiluxOne/\.github/[^@]*@\([^[:space:]]*\).*|\1|p' .github/workflows/plugin-checks.yml | head -1)
+CENTRAL            := $(REVIEW_CENTRAL)
+ifeq ($(DOCKER),1)
+CENTRAL_IN      := /central
+GETTEXT_CENTRAL := docker run --rm -i -u $(DOCKER_USER) -v $(CURDIR):/app -v $(abspath $(CENTRAL)):/central:ro -w /app $(GETTEXT_IMAGE)
+PHP_CENTRAL     := docker run --rm -u $(DOCKER_USER) -v $(CURDIR):/app -v $(abspath $(CENTRAL)):/central:ro -w /app $(PHP_IMAGE)
+else
+CENTRAL_IN      := $(abspath $(CENTRAL))
+GETTEXT_CENTRAL :=
+PHP_CENTRAL     :=
+endif
+
+# The repository on GitHub, for what reads it there (the next version, the
+# design system repos.yml gives it), and the kind its policy declares.
+GH_REPO   ?= DiluxOne/diluxone-multisite-user-sync-wordpress
+KIND      := $(shell sed -n 's/^kind:[[:space:]]*\([a-z-]*\).*/\1/p' .github/review-policy.yml | head -1)
+BASE_REF  ?= origin/main
+
 # The ports of this repository's stacks. 8888-8897 belong to the other
 # DiluxOne plugins on the same machine (diluxone-offload 8888/8889 and
 # 8896/8897, diluxone-users 8892-8895). The dev and tests ports are also in
 # .wp-env.json, which is what wp-env and the test suites read.
 PCP_PORT       := 8900
 PCP_TESTS_PORT := 8901
+# The suites of `make pre-pr`, on a network of their own (build/pre-pr), so
+# they never touch what `make env` serves.
+PRE_PR_PORT       := 8902
+PRE_PR_TESTS_PORT := 8903
 
 # -- Default target ----------------------------------------------------
 .DEFAULT_GOAL := help
@@ -72,9 +107,9 @@ help: ## Show this help.
 
 # -- Setup -------------------------------------------------------------
 .PHONY: install
-install: ## Install dev dependencies (composer install, npm install, Playwright's Chromium).
+install: gettext-image ## Install dev dependencies (composer install, npm ci, Playwright's Chromium, the gettext image).
 	$(COMPOSER) install --no-interaction --prefer-dist --no-progress
-	npm install --no-audit --no-fund
+	npm ci --no-audit --no-fund
 	npx playwright install chromium
 
 .PHONY: update
@@ -106,33 +141,72 @@ psalm: ## Psalm taint analysis (XSS / SQLi / RCE).
 # and what `make deploy-test` installs on a test site. WordPress reads plugin
 # translations from wp-content/languages/plugins/ (the language packs), never
 # from the plugin folder: there is no load_plugin_textdomain() call.
+#
+# The .pot and .po are kept in the form that merges (DiluxOne/.github#452,
+# scripts/plugin-i18n.sh there): no source references, sorted by message, the
+# header's dates fixed. The .mo are never committed: `i18n-mo` builds them
+# before the suites start. The gettext tools run in GETTEXT_IMAGE.
+.PHONY: gettext-image
+gettext-image: ## Build the image the gettext tools run in (GETTEXT_IMAGE, once per machine).
+ifeq ($(DOCKER),1)
+	@docker image inspect $(GETTEXT_IMAGE) >/dev/null 2>&1 \
+	  || printf 'FROM %s\nRUN apk add --no-cache bash gettext git\n' "$(GETTEXT_BASE)" | docker build -q -t $(GETTEXT_IMAGE) - >/dev/null
+endif
+
 .PHONY: i18n
-i18n: ## Refresh languages/wpm-user-sync.pot from the source strings.
+i18n: central gettext-image ## Refresh languages/wpm-user-sync.pot from the source strings, in the form that merges.
 	$(WP_CLI) i18n make-pot . languages/$(SLUG).pot \
 	    --slug=$(SLUG) \
 	    --domain=$(SLUG) \
-	    --exclude=tests,vendor,node_modules,.wordpress-org,docs,build
+	    --location=false \
+	    --exclude=tests,vendor,node_modules,.wordpress-org,docs,build,.dx-central,.dx-io,.dx-out
+	$(GETTEXT_CENTRAL) bash $(CENTRAL_IN)/scripts/plugin-i18n.sh normalise .
 
 .PHONY: i18n-update
 i18n-update: i18n ## Merge the refreshed .pot into every shipped .po (keeps existing translations).
 	@for po in languages/*.po; do \
-	  $(WP_CLI) i18n update-po languages/$(SLUG).pot "$$po" >/dev/null && echo "  merged $$po"; \
+	  $(GETTEXT) msgmerge --quiet --update --backup=none --no-location --sort-output --no-wrap "$$po" languages/$(SLUG).pot && echo "  merged $$po"; \
 	done
+	$(GETTEXT_CENTRAL) bash $(CENTRAL_IN)/scripts/plugin-i18n.sh normalise .
 
 .PHONY: i18n-mo
-i18n-mo: ## Compile every languages/*.po into the .mo WordPress actually reads.
-	$(WP_CLI) i18n make-mo languages languages
+i18n-mo: central gettext-image ## Compile every languages/*.po into the .mo WordPress actually reads (never committed).
+	$(GETTEXT_CENTRAL) bash $(CENTRAL_IN)/scripts/plugin-i18n.sh compile .
 	@echo "✔ $$(ls languages/*.mo | wc -l) .mo files built."
 
+.PHONY: i18n-form
+i18n-form: central gettext-image ## Fail if a .pot or .po is not in the form that merges, or a .mo is committed (CI's translations check).
+	$(GETTEXT_CENTRAL) bash $(CENTRAL_IN)/scripts/plugin-i18n.sh check .
+
+# CI's i18n job extracts the strings of what ships and fails on any warning
+# (a missing translator comment, a dynamic domain); this does the same on the
+# dist, and fails too when the committed .pot is not what the code gives.
+I18N_DIR    := build/i18n
+I18N_MOVING := -e '^\# Copyright' -e '^"Project-Id-Version: '
+
+.PHONY: i18n-pot
+i18n-pot: central gettext-image dist ## Extract the strings of the dist: any warning fails, and so does a stale .pot.
+	@mkdir -p $(I18N_DIR)
+	@out="$$($(WP_CLI) i18n make-pot $(DIST_DIR) $(I18N_DIR)/$(SLUG).pot --slug=$(SLUG) --domain=$(SLUG) --location=false 2>&1)"; status=$$?; \
+	  echo "$$out"; [ $$status -eq 0 ] || exit $$status; \
+	  if printf '%s\n' "$$out" | grep -E '^(Warning|Error):'; then echo "✖ wp i18n make-pot reported warnings (see above)"; exit 1; fi
+	@# The copyright line carries the current year and Project-Id-Version the
+	@# plugin's version: neither is a change of the strings.
+	@$(GETTEXT_CENTRAL) bash $(CENTRAL_IN)/scripts/plugin-i18n.sh form < $(I18N_DIR)/$(SLUG).pot | grep -v $(I18N_MOVING) > $(I18N_DIR)/extracted.pot
+	@grep -v $(I18N_MOVING) languages/$(SLUG).pot > $(I18N_DIR)/committed.pot
+	@diff -u $(I18N_DIR)/committed.pot $(I18N_DIR)/extracted.pot \
+	  || { echo "✖ languages/$(SLUG).pot is not what the code gives: run \`make i18n-update\` and translate what it adds."; exit 1; }
+	@echo "✔ $$(grep -c '^msgid "' $(I18N_DIR)/extracted.pot) strings, the committed .pot up to date."
+
 .PHONY: i18n-check
-i18n-check: ## Fail if any .po is malformed, untranslated, fuzzy, or behind the .pot.
+i18n-check: gettext-image ## Fail if any .po is malformed, untranslated, fuzzy, or behind the .pot.
 	@# Fuzzy counts as incomplete: WordPress does not show a fuzzy entry, so a
 	@# locale full of them reads as English while its statistics call it
 	@# translated. A .po that lacks a string of the .pot is incomplete too.
 	@fail=0; \
 	for po in languages/*.po; do \
-	  out=$$(msgfmt --check --statistics -o /dev/null "$$po" 2>&1) || fail=1; \
-	  missing=$$(msgcmp --use-untranslated "$$po" languages/$(SLUG).pot 2>&1 | grep -c 'this message is used but not defined') || true; \
+	  out=$$($(GETTEXT) msgfmt --check --statistics -o /dev/null "$$po" 2>&1) || fail=1; \
+	  missing=$$($(GETTEXT) msgcmp --use-untranslated "$$po" languages/$(SLUG).pot 2>&1 | grep -c 'this message is used but not defined') || true; \
 	  printf "%-34s %s%s\n" "$$po" "$$out" "$$( [ "$$missing" -gt 0 ] && echo ", $$missing missing from the .po" )"; \
 	  case "$$out" in *untranslated*|*fuzzy*) fail=1;; esac; \
 	  [ "$$missing" -eq 0 ] || fail=1; \
@@ -260,7 +334,9 @@ dist: ## Build build/wpm-user-sync/ — exactly what gets published.
 	@# --delete, never `rm -rf` the directory itself: wp-env bind-mounts it, and
 	@# replacing the inode leaves the container looking at a mount that is gone.
 	@# --delete-excluded too: a file that became excluded must leave the dist.
-	@rsync -a --delete --delete-excluded --exclude-from=.distignore --exclude='build' ./ "$(DIST_DIR)/"
+	@# .dx-*: the organisation's checkouts an agent or a workflow puts beside
+	@# the code (never the plugin's, never tracked).
+	@rsync -a --delete --delete-excluded --exclude-from=.distignore --exclude='build' --exclude='.dx-*' ./ "$(DIST_DIR)/"
 	@# What ships is what is committed: a file git never saw (a local .env, a
 	@# scratch script) fails the build instead of reaching wordpress.org.
 	@untracked="$$(cd "$(DIST_DIR)" && find . \( -type f -o -type l \) | sed 's|^\./||' | while read -r f; do git -C "$(CURDIR)" ls-files --error-unmatch "$$f" >/dev/null 2>&1 || echo "$$f"; done)"; \
@@ -375,32 +451,179 @@ coverage-report: ## The coverage table from build/coverage; COVERAGE_SHOW=unit|i
 check: lint stan psalm test ## Run the fast quality gates (lint, stan, psalm, unit tests).
 	@echo "✔ All checks passed."
 
-# The organisation's local review (DiluxOne/.github, scripts/local-review.sh):
-# the pull request's conventions, risk floor and Claude review, run before the
-# pull request exists. The script is cloned into build/.dx-central at the
-# moving tag REVIEW_CENTRAL_REF (v5, what CI calls too) and refreshed on every
-# run. REVIEW_CENTRAL=<path> uses a checkout of your own instead.
-REVIEW_CENTRAL     ?= build/.dx-central
-REVIEW_CENTRAL_REF ?= v5
-
-.PHONY: review-local
-review-local: ## The pull request's review before it exists: conventions, risk floor, Claude review (REVIEW_ARGS="--body-file pr.md", "--title …", "--no-claude").
+.PHONY: central
+central: ## Clone or refresh the organisation's scripts in build/.dx-central, at the ref the workflow callers name.
 	@if [ "$(REVIEW_CENTRAL)" = build/.dx-central ]; then \
+	  [ -n "$(REVIEW_CENTRAL_REF)" ] || { echo "✖ No DiluxOne/.github ref in .github/workflows/plugin-checks.yml"; exit 1; }; \
 	  [ -d build/.dx-central/.git ] || git clone -q --depth 1 --branch $(REVIEW_CENTRAL_REF) https://github.com/DiluxOne/.github build/.dx-central; \
 	  git -C build/.dx-central fetch -q --depth 1 origin $(REVIEW_CENTRAL_REF) && git -C build/.dx-central checkout -q FETCH_HEAD; \
 	fi
+
+# The organisation's local review (DiluxOne/.github, scripts/local-review.sh):
+# the pull request's conventions, risk floor and Claude review, run before the
+# pull request exists. `dx check` runs it after `make pre-pr`.
+.PHONY: review-local
+review-local: central ## The pull request's review before it exists: conventions, risk floor, Claude review (REVIEW_ARGS="--body-file pr.md", "--title …", "--no-claude").
 	bash "$(REVIEW_CENTRAL)/scripts/local-review.sh" $(REVIEW_ARGS)
 
+# -- The checks of the shared workflows, locally --------------------------
+# What plugin-checks-wp.yml in DiluxOne/.github runs beside the gates above,
+# with the same scripts, at the same ref.
+
+# `php -l` on every PHP file that ships, on every PHP from the plugin's
+# Requires PHP to the tools' (the pack's `settings.php`, scripts/php-versions.py).
+.PHONY: syntax
+syntax: central dist ## php -l on every shipped PHP file, on every supported PHP (8.0 to the tools' 8.5).
+	@versions=$$(SETTINGS="$$(python3 -c 'import json, sys; sys.path.insert(0, sys.argv[1]); import policy; print(json.dumps(policy.load_yaml(policy.pack_path(sys.argv[2]))["settings"]))' "$(CENTRAL)/scripts" "$(KIND)")" \
+	  MAIN=$(SLUG).php README=readme.txt python3 "$(CENTRAL)/scripts/php-versions.py" | sed -n 's/^versions=//p' | tr -d '[]"' | tr ',' ' '); \
+	  [ -n "$$versions" ] || { echo "✖ php-versions.py gave no PHP versions"; exit 1; }; \
+	  for v in $$versions; do \
+	    docker run --rm -u $(DOCKER_USER) -v $(CURDIR)/$(DIST_DIR):/app:ro -w /app php:$$v-cli \
+	      sh -c 'find . -type f -name "*.php" -print0 | xargs -0 -n1 php -l >/dev/null' || { echo "✖ PHP $$v: syntax error (above)"; exit 1; }; \
+	    echo "✔ PHP $$v syntax"; \
+	  done
+
+# CI's readme job: the headers, the three version markers aligned, the
+# changelog entry of the Stable tag.
+.PHONY: readme-check
+readme-check: ## readme.txt's headers and the version markers aligned (CI's readme job).
+	@set -euo pipefail; \
+	for h in "Contributors" "Tags" "Requires at least" "Tested up to" "Requires PHP" "Stable tag" "License"; do \
+	  grep -qE "^$${h}:" readme.txt || { echo "✖ readme.txt: missing header: $${h}"; exit 1; }; \
+	done; \
+	! grep -qE '^\s*\*\s*Tested up to:' $(SLUG).php || { echo "✖ $(SLUG).php: Tested up to belongs only in readme.txt."; exit 1; }; \
+	stable=$$(grep -oP '^Stable tag:\s*\K\S+' readme.txt); \
+	version=$$(grep -oP '^\s*\*\s*Version:\s*\K\S+' $(SLUG).php); \
+	base=$$(printf '%s' "$$version" | sed -E 's/-(dev|alpha|beta|rc)([.0-9]*)?$$//'); \
+	if [ "$$version" = "$$base" ]; then \
+	  [ "$$stable" = "$$base" ] || { echo "✖ Version $$version has no pre-release suffix, so Stable tag ($$stable) must equal it."; exit 1; }; \
+	else \
+	  [ "$$(printf '%s\n%s\n' "$$stable" "$$base" | sort -V | tail -1)" = "$$base" ] || { echo "✖ Version $$version is behind Stable tag $$stable."; exit 1; }; \
+	fi; \
+	constant=$$(grep -oP "WPMUS_VERSION',\s*'\K[^']+" $(SLUG).php); \
+	[ "$$constant" = "$$version" ] || { echo "✖ WPMUS_VERSION ($$constant) differs from Version ($$version)."; exit 1; }; \
+	grep -qE "^=\s*$${stable}\s*=" readme.txt || { echo "✖ readme.txt: no '= $${stable} =' changelog entry."; exit 1; }; \
+	echo "✔ readme.txt: Stable tag $$stable, Version $$version."
+
+# A change's changelog lines are its own file, changelog.d/<issue>.md, never
+# readme.txt's changelog by hand (DiluxOne/.github#452). Against the
+# merge-base with BASE_REF, the working tree as it is (a new fragment counts
+# before it is committed).
+.PHONY: changelog-check
+changelog-check: central ## The changelog fragments, and readme.txt's changelog untouched by hand (against BASE_REF).
+	@set -euo pipefail; \
+	bash "$(CENTRAL)/scripts/changelog-fragments.sh" check .; \
+	base=$$(git merge-base HEAD $(BASE_REF) 2>/dev/null) || { echo "✖ No merge-base with $(BASE_REF): fetch it (git fetch origin main) or set BASE_REF."; exit 1; }; \
+	mkdir -p build; git show "$$base:readme.txt" > build/base-readme.txt 2>/dev/null || : > build/base-readme.txt; \
+	{ git diff --name-status --no-renames "$$base" -- changelog.d; git ls-files --others --exclude-standard -- changelog.d | sed 's/^/A\t/'; } \
+	  | bash "$(CENTRAL)/scripts/changelog-fragments.sh" pull-request build/base-readme.txt .
+
+# The three markers name the released version (scripts/release-markers.sh),
+# from the next version the labels of what merged give (scripts/next-version.py,
+# which reads GitHub through gh). Where gh cannot read the repository, this
+# one check is not run here, and says so: CI runs it on every pull request.
+.PHONY: markers-check
+markers-check: central ## The version markers against what was released (needs gh logged in; skipped, saying so, without).
+	@set -euo pipefail; \
+	if ! command -v gh >/dev/null 2>&1 || ! gh api "repos/$(GH_REPO)" --silent >/dev/null 2>&1; then \
+	  echo "⚠ The version markers check did not run here: gh cannot read $(GH_REPO) (not installed or not logged in), and the next version comes from GitHub. CI runs it on the pull request."; \
+	  exit 0; \
+	fi; \
+	next=$$(python3 "$(CENTRAL)/scripts/next-version.py" --repo "$(GH_REPO)" --base main --json); \
+	field() { python3 -c 'import json, sys; v = json.loads(sys.argv[1])[sys.argv[2]]; print(str(v).lower() if isinstance(v, bool) else v)' "$$next" "$$1"; }; \
+	bash "$(CENTRAL)/scripts/release-markers.sh" check . $(SLUG).php WPMUS_VERSION "$$(field last)" "$$(field next)" "$$(field pending)"
+
+# The kind's review rules (kinds/<kind>/rules.yml), on the dist, on the tools' PHP.
+.PHONY: review-rules
+review-rules: central dist ## The kind's review rules on the shipped tree (scripts/review-rules.php).
+	$(PHP_CENTRAL) php $(CENTRAL_IN)/scripts/review-rules.php --kind $(KIND) --repo . --tree $(DIST_DIR)
+
+# The CSS the branch changes against BASE_REF, against the design system
+# repos.yml gives the repository (scripts/design-lint.py, stylelint as its
+# lockfile pins it). Nothing to check when the branch changes no CSS.
+.PHONY: design-lint
+design-lint: central ## The CSS the branch changes, against the design system (stylelint, as CI runs it).
+	@set -euo pipefail; \
+	base=$$(git merge-base HEAD $(BASE_REF) 2>/dev/null) || { echo "✖ No merge-base with $(BASE_REF): fetch it (git fetch origin main) or set BASE_REF."; exit 1; }; \
+	out=$$(mktemp); \
+	GITHUB_OUTPUT=$$out python3 "$(CENTRAL)/scripts/design-lint.py" plan --repo $(notdir $(GH_REPO)) --base "$$base" --head HEAD; \
+	if grep -qx 'run=true' "$$out"; then \
+	  npm ci --prefix "$(CENTRAL)/scripts/stylelint" --ignore-scripts --no-audit --no-fund >/dev/null; \
+	  python3 "$(CENTRAL)/scripts/design-lint.py" check --repo $(notdir $(GH_REPO)) --base "$$base" --head HEAD; \
+	fi; rm -f "$$out"
+
+# -- pre-pr: everything a pull request and the merge queue run ------------
+# The one check before a pull request (DiluxOne/.github#479): on a fresh
+# clone, with nothing started before it, every check of the pull request and
+# the merge queue, one after the other, stopping at the first failure. Its
+# suites run on a network of its own (build/pre-pr, ports 8902/8903) started
+# fresh, and the single-site check on the Plugin Check environment; both are
+# stopped at the end, also when a check fails, so the next run starts from
+# the same state. The integration suite is told its network's host
+# (WPMUS_TESTS_HOST: its bootstrap reads the root .wp-env.json's otherwise).
+# The suites run as CI runs them (CI=1, no Xdebug): the
+# coverage floors are `make coverage`, a target of their own. CodeQL runs on
+# GitHub only. PRE_PR_FAIL=<step> makes that step fail, to test the stop.
+PRE_PR_DIR   := $(CURDIR)/build/pre-pr
+PRE_PR_STEPS := install central lint stan psalm unit unit-min syntax i18n-form i18n-complete i18n-pot \
+                readme changelog markers plugin-check review-rules design-system docs i18n-mo env \
+                integration e2e e2e-single
+PRE_PR_FAIL  ?=
+PRE_PR_ENV_JS := const fs = require("fs"), [dir, port, testsPort, out] = process.argv.slice(1); \
+  const c = JSON.parse(fs.readFileSync(".wp-env.json", "utf8")); \
+  Object.assign(c, { plugins: [dir], mappings: { "wp-content/mu-plugins": dir + "/tests/e2e/mu-plugin" }, port: +port, testsPort: +testsPort }); \
+  fs.writeFileSync(out, JSON.stringify(c, null, 2) + "\n");
+SUBMAKE      := $(MAKE) --no-print-directory
+
+.PHONY: pre-pr-env
+pre-pr-env: ## Start pre-pr's own network (build/pre-pr, http://localhost:8902), fresh.
+	@mkdir -p "$(PRE_PR_DIR)"
+	@# .wp-env.json as it is, but the checkout and the e2e mu-plugin mounted
+	@# from here and the ports of its own.
+	@node -e '$(PRE_PR_ENV_JS)' "$(CURDIR)" $(PRE_PR_PORT) $(PRE_PR_TESTS_PORT) "$(PRE_PR_DIR)/.wp-env.json"
+	cd "$(PRE_PR_DIR)" && npx @wordpress/env start && npx @wordpress/env reset all
+
+.PHONY: pre-pr-down
+pre-pr-down: ## Stop pre-pr's own network.
+	@[ -f "$(PRE_PR_DIR)/.wp-env.json" ] && cd "$(PRE_PR_DIR)" && npx @wordpress/env stop 2>/dev/null || true
+
 .PHONY: pre-pr
-pre-pr: ## Everything a pull request is checked on, one after the other, then the local review (needs `make env`).
-	$(MAKE) check
-	$(MAKE) test-unit-min
-	$(MAKE) i18n-check
-	$(MAKE) docs-check
-	$(MAKE) coverage
-	$(MAKE) plugin-check
-	$(MAKE) review-local
-	@echo "✔ Checks passed; the review above says whether the branch is ready for a pull request."
+pre-pr: ## Every check the pull request and the merge queue run, on a fresh clone, starting and stopping what it needs.
+	@set -euo pipefail; \
+	steps=" $(PRE_PR_STEPS) "; \
+	if [ -n "$(PRE_PR_FAIL)" ] && [[ "$$steps" != *" $(PRE_PR_FAIL) "* ]]; then echo "✖ PRE_PR_FAIL=$(PRE_PR_FAIL) is not a step: $(PRE_PR_STEPS)"; exit 2; fi; \
+	stop() { status=$$?; trap - EXIT; echo "▶ stopping the pre-pr and Plugin Check environments"; \
+	  cd "$(CURDIR)"; $(SUBMAKE) pre-pr-down plugin-check-down >/dev/null 2>&1 || true; \
+	  if [ $$status -eq 0 ]; then echo "✔ Every check of the pull request and the merge queue passed."; \
+	  else echo "✖ make pre-pr failed at: $$current"; fi; exit $$status; }; \
+	current=; trap stop EXIT; trap 'exit 130' INT TERM; \
+	step() { current=$$1; shift; echo; echo "▶ $$current"; \
+	  if [ "$(PRE_PR_FAIL)" = "$$current" ]; then echo "✖ failed on purpose (PRE_PR_FAIL=$$current)"; return 1; fi; \
+	  "$$@"; }; \
+	step install         $(SUBMAKE) install; \
+	step central         $(SUBMAKE) central; \
+	step lint            $(SUBMAKE) lint; \
+	step stan            $(SUBMAKE) stan; \
+	step psalm           $(SUBMAKE) psalm; \
+	step unit            $(SUBMAKE) test-unit; \
+	step unit-min        $(SUBMAKE) test-unit-min; \
+	step syntax          $(SUBMAKE) syntax; \
+	step i18n-form       $(SUBMAKE) i18n-form; \
+	step i18n-complete   $(SUBMAKE) i18n-check; \
+	step i18n-pot        $(SUBMAKE) i18n-pot; \
+	step readme          $(SUBMAKE) readme-check; \
+	step changelog       $(SUBMAKE) changelog-check; \
+	step markers         $(SUBMAKE) markers-check; \
+	step plugin-check    $(SUBMAKE) plugin-check; \
+	step review-rules    $(SUBMAKE) review-rules; \
+	step design-system   $(SUBMAKE) design-lint; \
+	step docs            $(SUBMAKE) docs-check; \
+	step i18n-mo         $(SUBMAKE) i18n-mo; \
+	step env             $(SUBMAKE) pre-pr-env; \
+	step integration     sh -c 'cd "$(PRE_PR_DIR)" && npx @wordpress/env run tests-cli --env-cwd=wp-content/plugins/$(REPO_DIR) env WPMUS_TESTS_HOST=localhost:$(PRE_PR_TESTS_PORT) ./vendor/bin/phpunit -c phpunit-integration.xml'; \
+	mkdir -p build; \
+	step e2e             env CI=1 WPMUS_ENV="$(PRE_PR_DIR)" WP_BASE_URL=http://localhost:$(PRE_PR_PORT) npx playwright test; \
+	step e2e-single      env CI=1 $(SUBMAKE) test-e2e-single
 
 # The docs job of the conventions workflow, the same checks locally: relative
 # links in every Markdown file resolve (lychee, the version CI runs), and no
@@ -410,7 +633,7 @@ LYCHEE_IMAGE ?= lycheeverse/lychee:0.24.2
 
 .PHONY: docs-check
 docs-check: ## Relative links in every Markdown file resolve, and no retired product name is back (what CI's docs job checks).
-	docker run --rm -v "$(CURDIR)":/input -w /input $(LYCHEE_IMAGE) --offline --no-progress --exclude-path node_modules --exclude-path vendor --exclude-path build './**/*.md' './.github/**/*.md'
+	docker run --rm -v "$(CURDIR)":/input -w /input $(LYCHEE_IMAGE) --offline --no-progress --exclude-path node_modules --exclude-path vendor --exclude-path build --exclude-path .dx-central --exclude-path .dx-io --exclude-path .dx-out './**/*.md' './.github/**/*.md'
 	@retired=$$(sed -n "s/^retired-names: '\(.*\)'.*/\1/p" .github/review-policy.yml | head -1); \
 	if [ -z "$$retired" ]; then echo "No retired product names configured."; exit 0; fi; \
 	if git grep -nIiE "$$retired" -- . | grep -vE '^[^:]+:[0-9]+:\s*retired-names:'; then echo "A retired product name is back (see above)."; exit 1; fi; \

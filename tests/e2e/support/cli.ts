@@ -1,6 +1,8 @@
 import { execFileSync } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { userInfo } from 'node:os';
+import { basename, dirname, resolve } from 'node:path';
+import { DEV_ENV } from './env';
 
 /**
  * WP-CLI inside a wp-env container — the suite's other hand.
@@ -12,8 +14,8 @@ import { userInfo } from 'node:os';
  * a person would do in the dashboard is done here.
  *
  * It shells out to `npx wp-env run`, so it runs from a wp-env project
- * directory: the repository root (where Playwright runs) for the dev network,
- * or the Plugin Check project for the single site.
+ * directory: the dev network's (the repository root, where Playwright runs,
+ * or WPMUS_ENV's), or the Plugin Check project for the single site.
  */
 
 /** wp-env prints its own progress lines; they are not the answer. */
@@ -22,26 +24,33 @@ const NOISE = /^[ℹ✔✖⚠]|^- |^Starting |^Ran `/;
 export interface CliOptions {
 	/** The site of the network the command runs against. */
 	url?: string;
-	/** The wp-env project directory; the repository root by default. */
+	/** The wp-env project directory; the dev network's by default (env.ts, DEV_ENV). */
 	cwd?: string;
 	/** `cli` (the dev site, the default) or `tests-cli`. */
 	container?: 'cli' | 'tests-cli';
 }
 
 /**
- * The running container of this repository's wp-env service, found by the
- * compose file that mounts this checkout. `docker exec` into it costs a third
- * of `npx wp-env run` (no Node start, no config parsing), and a suite makes
- * hundreds of calls. Null when it cannot be found: the call then goes through
- * `npx wp-env run`, which always works.
+ * The running container of a wp-env project's service. `docker exec` into it
+ * costs a third of `npx wp-env run` (no Node start, no config parsing), and a
+ * suite makes hundreds of calls. Null when it cannot be found: the call then
+ * goes through `npx wp-env run`, which always works.
+ *
+ * The project is matched exactly, never by what it mounts: `make env` and
+ * `make pre-pr` both mount this checkout. wp-env keeps a project's compose
+ * file in a directory named after the MD5 of its .wp-env.json's path, the
+ * whole hash or, since wp-env 11, `wp-env-<dir>-<first 8 of it>`.
  */
 const containers = new Map<string, string | null>();
 
-function containerOf(service: string): string | null {
-	if (containers.has(service)) {
-		return containers.get(service)!;
+function containerOf(service: string, project: string): string | null {
+	const key = `${project}\0${service}`;
+
+	if (containers.has(key)) {
+		return containers.get(key)!;
 	}
 
+	const hash = createHash('md5').update(resolve(project, '.wp-env.json')).digest('hex');
 	let found: string | null = null;
 
 	try {
@@ -53,8 +62,9 @@ function containerOf(service: string): string | null {
 			const file = execFileSync('docker', ['inspect', id, '--format', '{{index .Config.Labels "com.docker.compose.project.config_files"}}'], {
 				encoding: 'utf8',
 			}).trim();
+			const dir = basename(dirname(file));
 
-			if (existsSync(file) && readFileSync(file, 'utf8').includes(`${process.cwd()}:`)) {
+			if (dir === hash || dir.endsWith(`-${hash.slice(0, 8)}`)) {
 				found = id;
 				break;
 			}
@@ -63,7 +73,7 @@ function containerOf(service: string): string | null {
 		found = null;
 	}
 
-	containers.set(service, found);
+	containers.set(key, found);
 
 	return found;
 }
@@ -71,10 +81,11 @@ function containerOf(service: string): string | null {
 export function wp(args: string[], options: CliOptions = {}): string {
 	const service = options.container ?? 'cli';
 	const command = ['wp', ...args, ...(options.url ? [`--url=${options.url}`] : [])];
-	const direct = options.cwd ? null : containerOf(service);
+	const project = options.cwd ?? DEV_ENV;
+	const direct = containerOf(service, project);
 	const [file, argv, cwd] = direct
 		? ['docker', ['exec', '-u', `${userInfo().uid}:${userInfo().gid}`, '-w', '/var/www/html', direct, ...command], process.cwd()]
-		: ['npx', ['wp-env', 'run', service, ...command], options.cwd ?? process.cwd()];
+		: ['npx', ['wp-env', 'run', service, ...command], project];
 
 	const out = execFileSync(file, argv, {
 		cwd,

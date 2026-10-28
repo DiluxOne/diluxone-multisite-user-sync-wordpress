@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { basename } from 'node:path';
+import { basename, join } from 'node:path';
 
 /**
  * Where the suites point, read from .wp-env.json rather than typed: the ports
@@ -7,7 +7,14 @@ import { basename } from 'node:path';
  * DiluxOne plugins on the same machine, and a test that hardcodes one is a
  * test that talks to somebody else's WordPress the day the port moves.
  */
-const config = JSON.parse(readFileSync('.wp-env.json', 'utf8')) as { port?: number; testsPort?: number };
+/**
+ * The wp-env project directory of the dev network: the repository root
+ * (`make env`) unless WPMUS_ENV names another, the network `make pre-pr`
+ * starts in build/pre-pr with ports of its own.
+ */
+export const DEV_ENV = process.env.WPMUS_ENV || '.';
+
+const config = JSON.parse(readFileSync(join(DEV_ENV, '.wp-env.json'), 'utf8')) as { port?: number; testsPort?: number };
 
 /** The dev network: Network Admin, the sites, the triggers. */
 export const DEV_URL = (process.env.WP_BASE_URL ?? `http://localhost:${config.port ?? 8888}`).replace(/\/$/, '');
