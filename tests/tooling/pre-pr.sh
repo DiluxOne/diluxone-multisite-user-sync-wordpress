@@ -102,8 +102,9 @@ else
 fi
 none_left "after the failed run"
 
-# 3. The whole run on the fresh clone.
-for run in first; do
+# 3. The whole run on the fresh clone, then again right after in the same
+# clone: the trap left it as the run found it (C2).
+for run in first second; do
 	if make -C "$clone" --no-print-directory pre-pr >"$log" 2>&1; then ok "make pre-pr passes ($run run)"; else ko "make pre-pr failed ($run run)"; tail -80 "$log"; fi
 	# A suite that exits 0 having run nothing is no pass: each says what ran.
 	section() { sed -n "/^▶ $1\$/,/^▶ /p" "$log"; }
