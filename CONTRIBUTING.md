@@ -17,18 +17,26 @@ not is in [`docs/roadmap.md`](docs/roadmap.md).
    and the listing screenshots when a screen changes; see
    [`docs/testing-and-quality.md`](docs/testing-and-quality.md)), add its row
    to [`tests/e2e/COVERAGE.md`](tests/e2e/COVERAGE.md), and update any doc
-   that describes what you changed. A change a user notices adds one bullet to
-   the newest `= X.Y.Z =` entry of `readme.txt`, under its `Unreleased.` line;
-   leave that line alone ([`docs/release.md`](docs/release.md)).
-2. Run `make pre-pr` (needs `make env`): `make check` (PHPCS, PHPStan, Psalm,
-   unit tests), the unit tests on PHP 8.0, the translations check, the docs
-   check, `make coverage` (the unit, integration and end-to-end suites, the
-   single-site check included, with their coverage floors), Plugin Check, and
-   the local review (`make review-local`), which checks the branch, the title, the
-   commits and, with `REVIEW_ARGS="--body-file .git/dx/pr.md"`, the description
-   as CI will, and runs the same Claude review through the Claude Code CLI on
-   your own account. It clones the organisation's shared scripts from
-   [DiluxOne/.github](https://github.com/DiluxOne/.github) into `build/`.
+   that describes what you changed. A change a user notices adds its
+   changelog line in a file of its own, `changelog.d/<issue>.md`: one bullet
+   (`* …`), written for users. Never in `readme.txt`, whose changelog the
+   release writes; leave its `Unreleased.` line alone
+   ([`docs/release.md`](docs/release.md)).
+2. Run `make pre-pr`, the one check before a pull request. It needs nothing
+   started before it (no `make env`): on a fresh clone it installs the tools,
+   clones the organisation's shared scripts from
+   [DiluxOne/.github](https://github.com/DiluxOne/.github) into `build/` at
+   the ref the workflows call, and runs every check the pull request and the
+   merge queue run, one after the other, stopping at the first failure. Its
+   suites run on a wp-env network of its own (ports 8902/8903), stopped at
+   the end whatever happened. The version markers check needs `gh` logged in;
+   without it, that one check says it did not run, and CI runs it.
+   Then the local review (`dx check` runs `make pre-pr` and then it; by hand,
+   `make review-local`), which checks the branch, the title, the commits and,
+   with `REVIEW_ARGS="--body-file .git/dx/pr.md"`, the description as CI will,
+   and runs the same Claude review through the Claude Code CLI on your own
+   account. The coverage floors are `make coverage`
+   ([`docs/testing-and-quality.md`](docs/testing-and-quality.md)).
 3. If AI took part, the rules for AI-assisted work here are in
    [`docs/ai.md`](docs/ai.md).
 
@@ -56,7 +64,9 @@ wp-env network. The Claude review is guided by
 - **Every user-facing string** translatable with the `wpm-user-sync` domain,
   with a `/* translators: */` comment right before a placeholder; after
   changing strings, every locale updated (`make i18n-update`, translate,
-  `make i18n-mo`, `make i18n-check`).
+  `make i18n-check`). The catalogues are kept in the form that merges (no
+  source references, sorted); the `.mo` are built (`make i18n-mo`), never
+  committed.
 - **Input unslashed and sanitized, output escaped, SQL prepared.**
 
 The full list, with the architecture and the review priorities:
@@ -66,10 +76,12 @@ The full list, with the architecture and the review priorities:
 
 Nobody types a version: it is computed from the `type:*` labels of what
 merged, and `main`'s markers say the last version released. The
-changelog is written as the changes merge, under the `Unreleased.` line of
-the newest `readme.txt` entry; the maintainer removes that line when the
-version is ready and approves the deployment. Never bump the version or
-remove that line in your pull request. The whole flow:
+changelog is written as the changes merge, one `changelog.d/<issue>.md` per
+change; the release pull request writes them into `readme.txt`. The
+`Unreleased.` line of the newest `readme.txt` entry is the release switch:
+the maintainer removes it when the version is ready and approves the
+deployment. Never bump the version or remove that line in your pull
+request. The whole flow:
 [`docs/release.md`](docs/release.md).
 
 ## Licence

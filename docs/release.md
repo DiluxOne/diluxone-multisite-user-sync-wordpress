@@ -15,14 +15,16 @@ every DiluxOne plugin is ([The organisation's setup](#the-organisations-setup)
 below): `release.yml` publishes (`dry-run: false`) once the maintainer
 approves the deployment.
 
-The next version opens its entry, `= X.Y.Z =` with `Unreleased.`, above the
-released one, with the first change worth a bullet.
+A change's changelog line is a file of its own, `changelog.d/<issue>.md`
+(one bullet, `* …`), never an edit of `readme.txt`: two pull requests then
+never touch the same lines. The release pull request writes the fragments
+into the newest entry and removes them.
 
 ## Who does what
 
 | | Outside contributor | Maintainer | The pipeline |
 | --- | --- | --- | --- |
-| Writes the change and its changelog bullet | yes, in the pull request | yes | never |
+| Writes the change and its changelog bullet (`changelog.d/<issue>.md`) | yes, in the pull request | yes | never |
 | Decides the type of the change (`type:*` label) | no | can override with a label | the Claude review, from the diff |
 | Computes the next version | no | no | yes, from the labels |
 | Decides that a version is ready | no | yes, by removing one line in `readme.txt` | never |
@@ -51,9 +53,11 @@ is created by the job.
    built, its first line is exactly `Unreleased.`. With that line in place the
    run ends green as **Not ready** and nothing waits for anyone.
 5. **The maintainer removes the `Unreleased.` line in a pull request** that
-   also sets the three version markers to the version the labels give
-   (`scripts/release-markers.sh prepare` in DiluxOne/.github does both). That
-   is the release decision.
+   also writes the changelog fragments into the entry and sets the three
+   version markers to the version the labels give
+   (`scripts/release-markers.sh prepare` in DiluxOne/.github does all three,
+   opening a `= X.Y.Z =` entry when none is held). That is the release
+   decision.
 6. **The maintainer approves the deployment** in the `wordpress-org`
    environment.
 7. **The job publishes** from the approved commit: checks the markers,
@@ -95,11 +99,16 @@ Unreleased.
 ```
 
 - **Write the notes as the changes merge**: a pull request that changes what a
-  user sees adds its bullet under `Unreleased.`, written for users.
+  user sees adds `changelog.d/<issue>.md`, `<issue>` the number of the issue
+  it closes, with its bullet (`* …`) written for users. It never edits
+  `readme.txt`'s changelog: CI fails a pull request that does, except the
+  release one (`scripts/changelog-fragments.sh` in DiluxOne/.github), and
+  `make pre-pr` checks the same.
 - **Never remove the `Unreleased.` line as part of another change.** The pull
-  request that removes it contains nothing else but the version markers.
-- **After a release**, the next change that deserves a bullet opens the next
-  entry, `= X.Y.Z =` with `Unreleased.`, above the released one.
+  request that removes it is the release: it writes the fragments in and
+  sets the version markers, nothing else.
+- **After a release**, the fragments of the next changes wait in
+  `changelog.d/`; the release pull request opens the next entry.
 
 ## The organisation's setup
 
