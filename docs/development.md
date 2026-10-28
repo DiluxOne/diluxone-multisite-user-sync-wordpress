@@ -9,11 +9,11 @@ How a change becomes a version: [`release.md`](release.md).
 
 | Tool | Why |
 | --- | --- |
-| **Docker** | Runs `wp-env` (the local networks) and the PHP toolchain (PHPCS, PHPStan, Psalm, PHPUnit, WP-CLI) without PHP on the host. |
+| **Docker** | Runs `wp-env` (the local networks), the PHP toolchain (PHPCS, PHPStan, Psalm, PHPUnit, WP-CLI) and the gettext tools (`make gettext-image`, once) without them on the host. |
 | **Node.js 22.13+** and **npm** | `wp-env` and Playwright. |
 | **GNU make** | Every task is a target; `make help` lists them. |
-| **gettext** (`msgfmt`, `msgcmp`) | `make i18n-check`. |
-| **`gh`** (optional) | Issues, pull requests and CI logs. |
+| **git** and **python3** | The organisation's scripts `make pre-pr` runs. |
+| **`gh`** (optional) | Issues, pull requests and CI logs; logged in, `make pre-pr` also checks the version markers against what was released. |
 
 Every PHP command runs inside an official Docker image as your host user, so
 `vendor/` is not root-owned. With a full PHP CLI on the host (`dom`,
@@ -47,6 +47,7 @@ stack does not have):
 | `http://localhost:8898/<slug>/` | Each site you add. |
 | <http://localhost:8899/> | The tests network; the integration suite boots it. |
 | <http://localhost:8900/>, <http://localhost:8901/> | The Plugin Check environment (`make plugin-check`): plain single sites with the built plugin. The single-site end-to-end check uses 8901. |
+| <http://localhost:8902/>, <http://localhost:8903/> | `make pre-pr`'s own networks (`build/pre-pr`): the end-to-end suite on 8902, the integration suite on 8903. Started fresh by `make pre-pr` and stopped when it ends. |
 
 The ports avoid the other DiluxOne plugins on the same machine
 (diluxone-offload on 8888/8889 and 8896/8897, diluxone-users on
@@ -93,12 +94,18 @@ npx wp-env run cli wp cron event run wpmus_process_sync_queue       # move a que
 | `make test-load` | The load test: a big network with the real limits; prints the timings (`LOAD_USERS`, `LOAD_SITES`). |
 | `make coverage` / `make coverage-report` | Line coverage per layer and all together, on the network with Xdebug; fails below the floors ([testing-and-quality.md](testing-and-quality.md#coverage)). |
 | `make check` | The fast gates: lint, stan, psalm, unit tests. |
-| `make i18n` / `make i18n-update` / `make i18n-mo` / `make i18n-check` | Refresh the `.pot`; merge it into every `.po`; compile the `.mo`; fail on an incomplete, fuzzy, stale or malformed locale. |
+| `make i18n` / `make i18n-update` / `make i18n-mo` / `make i18n-check` | Refresh the `.pot`; merge it into every `.po` (both in the form that merges); compile the `.mo` (never committed); fail on an incomplete, fuzzy, stale or malformed locale. |
+| `make i18n-form` / `make i18n-pot` | The catalogues in the form that merges, no `.mo` committed; the strings of the dist extracted with no warning and equal to the committed `.pot`. |
+| `make syntax` | `php -l` on every shipped PHP file, on PHP 8.0 to 8.5. |
+| `make readme-check` / `make changelog-check` / `make markers-check` | CI's readme job: the headers and the version markers aligned; the changelog fragments, and `readme.txt`'s changelog untouched by hand (against `BASE_REF`, `origin/main`); the markers against what was released (needs `gh`). |
+| `make review-rules` / `make design-lint` | The kind's review rules on the dist; the CSS the branch changes against the design system. |
 | `make docs-check` | Relative links in the Markdown resolve; no retired product name is back. |
 | `make dist` / `make zip` | `build/wpm-user-sync/`, exactly what ships (fails on untracked files or `vendor/`); its zip. |
 | `make plugin-check` | wordpress.org's Plugin Check on the dist, in a throwaway wp-env; an ERROR fails. `make plugin-check-all` lists warnings too. |
 | `make deploy-test SITE=/path/to/wordpress` | Copy what ships into a real network's plugins folder, and the `.mo` into `wp-content/languages/plugins/`. |
-| `make review-local` / `make pre-pr` | The organisation's review before the pull request; everything a pull request is checked on, then that review. |
+| `make pre-pr` | The one check before a pull request: on a fresh clone, every check the pull request and the merge queue run, starting and stopping what it needs ([testing-and-quality.md](testing-and-quality.md#before-a-pull-request)). |
+| `make review-local` | The organisation's review before the pull request; `dx check` runs it after `make pre-pr`. |
+| `make central` | Clone or refresh the organisation's scripts in `build/.dx-central`, at the ref the workflow callers name. |
 | `make clean` | Caches and build artefacts. |
 
 ## The repository name is not the plugin slug

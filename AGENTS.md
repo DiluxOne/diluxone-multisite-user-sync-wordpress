@@ -88,26 +88,36 @@ pull request is opened only when the branch is already clean. The steps
 around it (the accepted issue, `dx start`, `dx pr`) are the organisation's
 flow above.
 
-1. **Set up once.** Docker, Node.js (for `npx`), GNU make and git; no PHP on
-   the host. `make install` (dev tools, npm packages, Playwright's Chromium),
-   then `make env`: a subdirectory network at http://localhost:8898
-   (admin / password) and a second one at :8899 for the integration suite.
+1. **Set up once.** Docker, Node.js (for `npx`), GNU make, git and python3;
+   no PHP on the host. `make install` (dev tools, npm packages, Playwright's
+   Chromium), then `make env` to work: a subdirectory network at
+   http://localhost:8898 (admin / password) and a second one at :8899 for the
+   integration suite. `make pre-pr` needs neither: it does its own.
 2. **Make the change** with its tests at every layer it touches (unit,
    integration on the tests network, end-to-end on the dev network, the
    single-site check when activation changes), the docs that describe it, the
    layout and snapshot baselines when a screen changes, and, when a user
-   notices it, one bullet under the newest `= X.Y.Z =` entry of `readme.txt`,
-   below its `Unreleased.` line. A new screen or tab goes into
+   notices it, its changelog line in `changelog.d/<issue>.md` (one bullet,
+   `* …`, written for users), never in `readme.txt`, which the release
+   writes. A new screen or tab goes into
    `tests/e2e/support/screens.ts`; a new feature or state into
    [`tests/e2e/COVERAGE.md`](tests/e2e/COVERAGE.md).
 3. **Write the pull request description** in `.git/dx/pr.md` (`dx start`
    writes it, already closing the issue): fill in "📝 What changes" and
    "💡 Why"; it becomes the commit body on `main`.
-4. **Run everything:** `make pre-pr REVIEW_ARGS="--title '…' --body-file .git/dx/pr.md"`:
-   `make check`, `make test-unit-min` (PHP 8.0), `make i18n-check`,
-   `make docs-check`, `make coverage` (the unit, integration and end-to-end
-   suites with Xdebug, the single-site check included, failing below the
-   coverage floors), Plugin Check and the organisation's local review.
+4. **Run everything:** `make pre-pr`, the one check before a pull request,
+   on its own: no `make env` before it. It installs what it needs and runs
+   every check the pull request and the merge queue run, one after the
+   other, stopping at the first failure: the fast gates, the unit tests on
+   PHP 8.5 and 8.0, PHP syntax on 8.0 to 8.5, the translations in the form
+   that merges, `readme.txt` and the versions with the changelog fragments,
+   Plugin Check, the review rules, the design-system lint, the docs check,
+   then the integration suite, the end-to-end suite and the single-site
+   check on a network of its own (8902/8903), which it stops at the end,
+   also when a check fails. The coverage floors are `make coverage`, run by
+   hand. Then the organisation's local review: `dx check` runs `make pre-pr`
+   and then it, or run it yourself with
+   `make review-local REVIEW_ARGS="--title '…' --body-file .git/dx/pr.md"`.
 5. **Fix what the review found** (`.git/dx-review/findings.md`) and run step 4
    again until it says **Ready for a pull request**.
 
@@ -129,9 +139,11 @@ never do, in a change:
 - **The version is never typed.** `main` keeps the last released version in
   its three markers (`Version:` and `WPMUS_VERSION` in `wpm-user-sync.php`,
   `Stable tag:` in `readme.txt`).
-- **Write the changelog in the same pull request.** A change a user notices
-  adds one bullet under the newest `= X.Y.Z =` entry of `readme.txt`, below
-  its first line `Unreleased.`, written for users.
+- **Write the changelog in the same pull request**, in its own file: a
+  change a user notices adds `changelog.d/<issue>.md`, one bullet (`* …`)
+  written for users. Never edit `readme.txt`'s changelog by hand: the
+  release pull request writes the fragments into it (CI fails a pull request
+  that edits it).
 - **The line `Unreleased.` is the release switch.** The pull request that
   removes it is the maintainer's decision to release. Never remove it as part
   of another change.

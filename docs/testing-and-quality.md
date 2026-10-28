@@ -165,10 +165,14 @@ suppression.
 
 `languages/wpm-user-sync.pot` ships; eight complete locales (`es_AR`,
 `es_ES`, `es_MX`, `pt_BR`, `pt_PT`, `fr_FR`, `de_DE`, `it_IT`) live beside it
-as `.po` and `.mo`, the source for translate.wordpress.org. After changing a
-string: `make i18n-update`, translate the new entries in every `.po`,
-`make i18n-mo`, and `make i18n-check` must pass (no untranslated, fuzzy or
-missing entry).
+as `.po`, the source for translate.wordpress.org. The `.pot` and the `.po`
+are kept in the form that merges (no source references, sorted by message,
+the header's dates fixed: `make i18n-form` checks it); the `.mo` are built
+(`make i18n-mo`, before the suites start), never committed. After changing a
+string: `make i18n-update`, translate the new entries in every `.po`, and
+`make i18n-check` must pass (no untranslated, fuzzy or missing entry);
+`make i18n-pot` fails when the committed `.pot` is not what the code gives,
+or the extraction warns.
 
 ## Plugin Check
 
@@ -186,5 +190,41 @@ so a strict check, where every warning fails, still passes.
 
 ```bash
 make check     # lint + stan + psalm + unit tests
-make pre-pr    # check, PHP 8.0 units, i18n, docs, coverage (the three suites and the single-site check, with their floors), Plugin Check, local review
+make pre-pr    # every check the pull request and the merge queue run
 ```
+
+### Before a pull request
+
+`make pre-pr` is the one check before a pull request. It needs nothing
+started before it (no `make env`): on a fresh clone it installs the tools
+(`make install`), clones the organisation's scripts into `build/.dx-central`
+at the ref [`plugin-checks.yml`](../.github/workflows/plugin-checks.yml)
+calls, and runs, one after the other and stopping at the first failure:
+
+1. PHPCS, PHPStan, Psalm, the unit suite on PHP 8.5 and on PHP 8.0;
+2. `php -l` on every shipped PHP file, on PHP 8.0 to 8.5 (`make syntax`);
+3. the translations: in the form that merges, complete, the `.pot` up to date
+   and extracted with no warning (`make i18n-form`, `i18n-check`, `i18n-pot`);
+4. `readme.txt` and the versions: the headers and the markers aligned, the
+   changelog fragments (`changelog.d/<issue>.md`) and `readme.txt`'s
+   changelog untouched by hand against the merge-base with `origin/main`,
+   and the markers against what was released (`make readme-check`,
+   `changelog-check`, `markers-check`; the last needs `gh` logged in, and
+   without it says it did not run: CI runs it on every pull request);
+5. Plugin Check, the kind's review rules, the design-system lint of the CSS
+   the branch changes, the docs check;
+6. the `.mo` compiled, then on a network of its own (`build/pre-pr`,
+   8902/8903, started fresh) the integration suite and the end-to-end suite,
+   and the single-site check on the Plugin Check environment, all with
+   `CI=1` as CI runs them.
+
+At the end, and when any step fails, it stops its network and the Plugin
+Check one, so the next run starts from the same state. It runs the suites
+without Xdebug, as CI does: the coverage floors are `make coverage`, run by
+hand. CodeQL runs on GitHub only. `PRE_PR_FAIL=<step>` makes one step fail on
+purpose; [`tests/tooling/pre-pr.sh`](../tests/tooling/pre-pr.sh) uses it to
+test the target on a fresh clone (a failed run, then two full runs, with
+nothing left running after any).
+
+The organisation's local review comes after it: `dx check` runs
+`make pre-pr`, then the review (`make review-local` by hand).

@@ -73,7 +73,11 @@ Use any tool you like. These rules apply the moment you open a pull request.
 2. **You read what you commit**, line by line. If you do not understand a
    generated chunk, do not push it.
 3. **The tests pass because the runner says so**, not because a model said
-   so. Run `make pre-pr`.
+   so. Run `make pre-pr`, on its own (no `make env` before it): every check
+   the pull request and the merge queue run. `dx check` runs it, then the
+   local review. A change a user notices carries its changelog line in
+   `changelog.d/<issue>.md`, never in `readme.txt`, and leaves the
+   `Unreleased.` line, the release switch, alone.
 4. **No secrets into AI services**: no `wp-config.php`, SVN passwords, keys or
    database dumps. If you slip, rotate at once.
 5. **No prompt injection** in commits, comments, code or docs. A pull request

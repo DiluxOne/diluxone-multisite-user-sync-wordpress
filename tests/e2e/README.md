@@ -18,14 +18,22 @@ make test-e2e    # the network suite, then the single-site check
 `make test-e2e-single` starts the Plugin Check environment itself (`make
 dist` first) and runs only the single-site check.
 
+`make pre-pr` needs none of this up: it starts a network of its own in
+`build/pre-pr` (<http://localhost:8902>, the tests network on 8903), runs
+the network suite there with `CI=1` (CI's retries and reporter),
+`WPMUS_ENV=build/pre-pr` and `WP_BASE_URL=http://localhost:8902`, then the
+single-site check, and stops both environments at the end. `WPMUS_ENV` names
+the wp-env project of the dev network for the suite: its `.wp-env.json` gives
+the URL, and WP-CLI runs in that project's containers.
+
 ## How it is built
 
 | Piece | What it does |
 | --- | --- |
 | [`playwright.config.ts`](../../playwright.config.ts) | Projects: `setup`, `chromium` and `teardown` always; `single`, `visual` and `listing` only when their variable is set. |
 | [`global.setup.ts`](global.setup.ts) / [`global.teardown.ts`](global.teardown.ts) | Write down the three toggles and the queue, turn the toggles off, sweep what an interrupted run left, sign in as the super admin; the teardown deletes everything the run made and puts the rest back. The dev network is somebody's: nothing else is touched. |
-| [`support/env.ts`](support/env.ts) | The URLs, read from `.wp-env.json` (never a hardcoded port) and the environment. |
-| [`support/cli.ts`](support/cli.ts) | WP-CLI in the wp-env container: `docker exec` into this checkout's container when it can find it, `npx wp-env run` otherwise. |
+| [`support/env.ts`](support/env.ts) | The URLs, read from `.wp-env.json` (never a hardcoded port; `WPMUS_ENV`'s when it names another project) and the environment. |
+| [`support/cli.ts`](support/cli.ts) | WP-CLI in the wp-env container: `docker exec` into the project's own container when it can find it (matched by the hash wp-env names the project after, since `make env` and `make pre-pr` both mount this checkout), `npx wp-env run` otherwise. |
 | [`support/network.ts`](support/network.ts) | Builds the cases (sites with a default role, archived or spam sites, users with memberships, super admins) and reads what the plugin did (memberships, the queue, the removal record). Everything is named `e2e-…`. |
 | [`support/ui.ts`](support/ui.ts) | The plugin's screens by page slug, their forms, signing in as somebody else. |
 | [`support/screens.ts`](support/screens.ts) | The registry of every screen and tab. The layout spec fails when the menu or a tab strip has one that is not listed. |
