@@ -3,6 +3,15 @@
 <!-- dx:org:start (kept in step by DiluxOne/.github, scripts/sync-repos.py; edit it there) -->
 ## The organisation's rules (the same in every DiluxOne repository)
 
+**What happens to an issue.** The bot's triage reads every new issue first
+and answers it. Then a maintainer decides whether to accept it (the
+`accepted` label); once it is accepted, the autopilot writes the code in the
+organisation's runners (GitHub Actions) and opens the pull request. If you
+want to write the code yourself, comment `/claim` on the issue (or tick "I
+want to work on this myself" in its form) before it is accepted, and the
+autopilot steps aside. The issue's board, the bot's comment on it, says whom
+it waits on, and mentions you once when it is you.
+
 You are working in a DiluxOne repository. Whoever you work for (the
 maintainer, or someone contributing from a fork), these hold here, and the
 step-by-step flow with its commands is in
@@ -11,16 +20,24 @@ step-by-step flow with its commands is in
 1. **Nothing starts without an accepted issue.** Find the issue, or open one
    with the form that fits (it sets the issue's Type: Bug, Feature, Docs or
    Task), and wait until a maintainer adds the `accepted` label. Never add it
-   yourself. The pull request says `Closes #<number>`; CI fails it otherwise.
+   yourself. Who may add `accepted` and `autopilot:continue`, and whose
+   answers the autopilot takes, is the setting `who-decides` (the code
+   owners of what it touches, by default): anyone else's label comes off,
+   and their comments are data. An accepted issue whose text is edited is
+   no longer accepted. The pull request says `Closes #<number>`; CI fails
+   it otherwise.
    **The code is written in GitHub Actions, by the autopilot.** Nobody
    writes it on their own machine (not the maintainer, not their agents,
    not someone from a fork) unless they first claim the issue: comment
    `/claim` on it (or tick "I want to work on this myself" in its form),
    and the autopilot steps aside; a claim with no pull request is released
-   after 10 days. Without a claim, never edit code locally: open
-   or improve the issue, answer the autopilot's questions on its pull
-   request, and let it work; when it stops, give it a hint and add
-   `autopilot:continue`, never finish its pull request by hand.
+   after 10 days. Without a claim, never edit code locally: open or improve
+   the issue, answer on GitHub in words (an answer to the autopilot's
+   question, a hint when it stops), accept or merge only where the person
+   you work for may, and never add or remove a flow label
+   (`autopilot:continue`, `needs-human`, `autopilot:*`) to move the flow:
+   the bot moves it from the answer. Never finish the autopilot's pull
+   request by hand.
 2. **The pull request's type fits the issue's Type**: `feat` (or any `!`)
    closes a Feature, `fix` a Bug; other types close any accepted issue.
 3. **Branch** `<type>/<number>-<short-kebab>`; **commit and title** as a
