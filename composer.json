@@ -20,9 +20,9 @@
         "phpcompatibility/phpcompatibility-wp": "^3.0@alpha",
         "phpstan/extension-installer": "^1.4.3",
         "phpstan/phpstan": "^2.3",
-        "phpunit/phpunit": "^9.6.38",
+        "phpunit/phpunit": "^13.4.6",
         "szepeviktor/phpstan-wordpress": "^2.0",
-        "vimeo/psalm": "^6.14.2",
+        "vimeo/psalm": "^7.0.4",
         "wp-coding-standards/wpcs": "^3.4"
     },
     "autoload": {
